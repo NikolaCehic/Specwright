@@ -1,0 +1,31 @@
+{
+  "evalDefinition": {
+    "id": "artifact_schema_eval",
+    "type": "schema",
+    "target": {
+      "artifactId": "plan"
+    },
+    "requiredFields": [
+      "title",
+      "steps"
+    ],
+    "severity": "blocking"
+  },
+  "input": {
+    "artifacts": {
+      "plan": {
+        "artifactId": "plan",
+        "artifactType": "plan",
+        "evidenceRefs": [
+          "evidence:brief"
+        ],
+        "content": {
+          "title": "Source-bound plan",
+          "steps": [
+            "collect evidence"
+          ]
+        }
+      }
+    }
+  }
+}

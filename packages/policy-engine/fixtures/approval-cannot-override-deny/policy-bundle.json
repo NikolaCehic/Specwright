@@ -1,0 +1,50 @@
+{
+  "id": "fixture.shell-destructive",
+  "description": "Denies destructive shell commands before shell approval can be considered.",
+  "rules": [
+    {
+      "id": "runtime.shell.deny_destructive_reset",
+      "layer": "runtime_invariant",
+      "effect": "deny",
+      "reason": "runtime policy denies destructive workspace reset",
+      "match": {
+        "actionKind": "tool_call",
+        "toolId": "shell.exec",
+        "args": [
+          {
+            "path": "command",
+            "pattern": "\\bgit\\s+reset\\s+--hard\\b"
+          }
+        ]
+      }
+    }
+  ],
+  "toolPolicy": {
+    "shell.exec": {
+      "default": "approval_required",
+      "risk": "high",
+      "reason": "shell.exec requires explicit approval",
+      "approvalId": "appr_shell_exec_tests",
+      "allowedPhases": [
+        "execution",
+        "verification"
+      ],
+      "requiredScopes": [
+        "shell:exec"
+      ],
+      "allowedScopes": [
+        "shell:exec"
+      ],
+      "constraints": [
+        {
+          "kind": "timeoutMs",
+          "value": 120000
+        },
+        {
+          "kind": "network",
+          "value": "disabled"
+        }
+      ]
+    }
+  }
+}

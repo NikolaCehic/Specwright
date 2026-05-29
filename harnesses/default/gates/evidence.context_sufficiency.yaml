@@ -1,0 +1,39 @@
+id: evidence.context_sufficiency
+phase: evidence
+kind: exit
+required: true
+description: Ensure enough source-backed context exists before planning.
+inputs:
+  runInput: true
+  evidence: true
+  artifacts:
+    - source-inventory
+    - evidence-graph
+checks:
+  - id: goal_known
+    type: deterministic
+    path: $.run_input.task
+    condition: present
+  - id: source_inventory_present
+    type: schema
+    artifactId: source-inventory
+    requiredFields:
+      - sources
+  - id: source_authority_known
+    type: deterministic
+    path: $.artifacts.evidence-graph.content.sources[*].authority
+    condition: present
+  - id: evidence_records_present
+    type: deterministic
+    path: $.artifacts.evidence-graph.content.records[*].id
+    condition: present
+  - id: evidence_refs_recorded
+    type: evidence
+    artifactId: evidence-graph
+    minCount: 1
+onFail:
+  action: request_clarification
+  questionTemplate: I need source-backed context and unresolved unknowns before planning.
+onPass:
+  action: transition_phase
+  targetPhase: planning

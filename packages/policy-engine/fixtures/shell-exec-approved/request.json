@@ -1,0 +1,34 @@
+{
+  "requestId": "req_shell_exec_approved",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "bun test packages/policy-engine/src/index.test.ts",
+      "timeoutMs": 120000,
+      "idempotencyKey": "test-policy-engine"
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": [
+        {
+          "approvalId": "appr_shell_exec_tests",
+          "decision": "approved",
+          "humanMessage": "Run the policy-engine tests only.",
+          "constraints": {
+            "allowCommandPrefix": "bun test packages/policy-engine"
+          }
+        }
+      ]
+    },
+    "sourceTrust": {}
+  }
+}

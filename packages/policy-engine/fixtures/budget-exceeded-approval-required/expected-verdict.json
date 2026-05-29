@@ -1,0 +1,58 @@
+{
+  "status": "approval_required",
+  "reasons": [
+    "file read budget would exceed policy limit"
+  ],
+  "constraints": [
+    {
+      "kind": "maxBytes",
+      "value": 1024,
+      "sourceRuleId": "budget.file_read_bytes.max"
+    },
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "workspace:read",
+        "evidence:read"
+      ],
+      "sourceRuleId": "tool.fs.read.scope"
+    }
+  ],
+  "obligations": [
+    {
+      "kind": "request_human_review",
+      "params": {
+        "resource": "fileReadBytes"
+      },
+      "sourceRuleId": "budget.file_read_bytes.max"
+    }
+  ],
+  "matchedRules": [
+    {
+      "ruleId": "budget.file_read_bytes.max",
+      "layer": "harness",
+      "effect": "approval_required",
+      "reason": "file read budget would exceed policy limit"
+    },
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool fs.read scopes are within policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed for source and evidence discovery"
+    }
+  ],
+  "decisionHash": "sha256:9fa103459d44b24374d14f1d88663240ef0698c92a7ed509eec5d5d85d27d3e1",
+  "approvalId": "appr_file_read_budget"
+}

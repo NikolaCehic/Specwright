@@ -1,0 +1,17 @@
+id: verification
+description: Run deterministic evals against the plan and evidence graph.
+gates:
+  - verification.required_evals
+tools:
+  - fs.read
+  - eval.run
+artifactSchemas:
+  - eval-report
+evals:
+  - artifact_schema_presence
+  - source_fidelity
+  - completeness_required_sections
+next: packaging
+metadata:
+  expectedArtifacts:
+    - eval-report.json

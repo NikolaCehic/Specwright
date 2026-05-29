@@ -1,0 +1,38 @@
+{
+  "status": "deny",
+  "reasons": [
+    "Tool fs.read is not allowed in phase synthesis"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "workspace:read",
+        "evidence:read"
+      ],
+      "sourceRuleId": "tool.fs.read.scope"
+    }
+  ],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "deny",
+      "reason": "Tool fs.read is not allowed in phase synthesis"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool fs.read scopes are within policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed for source and evidence discovery"
+    }
+  ],
+  "decisionHash": "sha256:d3de5a879b240755bed2a595f99cbf61acaae418ebb1717776ad533a3f9ebf7b"
+}

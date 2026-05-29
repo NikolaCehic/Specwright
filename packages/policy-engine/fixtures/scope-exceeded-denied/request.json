@@ -1,0 +1,24 @@
+{
+  "requestId": "req_scope_exceeded_denied",
+  "runId": "run_policy_fixture",
+  "phase": "evidence",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "args": {
+      "path": "src/index.ts"
+    },
+    "requestedScopes": [
+      "workspace:read",
+      "workspace:write:direct"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

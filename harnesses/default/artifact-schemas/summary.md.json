@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "summary.md",
+  "version": "0.1.0",
+  "title": "Summary Markdown Artifact Metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["path", "contentType", "sections"],
+  "properties": {
+    "path": {
+      "type": "string",
+      "const": "summary.md"
+    },
+    "contentType": {
+      "type": "string",
+      "const": "text/markdown"
+    },
+    "content": {
+      "type": "string"
+    },
+    "sections": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "filesChanged", "checksRun", "assumptions", "openQuestions"],
+      "properties": {
+        "status": {
+          "type": "string"
+        },
+        "filesChanged": {
+          "type": "string"
+        },
+        "checksRun": {
+          "type": "string"
+        },
+        "assumptions": {
+          "type": "string"
+        },
+        "openQuestions": {
+          "type": "string"
+        }
+      }
+    },
+    "evidenceRefs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "id": "fixture.fs-read",
+  "description": "Allows read-only filesystem access during source and evidence discovery.",
+  "toolPolicy": {
+    "fs.read": {
+      "default": "allow",
+      "risk": "low",
+      "reason": "fs.read is allowed for source and evidence discovery",
+      "allowedPhases": [
+        "source_discovery",
+        "evidence"
+      ],
+      "requiredScopes": [
+        "workspace:read"
+      ],
+      "allowedScopes": [
+        "workspace:read",
+        "evidence:read"
+      ]
+    }
+  }
+}

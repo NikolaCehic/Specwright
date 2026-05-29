@@ -1,0 +1,46 @@
+{
+  "evalDefinition": {
+    "id": "source_fidelity",
+    "type": "source_fidelity",
+    "target": {
+      "artifactId": "ux_contract"
+    },
+    "claimsPath": "claims",
+    "severity": "blocking"
+  },
+  "input": {
+    "artifacts": {
+      "ux_contract": {
+        "artifactId": "ux_contract",
+        "artifactType": "ux_contract",
+        "content": {
+          "claims": [
+            {
+              "id": "claim.dashboard-filtering",
+              "claim": "The product requires dashboard filtering.",
+              "level": "source_fact",
+              "important": true,
+              "evidenceRefs": [
+                "evidence:brief#dashboard-filtering"
+              ]
+            },
+            {
+              "id": "claim.optional-theme",
+              "claim": "Dark theme can be explored later.",
+              "level": "assumption"
+            }
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "records": [
+        {
+          "id": "evidence:brief#dashboard-filtering",
+          "class": "source_fact",
+          "claim": "The brief mentions dashboard filtering."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@specwright/policy-engine": [
+        "../policy-engine/dist/index.d.ts"
+      ],
+      "@specwright/policy-engine/*": [
+        "../policy-engine/dist/*"
+      ],
+      "@specwright/schemas": [
+        "../schemas/dist/index.d.ts"
+      ],
+      "@specwright/schemas/*": [
+        "../schemas/dist/*"
+      ]
+    }
+  }
+}

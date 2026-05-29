@@ -1,0 +1,25 @@
+{
+  "requestId": "req_shell_exec_requires_approval",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "bun test packages/policy-engine/src/index.test.ts",
+      "timeoutMs": 120000,
+      "idempotencyKey": "test-policy-engine"
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

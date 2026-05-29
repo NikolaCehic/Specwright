@@ -1,0 +1,23 @@
+{
+  "requestId": "req_missing_policy_fails_closed",
+  "runId": "run_policy_fixture",
+  "phase": "execution",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "network.write",
+    "risk": "critical",
+    "args": {
+      "url": "https://example.invalid/deploy"
+    },
+    "requestedScopes": [
+      "network:write"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

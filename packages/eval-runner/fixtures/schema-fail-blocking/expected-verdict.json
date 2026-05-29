@@ -1,0 +1,22 @@
+{
+  "evalId": "artifact_schema_eval",
+  "targetRef": "artifact:plan",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "message": "Artifact is missing required fields: steps",
+      "code": "artifact.required_fields.missing",
+      "targetRef": "artifact:plan",
+      "severity": "blocking",
+      "repairHint": "Add the required fields or adjust the artifact schema."
+    }
+  ],
+  "evidenceRefs": [
+    "evidence:brief"
+  ],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  }
+}

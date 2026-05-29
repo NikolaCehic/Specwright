@@ -1,0 +1,27 @@
+id: intake.exit
+phase: intake
+kind: exit
+required: true
+description: Ensure the run has a concrete task and schema-valid input before source discovery.
+inputs:
+  runInput: true
+  artifacts:
+    - run-input
+checks:
+  - id: task_present
+    type: deterministic
+    path: $.run_input.task
+    condition: present
+  - id: run_input_schema_valid
+    type: schema
+    artifactId: run-input
+    requiredFields:
+      - task
+      - harnessId
+      - host
+onFail:
+  action: clarify
+  questionTemplate: Provide a task before Specwright can discover sources.
+onPass:
+  action: transition_phase
+  targetPhase: source_discovery

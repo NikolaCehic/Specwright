@@ -1,0 +1,40 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@specwright/artifact-store": [
+        "../artifact-store/dist/index.d.ts"
+      ],
+      "@specwright/artifact-store/*": [
+        "../artifact-store/dist/*"
+      ],
+      "@specwright/evidence-store": [
+        "../evidence-store/dist/index.d.ts"
+      ],
+      "@specwright/evidence-store/*": [
+        "../evidence-store/dist/*"
+      ],
+      "@specwright/run-store": [
+        "../run-store/dist/index.d.ts"
+      ],
+      "@specwright/run-store/*": [
+        "../run-store/dist/*"
+      ],
+      "@specwright/schemas": [
+        "../schemas/dist/index.d.ts"
+      ],
+      "@specwright/schemas/*": [
+        "../schemas/dist/*"
+      ],
+      "@specwright/trace-recorder": [
+        "../trace-recorder/dist/index.d.ts"
+      ],
+      "@specwright/trace-recorder/*": [
+        "../trace-recorder/dist/*"
+      ]
+    }
+  }
+}

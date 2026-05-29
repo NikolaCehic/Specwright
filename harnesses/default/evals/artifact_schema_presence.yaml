@@ -1,0 +1,29 @@
+id: artifact_schema_presence
+description: Ensure the plan artifact exists and exposes required schema fields.
+type: deterministic
+target:
+  artifactId: plan
+artifactSchemas:
+  - plan
+requiredArtifacts:
+  - plan
+blocking: true
+checks:
+  - id: plan_required_fields
+    type: schema
+    requiredFields:
+      - goal
+      - steps
+      - claims
+      - sections
+  - id: plan_sections_required
+    type: schema
+    path: sections
+    requiredFields:
+      - goal
+      - evidence
+      - steps
+      - risks
+      - verification
+onFail:
+  action: create_repair_task

@@ -1,0 +1,24 @@
+id: source_fidelity
+description: Verify important plan claims are backed by recorded evidence.
+type: source_fidelity
+target:
+  artifactId: plan
+artifactSchemas:
+  - plan
+  - evidence-graph
+requiredArtifacts:
+  - plan
+  - evidence-graph
+claimsPath: claims
+blocking: true
+checks:
+  - id: important_claims_have_evidence
+    type: source_fidelity
+    claimsPath: claims
+    importantClaimLevels:
+      - source_fact
+      - derived_fact
+      - inference
+      - human_decision
+onFail:
+  action: create_repair_task

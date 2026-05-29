@@ -1,0 +1,57 @@
+{
+  "verdict": {
+    "gateId": "artifact_schema",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Artifact schema validation failed"
+    ],
+    "findings": [
+      {
+        "id": "plan_schema_valid",
+        "severity": "blocking",
+        "message": "Artifact schema validation failed",
+        "targetRef": "artifact:plan_artifact",
+        "evidenceRefs": [
+          "evidence:plan"
+        ],
+        "repairHint": "Add all schema-required fields before promotion."
+      }
+    ],
+    "evidenceRefs": [
+      "evidence:plan"
+    ],
+    "requiredAction": "repair",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    }
+  },
+  "instruction": {
+    "kind": "create_repair_task",
+    "gateId": "artifact_schema",
+    "repairTask": {
+      "id": "repair.artifact_schema",
+      "gateId": "artifact_schema",
+      "failedPhase": "verification",
+      "problem": "Artifact schema validation failed",
+      "requiredEvidenceRefs": [
+        "evidence:plan"
+      ],
+      "allowedTools": [
+        "fs.read"
+      ],
+      "blockedTools": [
+        "shell.exec"
+      ],
+      "successGate": "artifact_schema",
+      "createdFromFindingIds": [
+        "plan_schema_valid"
+      ],
+      "targetRef": "artifact:plan_artifact"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+id: planning
+description: Produce a minimal plan artifact from recorded evidence.
+gates:
+  - planning.plan_schema
+artifactSchemas:
+  - plan
+next: verification
+metadata:
+  expectedArtifacts:
+    - plan.json
+  futureTools:
+    - model.generate

@@ -1,0 +1,63 @@
+{
+  "gateId": "artifact_schema",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "artifact_schema",
+    "phase": "verification",
+    "kind": "artifact",
+    "required": true,
+    "inputs": {
+      "artifacts": [
+        "plan_artifact"
+      ],
+      "evidence": true
+    },
+    "checks": [
+      {
+        "id": "plan_schema_valid",
+        "type": "schema",
+        "artifactId": "plan_artifact",
+        "path": "$.artifacts.plan_artifact",
+        "requiredFields": [
+          "content.title",
+          "content.steps"
+        ],
+        "repairHint": "Add all schema-required fields before promotion."
+      }
+    ],
+    "onFail": {
+      "action": "create_repair_task",
+      "allowedTools": [
+        "fs.read"
+      ],
+      "blockedTools": [
+        "shell.exec"
+      ],
+      "successGate": "artifact_schema"
+    }
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "verification",
+    "artifacts": {
+      "plan_artifact": {
+        "artifactId": "plan_artifact",
+        "artifactType": "plan",
+        "schemaValid": false,
+        "evidenceRefs": [
+          "evidence:plan"
+        ],
+        "content": {
+          "title": "Initial gate plan"
+        }
+      }
+    },
+    "evidence": {
+      "refs": {
+        "evidence:plan": {
+          "id": "evidence:plan"
+        }
+      }
+    }
+  }
+}

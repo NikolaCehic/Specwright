@@ -1,0 +1,11 @@
+id: source_discovery
+description: Discover candidate workspace sources through read-only brokered filesystem tools.
+tools:
+  - fs.list
+  - fs.read
+artifactSchemas:
+  - source-inventory
+next: evidence
+metadata:
+  expectedArtifacts:
+    - source-inventory.json

@@ -1,0 +1,39 @@
+id: planning.plan_schema
+phase: planning
+kind: artifact
+required: true
+description: Require a schema-valid, evidence-bound plan artifact before verification.
+inputs:
+  artifacts:
+    - plan
+    - evidence-graph
+  evidence: true
+checks:
+  - id: plan_required_fields
+    type: schema
+    artifactId: plan
+    requiredFields:
+      - goal
+      - steps
+      - claims
+      - sections
+  - id: plan_required_sections
+    type: schema
+    path: $.artifacts.plan.content.sections
+    requiredFields:
+      - goal
+      - evidence
+      - steps
+      - risks
+      - verification
+  - id: plan_has_evidence_refs
+    type: evidence
+    path: $.artifacts.plan.content.claims[*].evidenceRefs
+    minCount: 1
+onFail:
+  action: create_repair_task
+  repairHint: Add the missing plan fields, sections, or evidence references.
+  successGate: planning.plan_schema
+onPass:
+  action: transition_phase
+  targetPhase: verification

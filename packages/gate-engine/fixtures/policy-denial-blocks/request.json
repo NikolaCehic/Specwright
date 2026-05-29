@@ -1,0 +1,53 @@
+{
+  "gateId": "tool_policy",
+  "phase": "evidence",
+  "gateDefinition": {
+    "id": "tool_policy",
+    "phase": "evidence",
+    "kind": "action",
+    "required": true,
+    "inputs": {
+      "policy": [
+        "gate-evaluation-policy"
+      ]
+    },
+    "checks": [
+      {
+        "id": "policy_allowed_gate_evaluation",
+        "type": "policy",
+        "policyId": "gate-evaluation-policy",
+        "allowedStatuses": [
+          "allow"
+        ],
+        "message": "Policy denied gate advancement",
+        "targetRef": "policy:gate-evaluation-policy"
+      }
+    ],
+    "onFail": {
+      "action": "fail_run"
+    }
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "evidence",
+    "policy": {
+      "gate-evaluation-policy": {
+        "status": "deny",
+        "reasons": [
+          "Required policy snapshot denies gate evaluation"
+        ],
+        "constraints": [],
+        "obligations": [],
+        "matchedRules": [
+          {
+            "ruleId": "policy.gate_evaluation.deny",
+            "layer": "runtime_invariant",
+            "effect": "deny",
+            "reason": "Required policy snapshot denies gate evaluation"
+          }
+        ],
+        "decisionHash": "sha256:policy-denial"
+      }
+    }
+  }
+}

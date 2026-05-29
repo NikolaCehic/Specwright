@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": [
+      "ES2022"
+    ],
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "skipLibCheck": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "baseUrl": ".",
+    "paths": {
+      "@specwright/run-store": [
+        "packages/run-store/src/index.ts"
+      ],
+      "@specwright/run-store/*": [
+        "packages/run-store/src/*"
+      ],
+      "@specwright/trace-recorder": [
+        "packages/trace-recorder/src/index.ts"
+      ],
+      "@specwright/trace-recorder/*": [
+        "packages/trace-recorder/src/*"
+      ],
+      "@specwright/run-reports": [
+        "packages/run-reports/src/index.ts"
+      ],
+      "@specwright/run-reports/*": [
+        "packages/run-reports/src/*"
+      ],
+      "@specwright/evidence-store": [
+        "packages/evidence-store/src/index.ts"
+      ],
+      "@specwright/evidence-store/*": [
+        "packages/evidence-store/src/*"
+      ],
+      "@specwright/artifact-store": [
+        "packages/artifact-store/src/index.ts"
+      ],
+      "@specwright/artifact-store/*": [
+        "packages/artifact-store/src/*"
+      ],
+      "@specwright/harness-loader": [
+        "packages/harness-loader/src/index.ts"
+      ],
+      "@specwright/harness-loader/*": [
+        "packages/harness-loader/src/*"
+      ],
+      "@specwright/policy-engine": [
+        "packages/policy-engine/src/index.ts"
+      ],
+      "@specwright/policy-engine/*": [
+        "packages/policy-engine/src/*"
+      ],
+      "@specwright/gate-engine": [
+        "packages/gate-engine/src/index.ts"
+      ],
+      "@specwright/gate-engine/*": [
+        "packages/gate-engine/src/*"
+      ],
+      "@specwright/tool-broker": [
+        "packages/tool-broker/src/index.ts"
+      ],
+      "@specwright/tool-broker/*": [
+        "packages/tool-broker/src/*"
+      ],
+      "@specwright/eval-runner": [
+        "packages/eval-runner/src/index.ts"
+      ],
+      "@specwright/eval-runner/*": [
+        "packages/eval-runner/src/*"
+      ],
+      "@specwright/runtime": [
+        "packages/runtime/src/index.ts"
+      ],
+      "@specwright/runtime/*": [
+        "packages/runtime/src/*"
+      ],
+      "@specwright/adapters-cli": [
+        "packages/adapters-cli/src/index.ts"
+      ],
+      "@specwright/adapters-cli/*": [
+        "packages/adapters-cli/src/*"
+      ],
+      "@specwright/schemas": [
+        "packages/schemas/src/index.ts"
+      ],
+      "@specwright/schemas/*": [
+        "packages/schemas/src/*"
+      ]
+    }
+  },
+  "include": [
+    "packages/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/*.test.ts"
+  ]
+}

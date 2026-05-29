@@ -1,0 +1,20 @@
+{
+  "evalId": "semantic_rubric",
+  "targetRef": "artifact:summary",
+  "status": "needs_review",
+  "severity": "advisory",
+  "findings": [
+    {
+      "message": "Eval type model_assisted requires capabilities outside the deterministic EvalRunner slice",
+      "code": "eval.type.unsupported",
+      "targetRef": "artifact:summary",
+      "severity": "advisory",
+      "repairHint": "Route this eval through an explicit ToolBroker-backed or human review path."
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  }
+}

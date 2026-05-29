@@ -1,0 +1,29 @@
+{
+  "evalDefinition": {
+    "id": "artifact_completeness",
+    "type": "completeness",
+    "target": {
+      "artifactId": "summary"
+    },
+    "requiredSections": [
+      "overview",
+      "risks"
+    ],
+    "severity": "blocking"
+  },
+  "input": {
+    "artifacts": {
+      "summary": {
+        "artifactId": "summary",
+        "artifactType": "summary",
+        "content": {
+          "sections": {
+            "overview": {
+              "body": "Run overview."
+            }
+          }
+        }
+      }
+    }
+  }
+}

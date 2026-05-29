@@ -1,0 +1,62 @@
+id: eval.run
+kind: eval
+description: Run a declared deterministic eval definition and return its verdict.
+version: 0.1.0
+inputSchema:
+  type: object
+  additionalProperties: false
+  required:
+    - evalId
+  properties:
+    evalId:
+      type: string
+      minLength: 1
+    targetArtifactId:
+      type: string
+      minLength: 1
+outputSchema:
+  type: object
+  additionalProperties: false
+  required:
+    - evalId
+    - targetRef
+    - status
+    - severity
+    - findings
+    - evidenceRefs
+    - producedBy
+  properties:
+    evalId:
+      type: string
+    targetRef:
+      type: string
+    status:
+      type: string
+      enum:
+        - pass
+        - fail
+        - needs_review
+        - skipped
+    severity:
+      type: string
+      enum:
+        - advisory
+        - blocking
+    findings:
+      type: array
+    evidenceRefs:
+      type: array
+      items:
+        type: string
+    producedBy:
+      type: object
+adapter: adapters/eval-runner/run
+risk: low
+policy:
+  allowedPhases:
+    - verification
+  approval: none
+  scopes: ["eval:run"]
+observability:
+  recordArgs: true
+  recordResultHash: true

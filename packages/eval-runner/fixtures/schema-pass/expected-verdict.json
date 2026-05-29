@@ -1,0 +1,14 @@
+{
+  "evalId": "artifact_schema_eval",
+  "targetRef": "artifact:plan",
+  "status": "pass",
+  "severity": "blocking",
+  "findings": [],
+  "evidenceRefs": [
+    "evidence:brief"
+  ],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  }
+}

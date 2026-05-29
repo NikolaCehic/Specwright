@@ -1,0 +1,9 @@
+id: packaging
+description: Package eval results and the source-bound run summary.
+gates:
+  - packaging.run_report
+artifactSchemas:
+  - summary.md
+metadata:
+  expectedArtifacts:
+    - summary.md

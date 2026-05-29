@@ -1,0 +1,95 @@
+{
+  "lockfileVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "specwright",
+      "devDependencies": {
+        "typescript": "^5.6.3",
+      },
+    },
+    "packages/eval-runner": {
+      "name": "@specwright/eval-runner",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/schemas": "workspace:*",
+      },
+    },
+    "packages/gate-engine": {
+      "name": "@specwright/gate-engine",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/schemas": "workspace:*",
+      },
+    },
+    "packages/harness-loader": {
+      "name": "@specwright/harness-loader",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/schemas": "workspace:*",
+      },
+    },
+    "packages/policy-engine": {
+      "name": "@specwright/policy-engine",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/schemas": "workspace:*",
+      },
+    },
+    "packages/run-store": {
+      "name": "@specwright/run-store",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/schemas": "workspace:*",
+      },
+    },
+    "packages/runtime": {
+      "name": "@specwright/runtime",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/eval-runner": "workspace:*",
+        "@specwright/gate-engine": "workspace:*",
+        "@specwright/harness-loader": "workspace:*",
+        "@specwright/run-store": "workspace:*",
+        "@specwright/schemas": "workspace:*",
+        "@specwright/tool-broker": "workspace:*",
+      },
+    },
+    "packages/schemas": {
+      "name": "@specwright/schemas",
+      "version": "0.0.0",
+      "dependencies": {
+        "zod": "^3.22.4",
+      },
+    },
+    "packages/tool-broker": {
+      "name": "@specwright/tool-broker",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/policy-engine": "workspace:*",
+        "@specwright/schemas": "workspace:*",
+        "zod": "^3.22.4",
+      },
+    },
+  },
+  "packages": {
+    "@specwright/eval-runner": ["@specwright/eval-runner@workspace:packages/eval-runner"],
+
+    "@specwright/gate-engine": ["@specwright/gate-engine@workspace:packages/gate-engine"],
+
+    "@specwright/harness-loader": ["@specwright/harness-loader@workspace:packages/harness-loader"],
+
+    "@specwright/policy-engine": ["@specwright/policy-engine@workspace:packages/policy-engine"],
+
+    "@specwright/run-store": ["@specwright/run-store@workspace:packages/run-store"],
+
+    "@specwright/runtime": ["@specwright/runtime@workspace:packages/runtime"],
+
+    "@specwright/schemas": ["@specwright/schemas@workspace:packages/schemas"],
+
+    "@specwright/tool-broker": ["@specwright/tool-broker@workspace:packages/tool-broker"],
+
+    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
+
+    "zod": ["zod@3.25.76", "", {}, "sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ=="],
+  }
+}

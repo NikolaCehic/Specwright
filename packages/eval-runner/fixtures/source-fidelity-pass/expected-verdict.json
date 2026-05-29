@@ -1,0 +1,14 @@
+{
+  "evalId": "source_fidelity",
+  "targetRef": "artifact:ux_contract",
+  "status": "pass",
+  "severity": "blocking",
+  "findings": [],
+  "evidenceRefs": [
+    "evidence:brief#dashboard-filtering"
+  ],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  }
+}

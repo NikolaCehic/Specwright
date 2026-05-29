@@ -1,0 +1,10 @@
+id: intake
+description: Capture the task and run input before any source discovery.
+gates:
+  - intake.exit
+artifactSchemas:
+  - run-input
+next: source_discovery
+metadata:
+  expectedArtifacts:
+    - run-input.json

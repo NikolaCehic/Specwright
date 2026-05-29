@@ -1,0 +1,33 @@
+{
+  "verdict": {
+    "gateId": "tool_policy",
+    "phase": "evidence",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Policy denied gate advancement"
+    ],
+    "findings": [
+      {
+        "id": "policy_allowed_gate_evaluation",
+        "severity": "blocking",
+        "message": "Policy denied gate advancement",
+        "targetRef": "policy:gate-evaluation-policy",
+        "evidenceRefs": []
+      }
+    ],
+    "evidenceRefs": [],
+    "requiredAction": "fail_run",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    }
+  },
+  "instruction": {
+    "kind": "fail_run",
+    "gateId": "tool_policy",
+    "reason": "Policy denied gate advancement"
+  }
+}

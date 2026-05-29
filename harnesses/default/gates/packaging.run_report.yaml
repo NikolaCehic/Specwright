@@ -1,0 +1,38 @@
+id: packaging.run_report
+phase: packaging
+kind: exit
+required: true
+description: Require eval reporting and a source-bound summary artifact.
+inputs:
+  artifacts:
+    - eval-report
+    - summary.md
+  evals:
+    - artifact_schema_presence
+    - source_fidelity
+    - completeness_required_sections
+checks:
+  - id: eval_report_schema
+    type: schema
+    artifactId: eval-report
+    requiredFields:
+      - overallStatus
+      - evals
+      - requiredEvalIds
+  - id: summary_metadata_schema
+    type: schema
+    artifactId: summary.md
+    requiredFields:
+      - path
+      - contentType
+      - sections
+  - id: summary_has_evidence
+    type: evidence
+    artifactId: summary.md
+    minCount: 1
+onFail:
+  action: create_repair_task
+  repairHint: Package eval results and a summary with evidence references.
+  successGate: packaging.run_report
+onPass:
+  action: continue

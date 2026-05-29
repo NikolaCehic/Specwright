@@ -1,0 +1,13 @@
+id: evidence
+description: Record source-backed evidence and unknowns before planning.
+gates:
+  - evidence.context_sufficiency
+tools:
+  - fs.list
+  - fs.read
+artifactSchemas:
+  - evidence-graph
+next: planning
+metadata:
+  expectedArtifacts:
+    - evidence-graph.json

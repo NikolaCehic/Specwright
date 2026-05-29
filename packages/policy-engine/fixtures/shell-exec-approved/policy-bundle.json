@@ -1,0 +1,40 @@
+{
+  "id": "fixture.shell-exec",
+  "description": "Requires approval for shell execution in execution and verification phases.",
+  "toolPolicy": {
+    "shell.exec": {
+      "default": "approval_required",
+      "risk": "high",
+      "reason": "shell.exec requires explicit approval",
+      "approvalId": "appr_shell_exec_tests",
+      "allowedPhases": [
+        "execution",
+        "verification"
+      ],
+      "requiredScopes": [
+        "shell:exec"
+      ],
+      "allowedScopes": [
+        "shell:exec"
+      ],
+      "constraints": [
+        {
+          "kind": "timeoutMs",
+          "value": 120000
+        },
+        {
+          "kind": "network",
+          "value": "disabled"
+        }
+      ],
+      "obligations": [
+        {
+          "kind": "record_event",
+          "params": {
+            "eventType": "policy.evaluated"
+          }
+        }
+      ]
+    }
+  }
+}

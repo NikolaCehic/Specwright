@@ -1,0 +1,33 @@
+{
+  "verdict": {
+    "gateId": "missing_gate",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Gate definition missing_gate is missing"
+    ],
+    "findings": [
+      {
+        "id": "gate.definition.missing",
+        "severity": "blocking",
+        "message": "Gate definition missing_gate is missing",
+        "targetRef": "gate:missing_gate",
+        "evidenceRefs": []
+      }
+    ],
+    "evidenceRefs": [],
+    "requiredAction": "fail_run",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    }
+  },
+  "instruction": {
+    "kind": "fail_run",
+    "gateId": "missing_gate",
+    "reason": "Gate definition missing_gate is missing"
+  }
+}

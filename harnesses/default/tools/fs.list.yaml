@@ -1,0 +1,57 @@
+id: fs.list
+kind: filesystem
+description: List entries below a workspace path for source discovery.
+version: 0.1.0
+inputSchema:
+  type: object
+  additionalProperties: false
+  required:
+    - path
+  properties:
+    path:
+      type: string
+      minLength: 1
+outputSchema:
+  type: object
+  additionalProperties: false
+  required:
+    - path
+    - entries
+  properties:
+    path:
+      type: string
+    entries:
+      type: array
+      items:
+        type: object
+        required:
+          - name
+          - path
+          - type
+        properties:
+          name:
+            type: string
+          path:
+            type: string
+          type:
+            type: string
+            enum:
+              - file
+              - directory
+              - symlink
+              - other
+adapter: adapters/filesystem/list
+risk: low
+policy:
+  allowedPhases:
+    - source_discovery
+    - evidence
+  approval: none
+  scopes: ["workspace:read"]
+  limits:
+    timeoutMs: 30000
+cache:
+  enabled: false
+observability:
+  recordArgs: true
+  recordResultHash: true

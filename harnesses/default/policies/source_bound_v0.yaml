@@ -1,0 +1,121 @@
+id: source_bound_v0
+description: Read-only source discovery plus deterministic eval execution for the default v0 harness.
+scopes: ["workspace:read", "evidence:read", "eval:run"]
+tools:
+  - fs.list
+  - fs.read
+  - eval.run
+gates:
+  - intake.exit
+  - evidence.context_sufficiency
+  - planning.plan_schema
+  - verification.required_evals
+  - packaging.run_report
+evals:
+  - artifact_schema_presence
+  - source_fidelity
+  - completeness_required_sections
+artifactSchemas:
+  - run-input
+  - source-inventory
+  - evidence-graph
+  - plan
+  - eval-report
+  - summary.md
+runtimeInvariants:
+  - id: deny.shell.exec
+    layer: runtime_invariant
+    effect: deny
+    reason: Shell execution is outside Default Harness v0.
+    match:
+      actionKind: tool_call
+      toolId: shell.exec
+  - id: deny.fs.write
+    layer: runtime_invariant
+    effect: deny
+    reason: Filesystem writes are outside Default Harness v0.
+    match:
+      actionKind: tool_call
+      toolId: fs.write
+  - id: deny.git.branch
+    layer: runtime_invariant
+    effect: deny
+    reason: Git mutation is outside Default Harness v0.
+    match:
+      actionKind: tool_call
+      toolId: git.branch
+  - id: deny.git.commit
+    layer: runtime_invariant
+    effect: deny
+    reason: Git mutation is outside Default Harness v0.
+    match:
+      actionKind: tool_call
+      toolId: git.commit
+  - id: deny.git.push
+    layer: runtime_invariant
+    effect: deny
+    reason: Git mutation is outside Default Harness v0.
+    match:
+      actionKind: tool_call
+      toolId: git.push
+  - id: deny.network.request
+    layer: runtime_invariant
+    effect: deny
+    reason: Network actions are outside Default Harness v0.
+    match:
+      actionKind: tool_call
+      toolId: network.request
+  - id: deny.network.write
+    layer: runtime_invariant
+    effect: deny
+    reason: Network actions are outside Default Harness v0.
+    match:
+      actionKind: tool_call
+      toolId: network.write
+toolPolicy:
+  fs.list:
+    default: allow
+    risk: low
+    reason: fs.list is allowed only for source discovery and evidence collection.
+    allowedPhases:
+      - source_discovery
+      - evidence
+    requiredScopes: ["workspace:read"]
+    allowedScopes: ["workspace:read"]
+    obligations:
+      - kind: record_event
+        params:
+          eventType: tool.authorized
+      - kind: attach_trace
+  fs.read:
+    default: allow
+    risk: low
+    reason: fs.read is allowed for source discovery, evidence, and verification.
+    allowedPhases:
+      - source_discovery
+      - evidence
+      - verification
+    requiredScopes: ["workspace:read"]
+    allowedScopes: ["workspace:read", "evidence:read"]
+    constraints:
+      - kind: maxBytes
+        value: 200000
+    obligations:
+      - kind: record_event
+        params:
+          eventType: tool.authorized
+      - kind: require_evidence
+      - kind: attach_trace
+  eval.run:
+    default: allow
+    risk: low
+    reason: eval.run is allowed only during verification.
+    allowedPhases:
+      - verification
+    requiredScopes: ["eval:run"]
+    allowedScopes: ["eval:run", "evidence:read"]
+    obligations:
+      - kind: record_event
+        params:
+          eventType: eval.authorized
+      - kind: attach_trace

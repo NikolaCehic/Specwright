@@ -1,0 +1,30 @@
+{
+  "requestId": "req_budget_exceeded_approval_required",
+  "runId": "run_policy_fixture",
+  "phase": "evidence",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "args": {
+      "path": "large/source-dump.txt"
+    },
+    "requestedScopes": [
+      "workspace:read"
+    ],
+    "budgetCosts": {
+      "fileReadBytes": 200
+    }
+  },
+  "snapshots": {
+    "budgets": {
+      "fileReadBytes": {
+        "used": 900
+      }
+    },
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

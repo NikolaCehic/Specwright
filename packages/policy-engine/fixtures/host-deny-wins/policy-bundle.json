@@ -1,0 +1,34 @@
+{
+  "id": "fixture.host-deny-fs-read",
+  "description": "Host restriction denies fs.read despite lower-layer allow policy.",
+  "hostRules": [
+    {
+      "id": "host.fs_read.denied",
+      "layer": "host",
+      "effect": "deny",
+      "reason": "host policy denies fs.read",
+      "match": {
+        "actionKind": "tool_call",
+        "toolId": "fs.read"
+      }
+    }
+  ],
+  "toolPolicy": {
+    "fs.read": {
+      "default": "allow",
+      "risk": "low",
+      "reason": "fs.read is allowed for source and evidence discovery",
+      "allowedPhases": [
+        "source_discovery",
+        "evidence"
+      ],
+      "requiredScopes": [
+        "workspace:read"
+      ],
+      "allowedScopes": [
+        "workspace:read",
+        "evidence:read"
+      ]
+    }
+  }
+}

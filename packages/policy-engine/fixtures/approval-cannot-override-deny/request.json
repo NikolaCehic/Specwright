@@ -1,0 +1,31 @@
+{
+  "requestId": "req_approval_cannot_override_deny",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "git reset --hard",
+      "timeoutMs": 120000,
+      "idempotencyKey": "reset-hard"
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": [
+        {
+          "approvalId": "appr_shell_exec_tests",
+          "decision": "approved",
+          "humanMessage": "Approved by fixture, but runtime deny must still win."
+        }
+      ]
+    },
+    "sourceTrust": {}
+  }
+}

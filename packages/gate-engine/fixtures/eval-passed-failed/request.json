@@ -1,0 +1,50 @@
+{
+  "gateId": "eval_passed",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "eval_passed",
+    "phase": "verification",
+    "kind": "eval",
+    "required": true,
+    "inputs": {
+      "evals": [
+        "artifact_schema_eval"
+      ]
+    },
+    "checks": [
+      {
+        "id": "artifact_schema_eval_passed",
+        "type": "eval",
+        "evalId": "artifact_schema_eval",
+        "status": "pass",
+        "message": "Blocking eval artifact_schema_eval failed",
+        "repairHint": "Repair the artifact and rerun the blocking eval."
+      }
+    ],
+    "onFail": {
+      "action": "create_repair_task",
+      "successGate": "eval_passed"
+    }
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "verification",
+    "evals": {
+      "artifact_schema_eval": {
+        "evalId": "artifact_schema_eval",
+        "targetRef": "artifact:plan_artifact",
+        "status": "fail",
+        "severity": "blocking",
+        "findings": [
+          {
+            "message": "artifact missing steps",
+            "code": "missing_required_field",
+            "evidenceRefs": [
+              "evidence:plan"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

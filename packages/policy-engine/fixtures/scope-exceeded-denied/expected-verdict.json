@@ -1,0 +1,29 @@
+{
+  "status": "deny",
+  "reasons": [
+    "Tool fs.read requested scope workspace:write:direct outside policy"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "deny",
+      "reason": "Tool fs.read requested scope workspace:write:direct outside policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed for source and evidence discovery"
+    }
+  ],
+  "decisionHash": "sha256:88eff02dbef0d186f8fc230faa6b3040fa4834315750363459639ac49e6e078c"
+}

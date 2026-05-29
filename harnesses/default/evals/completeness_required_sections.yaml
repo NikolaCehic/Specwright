@@ -1,0 +1,29 @@
+id: completeness_required_sections
+description: Ensure the plan includes the minimum reviewable planning sections.
+type: completeness
+target:
+  artifactId: plan
+artifactSchemas:
+  - plan
+requiredArtifacts:
+  - plan
+requiredSections:
+  - goal
+  - evidence
+  - steps
+  - risks
+  - verification
+sectionsPath: sections
+blocking: true
+checks:
+  - id: plan_sections_complete
+    type: completeness
+    sectionsPath: sections
+    requiredSections:
+      - goal
+      - evidence
+      - steps
+      - risks
+      - verification
+onFail:
+  action: create_repair_task

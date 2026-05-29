@@ -1,0 +1,26 @@
+{
+  "evalDefinition": {
+    "id": "semantic_rubric",
+    "type": "model_assisted",
+    "target": {
+      "artifactId": "summary"
+    },
+    "rubric": "Check whether the summary is persuasive.",
+    "severity": "advisory"
+  },
+  "input": {
+    "artifacts": {
+      "summary": {
+        "artifactId": "summary",
+        "artifactType": "summary",
+        "content": {
+          "sections": {
+            "overview": {
+              "body": "Run overview."
+            }
+          }
+        }
+      }
+    }
+  }
+}

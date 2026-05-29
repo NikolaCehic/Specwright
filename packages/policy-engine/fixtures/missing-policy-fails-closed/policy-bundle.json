@@ -1,0 +1,4 @@
+{
+  "id": "fixture.missing-policy",
+  "description": "Intentionally omits tool policy to prove fail-closed behavior."
+}

@@ -1,0 +1,44 @@
+{
+  "status": "deny",
+  "reasons": [
+    "host policy denies fs.read"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "workspace:read",
+        "evidence:read"
+      ],
+      "sourceRuleId": "tool.fs.read.scope"
+    }
+  ],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "host.fs_read.denied",
+      "layer": "host",
+      "effect": "deny",
+      "reason": "host policy denies fs.read"
+    },
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool fs.read scopes are within policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed for source and evidence discovery"
+    }
+  ],
+  "decisionHash": "sha256:1b538f01f88829a1174ba8e93eb529048543c871ae73f47a13aa072257b846a3"
+}

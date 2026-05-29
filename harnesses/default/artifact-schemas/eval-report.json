@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "eval-report",
+  "version": "0.1.0",
+  "title": "Eval Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["overallStatus", "requiredEvalIds", "evals"],
+  "properties": {
+    "overallStatus": {
+      "type": "string",
+      "enum": ["pass", "fail", "needs_review", "skipped"]
+    },
+    "requiredEvalIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "evals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evalId", "status", "severity", "evidenceRefs"],
+        "properties": {
+          "evalId": {
+            "type": "string"
+          },
+          "targetRef": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["pass", "fail", "needs_review", "skipped"]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["advisory", "blocking"]
+          },
+          "findings": {
+            "type": "array"
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}

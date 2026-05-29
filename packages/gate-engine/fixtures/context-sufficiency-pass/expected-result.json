@@ -1,0 +1,25 @@
+{
+  "verdict": {
+    "gateId": "context_sufficiency",
+    "phase": "evidence",
+    "status": "pass",
+    "severity": "blocking",
+    "reasons": [
+      "Gate context_sufficiency passed"
+    ],
+    "findings": [],
+    "evidenceRefs": [
+      "source:requirements"
+    ],
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    }
+  },
+  "instruction": {
+    "kind": "continue",
+    "gateId": "context_sufficiency"
+  }
+}

@@ -1,0 +1,30 @@
+id: verification.required_evals
+phase: verification
+kind: eval
+required: true
+description: Require all blocking evals to pass before packaging.
+inputs:
+  evals:
+    - artifact_schema_presence
+    - source_fidelity
+    - completeness_required_sections
+checks:
+  - id: artifact_schema_presence_passed
+    type: eval
+    evalId: artifact_schema_presence
+    status: pass
+  - id: source_fidelity_passed
+    type: eval
+    evalId: source_fidelity
+    status: pass
+  - id: completeness_required_sections_passed
+    type: eval
+    evalId: completeness_required_sections
+    status: pass
+onFail:
+  action: create_repair_task
+  repairHint: Repair the plan or evidence graph, then rerun the blocking evals.
+  successGate: verification.required_evals
+onPass:
+  action: transition_phase
+  targetPhase: packaging

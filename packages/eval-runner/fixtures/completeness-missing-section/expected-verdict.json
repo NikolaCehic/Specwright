@@ -1,0 +1,21 @@
+{
+  "evalId": "artifact_completeness",
+  "targetRef": "artifact:summary",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "message": "Artifact is missing required sections: risks",
+      "code": "artifact.sections.missing",
+      "targetRef": "artifact:summary",
+      "path": "$.sections",
+      "severity": "blocking",
+      "repairHint": "Add the missing sections before this artifact can pass completeness."
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  }
+}

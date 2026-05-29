@@ -1,0 +1,22 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@specwright/run-store": [
+        "../run-store/dist/index.d.ts"
+      ],
+      "@specwright/run-store/*": [
+        "../run-store/dist/*"
+      ],
+      "@specwright/schemas": [
+        "../schemas/dist/index.d.ts"
+      ],
+      "@specwright/schemas/*": [
+        "../schemas/dist/*"
+      ]
+    }
+  }
+}

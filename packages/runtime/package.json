@@ -1,0 +1,34 @@
+{
+  "name": "@specwright/runtime",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json --pretty false",
+    "typecheck": "tsc --noEmit -p tsconfig.json --pretty false",
+    "test": "bun test src/index.test.ts"
+  },
+  "dependencies": {
+    "@specwright/artifact-store": "workspace:*",
+    "@specwright/evidence-store": "workspace:*",
+    "@specwright/eval-runner": "workspace:*",
+    "@specwright/gate-engine": "workspace:*",
+    "@specwright/harness-loader": "workspace:*",
+    "@specwright/run-reports": "workspace:*",
+    "@specwright/run-store": "workspace:*",
+    "@specwright/schemas": "workspace:*",
+    "@specwright/trace-recorder": "workspace:*",
+    "@specwright/tool-broker": "workspace:*"
+  }
+}

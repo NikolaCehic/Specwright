@@ -1,0 +1,17 @@
+{
+  "status": "deny",
+  "reasons": [
+    "No applicable policy exists for risky action network.write"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "runtime.missing_policy.fail_closed",
+      "layer": "runtime_invariant",
+      "effect": "deny",
+      "reason": "No applicable policy exists for risky action network.write"
+    }
+  ],
+  "decisionHash": "sha256:02e3d829759056589a15adcc00fd3d6898044fd0552a63294022afc48d548773"
+}

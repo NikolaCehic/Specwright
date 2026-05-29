@@ -1,0 +1,69 @@
+{
+  "gateId": "context_sufficiency",
+  "phase": "evidence",
+  "gateDefinition": {
+    "id": "context_sufficiency",
+    "phase": "evidence",
+    "kind": "exit",
+    "required": true,
+    "inputs": [
+      "run_input",
+      "evidence_graph"
+    ],
+    "checks": [
+      {
+        "id": "goal_known",
+        "type": "deterministic",
+        "path": "$.run_input.task",
+        "condition": "present",
+        "message": "Target task is required before planning"
+      },
+      {
+        "id": "source_authority_known",
+        "type": "deterministic",
+        "path": "$.evidence_graph.sources[*].authority",
+        "condition": "present",
+        "evidenceRefs": [
+          "source:requirements"
+        ]
+      },
+      {
+        "id": "context_evidence_covered",
+        "type": "evidence",
+        "artifactId": "context",
+        "minCount": 1
+      }
+    ],
+    "onFail": {
+      "action": "request_clarification",
+      "questionTemplate": "I need the target task and source authority before planning."
+    }
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "evidence",
+    "runInput": {
+      "task": ""
+    },
+    "artifacts": {
+      "context": {
+        "artifactId": "context",
+        "artifactType": "evidence_graph",
+        "evidenceRefs": [
+          "source:requirements"
+        ],
+        "content": {
+          "summary": "Source exists, but task is missing"
+        }
+      }
+    },
+    "evidence": {
+      "sources": [
+        {
+          "id": "source:requirements",
+          "authority": "vault"
+        }
+      ]
+    }
+  }
+}

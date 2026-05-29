@@ -1,0 +1,56 @@
+id: specwright.default
+version: 0.1.0
+schemaVersion: specwright.harness.v0
+runtime:
+  strict: true
+  eventLog: append-only
+  requireEvidenceForClaims: true
+  failClosed: true
+  modelOutputAuthority: proposal_only
+  lifecycleAuthority:
+    policyEngine: true
+    gateEngine: true
+initialPhase: intake
+phases:
+  - intake
+  - source_discovery
+  - evidence
+  - planning
+  - verification
+  - packaging
+gates:
+  - intake.exit
+  - evidence.context_sufficiency
+  - planning.plan_schema
+  - verification.required_evals
+  - packaging.run_report
+policies:
+  - source_bound_v0
+tools:
+  allow:
+    - fs.list
+    - fs.read
+    - eval.run
+artifactSchemas:
+  - run-input
+  - source-inventory
+  - evidence-graph
+  - plan
+  - eval-report
+  - summary.md
+evals:
+  - artifact_schema_presence
+  - source_fidelity
+  - completeness_required_sections
+metadata:
+  description: Minimal source-bound planning harness for runtime strictness.
+  omittedFutureTools:
+    model.generate: Omitted until model tool schemas and a broker adapter exist.
+  deniedByOmission:
+    - shell.exec
+    - fs.write
+    - git.branch
+    - git.commit
+    - git.push
+    - network.request
+    - network.write

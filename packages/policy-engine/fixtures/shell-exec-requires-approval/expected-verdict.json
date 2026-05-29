@@ -1,0 +1,56 @@
+{
+  "status": "approval_required",
+  "reasons": [
+    "shell.exec requires explicit approval"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "shell:exec"
+      ],
+      "sourceRuleId": "tool.shell.exec.scope"
+    },
+    {
+      "kind": "timeoutMs",
+      "value": 120000,
+      "sourceRuleId": "tool.shell.exec.default"
+    },
+    {
+      "kind": "network",
+      "value": "disabled",
+      "sourceRuleId": "tool.shell.exec.default"
+    }
+  ],
+  "obligations": [
+    {
+      "kind": "record_event",
+      "params": {
+        "eventType": "policy.evaluated"
+      },
+      "sourceRuleId": "tool.shell.exec.default"
+    }
+  ],
+  "matchedRules": [
+    {
+      "ruleId": "tool.shell.exec.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool shell.exec is allowed in phase verification"
+    },
+    {
+      "ruleId": "tool.shell.exec.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool shell.exec scopes are within policy"
+    },
+    {
+      "ruleId": "tool.shell.exec.default",
+      "layer": "capability",
+      "effect": "approval_required",
+      "reason": "shell.exec requires explicit approval"
+    }
+  ],
+  "decisionHash": "sha256:246d79c6f67f414d57376289fb42d6ac39e8b22869c0575e1ed90a0768891fd3",
+  "approvalId": "appr_shell_exec_tests"
+}
