@@ -70,6 +70,84 @@ export const SourceAuthoritySchema = z.enum([
 ]);
 export type SourceAuthority = z.infer<typeof SourceAuthoritySchema>;
 
+export const RedactionClassSchema = z.enum([
+  "model",
+  "adapter",
+  "operator",
+  "audit",
+  "restricted",
+  "secret"
+]);
+export type RedactionClass = z.infer<typeof RedactionClassSchema>;
+
+const redactionClassOrder = {
+  model: 0,
+  adapter: 1,
+  operator: 2,
+  audit: 3,
+  restricted: 4,
+  secret: 5
+} satisfies Record<RedactionClass, number>;
+
+export function redactionClassRank(redactionClass: RedactionClass) {
+  return redactionClassOrder[redactionClass];
+}
+
+export function redactionClassAtLeast(
+  candidate: RedactionClass,
+  minimum: RedactionClass
+) {
+  return redactionClassRank(candidate) >= redactionClassRank(minimum);
+}
+
+export const isRedactionAtLeast = redactionClassAtLeast;
+
+export function claimLevelRequiresEvidence(level: ClaimLevel) {
+  switch (level) {
+    case "source_fact":
+    case "derived_fact":
+    case "inference":
+    case "human_decision":
+      return true;
+    case "assumption":
+    case "unknown":
+      return false;
+    default:
+      assertNever(level);
+  }
+}
+
+export function evidenceClassRequiresSourceRefs(evidenceClass: EvidenceClass) {
+  switch (evidenceClass) {
+    case "source_fact":
+    case "derived_fact":
+      return true;
+    case "inference":
+    case "assumption":
+    case "human_decision":
+    case "unknown":
+    case "conflict":
+      return false;
+    default:
+      assertNever(evidenceClass);
+  }
+}
+
+export function isTrustedSourceAuthority(authority: SourceAuthority) {
+  switch (authority) {
+    case "user":
+    case "repo":
+    case "design":
+    case "external":
+      return true;
+    case "model":
+    case "generated":
+      return false;
+    default:
+      assertNever(authority);
+  }
+}
+
 export const EvalVerdictStatusSchema = z.enum([
   "pass",
   "fail",
@@ -436,19 +514,52 @@ export const ArtifactInputSchema = z
   .strict();
 export type ArtifactInput = z.infer<typeof ArtifactInputSchema>;
 
-export const SourceRefSchema = z.union([
-  nonEmptyString,
-  z
-    .object({
-      id: nonEmptyString.optional(),
-      uri: nonEmptyString.optional(),
-      path: nonEmptyString.optional(),
-      locator: nonEmptyString.optional(),
-      contentHash: nonEmptyString.optional(),
-      metadata: MetadataSchema.optional()
-    })
-    .passthrough()
+const RedactionPolicySchema = z.union([
+  RedactionClassSchema,
+  z.record(nonEmptyString, RedactionClassSchema)
 ]);
+export type RedactionPolicy = z.infer<typeof RedactionPolicySchema>;
+
+const SourceRefObjectSchema = z
+  .object({
+    id: nonEmptyString.optional(),
+    uri: nonEmptyString.optional(),
+    path: nonEmptyString.optional(),
+    locator: nonEmptyString.optional(),
+    contentHash: nonEmptyString.optional(),
+    authority: SourceAuthoritySchema,
+    captureToolCallId: nonEmptyString.optional(),
+    redactionClass: RedactionClassSchema,
+    snapshotTimestamp: z.string().datetime({ offset: true }).optional(),
+    externalTrustPolicy: nonEmptyString.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict()
+  .superRefine((sourceRef, context) => {
+    if (
+      sourceRef.id === undefined &&
+      sourceRef.uri === undefined &&
+      sourceRef.path === undefined &&
+      sourceRef.contentHash === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Source refs must include id, uri, path, or contentHash"
+      });
+    }
+
+    if (
+      sourceRef.authority === "external" &&
+      sourceRef.externalTrustPolicy === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "external source refs must include externalTrustPolicy"
+      });
+    }
+  });
+
+export const SourceRefSchema = z.union([nonEmptyString, SourceRefObjectSchema]);
 export type SourceRef = z.infer<typeof SourceRefSchema>;
 
 export const CreatedBySchema = z
@@ -469,9 +580,81 @@ export const EvidenceRecordSchema = z
     confidence: EvidenceConfidenceSchema,
     authority: SourceAuthoritySchema,
     createdBy: CreatedBySchema,
+    extractionMethod: nonEmptyString.optional(),
+    validationStatus: nonEmptyString.optional(),
+    referencedArtifactRefs: z.array(nonEmptyString).optional(),
+    referencedToolCallIds: z.array(nonEmptyString).optional(),
+    redactionPolicy: RedactionPolicySchema,
+    conflictGroup: nonEmptyString.optional(),
+    unknownReason: nonEmptyString.optional(),
+    supersedesEvidenceId: nonEmptyString.optional(),
+    supersededByEvidenceId: nonEmptyString.optional(),
+    supersessionReason: nonEmptyString.optional(),
     metadata: MetadataSchema.optional()
   })
-  .strict();
+  .strict()
+  .superRefine((record, context) => {
+    if (
+      evidenceClassRequiresSourceRefs(record.class) &&
+      record.sourceRefs.length === 0
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${record.class} evidence must include sourceRefs`,
+        path: ["sourceRefs"]
+      });
+    }
+
+    if (record.class === "conflict") {
+      if (record.conflictGroup === undefined) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "conflict evidence must include conflictGroup",
+          path: ["conflictGroup"]
+        });
+      }
+
+      if (record.sourceRefs.length < 2) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "conflict evidence must include at least two sourceRefs",
+          path: ["sourceRefs"]
+        });
+      }
+    }
+
+    if (record.class === "unknown" && record.unknownReason === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "unknown evidence must include unknownReason",
+        path: ["unknownReason"]
+      });
+    }
+
+    if (
+      record.class === "source_fact" &&
+      !isTrustedSourceAuthority(record.authority)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "source_fact evidence cannot use model or generated authority",
+        path: ["authority"]
+      });
+    }
+
+    if (record.class === "source_fact") {
+      for (const [index, sourceRef] of record.sourceRefs.entries()) {
+        if (!sourceRefCarriesTrustedAuthority(sourceRef)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message:
+              "source_fact evidence sourceRefs must carry trusted authority",
+            path: ["sourceRefs", index]
+          });
+        }
+      }
+    }
+  });
 export type EvidenceRecord = z.infer<typeof EvidenceRecordSchema>;
 
 export const MvpArtifactTypeSchema = z.enum([
@@ -511,9 +694,53 @@ export const ArtifactClaimSchema = z
     evidenceRefs: z.array(nonEmptyString),
     confidence: EvidenceConfidenceSchema,
     authority: SourceAuthoritySchema,
+    owningArtifactId: nonEmptyString,
+    fieldPath: nonEmptyString.optional(),
+    owningSection: nonEmptyString.optional(),
+    verificationStatus: z.enum([
+      "unverified",
+      "supported",
+      "unsupported",
+      "conflicted",
+      "unknown"
+    ]),
+    redactionPolicy: RedactionPolicySchema,
     metadata: MetadataSchema.optional()
   })
-  .strict();
+  .strict()
+  .superRefine((claim, context) => {
+    if (
+      claim.fieldPath === undefined &&
+      claim.owningSection === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "important claims must include fieldPath or owningSection"
+      });
+    }
+
+    if (
+      claimLevelRequiresEvidence(claim.claimLevel) &&
+      claim.evidenceRefs.length === 0
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${claim.claimLevel} important claims must include evidenceRefs`,
+        path: ["evidenceRefs"]
+      });
+    }
+
+    if (
+      claim.claimLevel === "source_fact" &&
+      !isTrustedSourceAuthority(claim.authority)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "source_fact claims cannot use model or generated authority",
+        path: ["authority"]
+      });
+    }
+  });
 export type ArtifactClaim = z.infer<typeof ArtifactClaimSchema>;
 
 export const ArtifactRecordSchema = z
@@ -526,6 +753,7 @@ export const ArtifactRecordSchema = z
     claimLevel: ClaimLevelSchema.optional(),
     importantClaims: z.array(ArtifactClaimSchema).optional(),
     producedBy: ArtifactProducedBySchema,
+    redactionPolicy: RedactionPolicySchema,
     metadata: MetadataSchema
   })
   .strict()
@@ -536,8 +764,81 @@ export const ArtifactRecordSchema = z
         message: "Artifact records must include content or fileRef"
       });
     }
+
+    if (
+      record.claimLevel !== undefined &&
+      claimLevelRequiresEvidence(record.claimLevel) &&
+      record.evidenceRefs.length === 0
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `${record.claimLevel} artifact claims must include evidenceRefs`,
+        path: ["evidenceRefs"]
+      });
+    }
+
+    for (const [index, evidenceRef] of record.evidenceRefs.entries()) {
+      if (isSelfCitingEvidenceRef(record, evidenceRef)) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Artifact ${record.artifactId} cannot cite itself as evidence`,
+          path: ["evidenceRefs", index]
+        });
+      }
+    }
+
+    for (const [claimIndex, claim] of (
+      record.importantClaims ?? []
+    ).entries()) {
+      if (claim.owningArtifactId !== record.artifactId) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "important claims must reference their owning artifact",
+          path: ["importantClaims", claimIndex, "owningArtifactId"]
+        });
+      }
+
+      for (const [evidenceRefIndex, evidenceRef] of claim.evidenceRefs.entries()) {
+        if (isSelfCitingEvidenceRef(record, evidenceRef)) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Artifact ${record.artifactId} cannot cite itself as evidence`,
+            path: [
+              "importantClaims",
+              claimIndex,
+              "evidenceRefs",
+              evidenceRefIndex
+            ]
+          });
+        }
+      }
+    }
   });
 export type ArtifactRecord = z.infer<typeof ArtifactRecordSchema>;
+
+export function isSelfCitingEvidenceRef(
+  record: Pick<ArtifactRecord, "artifactId" | "artifactType" | "fileRef">,
+  evidenceRef: string
+) {
+  const selfRefs = [
+    record.artifactId,
+    `artifact:${record.artifactId}`,
+    `artifact:${record.artifactType}`,
+    record.fileRef?.uri,
+    record.fileRef === undefined ? undefined : `artifact:${record.fileRef.uri}`
+  ].filter((value): value is string => value !== undefined);
+
+  return selfRefs.some(
+    (selfRef) => evidenceRef === selfRef || evidenceRef.startsWith(`${selfRef}#`)
+  );
+}
+
+function sourceRefCarriesTrustedAuthority(sourceRef: SourceRef) {
+  return (
+    typeof sourceRef !== "string" &&
+    isTrustedSourceAuthority(sourceRef.authority)
+  );
+}
 
 export const EvalFindingSchema = z
   .object({
@@ -1341,4 +1642,8 @@ export function runtimeEventSchema<TPayloadSchema extends ZodTypeAny>(
   return RuntimeEventEnvelopeSchema.extend({
     payload: payloadSchema
   });
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled contract value: ${String(value)}`);
 }

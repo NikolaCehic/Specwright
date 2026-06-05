@@ -25,6 +25,7 @@ afterEach(async () => {
 describe("evidence store", () => {
   test("records and reads evidence under the run package", async () => {
     const record = sourceFact("evidence:repo:package-json");
+    const expected = withStoreDefaults(record);
 
     await appendEvidence({
       rootDir,
@@ -38,7 +39,7 @@ describe("evidence store", () => {
         runId: "run-evidence",
         evidenceId: record.id
       })
-    ).toEqual(record);
+    ).toEqual(expected);
 
     const paths = getEvidenceStorePaths(rootDir, "run-evidence");
     const rawIndex = await readFile(paths.indexPath, "utf8");
@@ -61,11 +62,14 @@ describe("evidence store", () => {
     expect(stored.sourceRefs).toEqual([
       {
         path: "app/layout.tsx",
-        locator: "dependencies.next"
+        locator: "dependencies.next",
+        authority: "repo",
+        redactionClass: "operator",
+        captureToolCallId: "tool-call-1"
       }
     ]);
     expect(await listEvidence({ rootDir, runId: "run-source-fact" })).toEqual([
-      record
+      withStoreDefaults(record)
     ]);
   });
 
@@ -111,6 +115,93 @@ describe("evidence store", () => {
       "unsupported_source_fact"
     );
   });
+
+  test("rejects source facts with untrusted source-ref authority before write", async () => {
+    const paths = getEvidenceStorePaths(rootDir, "run-untrusted-source-ref");
+    const error = await captureError(() =>
+      appendEvidence({
+        rootDir,
+        runId: "run-untrusted-source-ref",
+        record: {
+          ...sourceFact("evidence:repo:untrusted-source-ref"),
+          sourceRefs: [
+            {
+              path: "app/layout.tsx",
+              locator: "dependencies.next",
+              authority: "model",
+              redactionClass: "operator"
+            }
+          ]
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(EvidenceStoreError);
+    expect((error as EvidenceStoreError).code).toBe(
+      "unsupported_source_fact"
+    );
+    await expect(readFile(paths.indexPath, "utf8")).rejects.toThrow();
+  });
+
+  test("rejects conflict evidence without conflicting source cardinality", async () => {
+    const error = await captureError(() =>
+      appendEvidence({
+        rootDir,
+        runId: "run-conflict-cardinality",
+        record: {
+          id: "evidence:conflict:single-source",
+          class: "conflict",
+          claim: "Two source files disagree about the exported API.",
+          sourceRefs: [
+            {
+              path: "app/layout.tsx",
+              locator: "exports",
+              authority: "repo",
+              redactionClass: "operator"
+            }
+          ],
+          confidence: "medium",
+          authority: "repo",
+          redactionPolicy: "operator",
+          conflictGroup: "exports-api",
+          createdBy: {
+            phase: "evidence",
+            actionId: "compare-sources"
+          }
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(EvidenceStoreError);
+    expect((error as EvidenceStoreError).code).toBe(
+      "unsupported_source_fact"
+    );
+  });
+
+  test("rejects unknown evidence without a question or gap", async () => {
+    const error = await captureError(() =>
+      appendEvidence({
+        rootDir,
+        runId: "run-unknown-gap",
+        record: {
+          id: "evidence:unknown:gap",
+          class: "unknown",
+          claim: "The rendered browser state is not known.",
+          sourceRefs: [],
+          confidence: "low",
+          authority: "model",
+          redactionPolicy: "operator",
+          createdBy: {
+            phase: "verification",
+            actionId: "record-gap"
+          }
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(EvidenceStoreError);
+    expect((error as EvidenceStoreError).code).toBe("invalid_evidence");
+  });
 });
 
 function sourceFact(id: string): EvidenceRecord {
@@ -130,7 +221,26 @@ function sourceFact(id: string): EvidenceRecord {
       phase: "evidence",
       actionId: "read-package-json",
       toolCallId: "tool-call-1"
-    }
+    },
+    redactionPolicy: "operator"
+  };
+}
+
+function withStoreDefaults(record: EvidenceRecord): EvidenceRecord {
+  return {
+    ...record,
+    redactionPolicy: record.redactionPolicy ?? "operator",
+    sourceRefs: record.sourceRefs.map((sourceRef) =>
+      typeof sourceRef === "string"
+        ? sourceRef
+        : {
+            ...sourceRef,
+            authority: sourceRef.authority ?? record.authority,
+            redactionClass: sourceRef.redactionClass ?? "operator",
+            captureToolCallId:
+              sourceRef.captureToolCallId ?? record.createdBy.toolCallId
+          }
+    )
   };
 }
 

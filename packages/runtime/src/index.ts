@@ -982,11 +982,14 @@ function taskEvidenceRecord(input: RunInput, phase: string): EvidenceRecord {
       {
         id: "run-input.task",
         uri: "artifacts/run-input.json",
-        locator: "task"
+        locator: "task",
+        authority: "user",
+        redactionClass: "operator"
       }
     ],
     confidence: "high",
     authority: "user",
+    redactionPolicy: "operator",
     createdBy: {
       phase,
       actionId: "start-run"

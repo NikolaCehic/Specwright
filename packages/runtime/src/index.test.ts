@@ -512,6 +512,8 @@ function unknownEvidence() {
     sourceRefs: [],
     confidence: "low",
     authority: "generated",
+    unknownReason: "No browser-rendered state inspection was recorded.",
+    redactionPolicy: "operator",
     createdBy: {
       phase: "verification",
       actionId: "record-unknown"

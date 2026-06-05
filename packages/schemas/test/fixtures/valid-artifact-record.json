@@ -1,0 +1,31 @@
+{
+  "artifactId": "plan",
+  "artifactType": "plan",
+  "content": {
+    "goal": "Prove artifact claims are source-bound.",
+    "steps": ["read package.json", "record evidence", "write plan"]
+  },
+  "evidenceRefs": ["evidence:repo:package-json"],
+  "claimLevel": "derived_fact",
+  "importantClaims": [
+    {
+      "claim": "The repository declares a runnable package script.",
+      "claimLevel": "source_fact",
+      "evidenceRefs": ["evidence:repo:package-json"],
+      "confidence": "high",
+      "authority": "repo",
+      "owningArtifactId": "plan",
+      "fieldPath": "content.steps.0",
+      "verificationStatus": "supported",
+      "redactionPolicy": "operator"
+    }
+  ],
+  "producedBy": {
+    "phase": "planning",
+    "actionId": "record-plan"
+  },
+  "redactionPolicy": "operator",
+  "metadata": {
+    "canonicalName": "plan.json"
+  }
+}

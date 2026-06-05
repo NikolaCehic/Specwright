@@ -45,6 +45,14 @@ Unknown-field posture is recorded under extension points. `metadata` means the d
 | `EvidenceConfidence` | type | evidence | artifact | public | 07 Evidence Store | durable | same as schema | Inferred type for `EvidenceConfidenceSchema`. |
 | `SourceAuthoritySchema` | enum | evidence | governance | public | 07 Evidence Store | durable | none | Authority carried by source-backed claims. |
 | `SourceAuthority` | type | evidence | governance | public | 07 Evidence Store | durable | same as schema | Inferred type for `SourceAuthoritySchema`. |
+| `RedactionClassSchema` | enum | evidence | governance | public | 01 Shared Schemas | durable | none | Visibility class for artifact/evidence trust labels. |
+| `RedactionClass` | type | evidence | governance | public | 01 Shared Schemas | durable | same as schema | Inferred type for `RedactionClassSchema`. |
+| `redactionClassRank` | function | evidence | governance | public | 01 Shared Schemas | transient | none | Deterministic ordering helper for redaction classes. |
+| `redactionClassAtLeast` | function | evidence | governance | public | 01 Shared Schemas | transient | none | Compares redaction classes by contract ordering. |
+| `isRedactionAtLeast` | const | evidence | governance | public | 01 Shared Schemas | transient | none | Alias for comparing redaction classes by minimum visibility. |
+| `claimLevelRequiresEvidence` | function | artifact | evidence | public | 01 Shared Schemas | transient | none | Shared predicate for important-claim evidence requirements. |
+| `evidenceClassRequiresSourceRefs` | function | evidence | artifact | public | 01 Shared Schemas | transient | none | Shared predicate for evidence-class source-ref requirements. |
+| `isTrustedSourceAuthority` | function | evidence | governance | public | 01 Shared Schemas | transient | none | Shared predicate for source authority trustedness. |
 | `EvalVerdictStatusSchema` | enum | verification | lifecycle | public | 07 Eval Runner | durable | none | Eval result status. |
 | `EvalVerdictStatus` | type | verification | lifecycle | public | 07 Eval Runner | durable | same as schema | Inferred type for `EvalVerdictStatusSchema`. |
 | `EvalSeveritySchema` | enum | verification | lifecycle | public | 07 Eval Runner / 05 Gate Engine | durable | none | Blocking/advisory eval severity. |
@@ -106,6 +114,7 @@ Unknown-field posture is recorded under extension points. `metadata` means the d
 | `ArtifactInput` | type | artifact | evidence | public | Artifact Store | transient | same as schema | Inferred type for `ArtifactInputSchema`. |
 | `SourceRefSchema` | schema | evidence | identity | public | 07 Evidence Store | durable | object variant metadata; passthrough | Source pointer primitive. |
 | `SourceRef` | type | evidence | identity | public | 07 Evidence Store | durable | same as schema | Inferred type for `SourceRefSchema`. |
+| `RedactionPolicy` | type | evidence | governance | public | 01 Shared Schemas | durable | same as schema | Inferred type for artifact/evidence redaction policy fields. |
 | `CreatedBySchema` | schema | evidence | observability | public | 07 Evidence Store | durable | strict | Evidence producer reference. |
 | `CreatedBy` | type | evidence | observability | public | 07 Evidence Store | durable | same as schema | Inferred type for `CreatedBySchema`. |
 | `EvidenceRecordSchema` | schema | evidence | observability | public | 07 Evidence Store | durable | metadata; strict | Canonical evidence record. |
@@ -120,6 +129,7 @@ Unknown-field posture is recorded under extension points. `metadata` means the d
 | `ArtifactClaim` | type | artifact | evidence | public | Artifact Store / 07 Evidence Store | durable | same as schema | Inferred type for `ArtifactClaimSchema`. |
 | `ArtifactRecordSchema` | schema | artifact | evidence | public | Artifact Store | durable | metadata required; strict | Canonical artifact record. |
 | `ArtifactRecord` | type | artifact | evidence | public | Artifact Store | durable | same as schema | Inferred type for `ArtifactRecordSchema`. |
+| `isSelfCitingEvidenceRef` | function | artifact | evidence | public | 01 Shared Schemas | transient | none | Shared predicate for artifact self-citation checks. |
 | `EvalFindingSchema` | schema | verification | evidence | public | 07 Eval Runner | durable | metadata; strict | Eval finding inside verdicts. |
 | `EvalFinding` | type | verification | evidence | public | 07 Eval Runner | durable | same as schema | Inferred type for `EvalFindingSchema`. |
 | `EvalProducedBySchema` | schema | verification | observability | public | 07 Eval Runner | durable | strict | Eval producer reference. |

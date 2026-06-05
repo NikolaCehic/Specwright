@@ -2,8 +2,8 @@ import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   EvidenceRecordSchema,
-  type EvidenceClass,
-  type EvidenceRecord
+  type EvidenceRecord,
+  type SourceRef
 } from "@specwright/schemas";
 import { getRunStorePaths } from "@specwright/run-store";
 
@@ -110,7 +110,7 @@ export function getEvidenceStorePaths(
 export async function appendEvidence(
   options: AppendEvidenceOptions
 ): Promise<EvidenceRecord> {
-  const record = validateEvidenceRecord(options.record);
+  const record = validateEvidenceRecord(withEvidenceDefaults(options.record));
   const paths = getEvidenceStorePaths(options.rootDir, options.runId);
   const uri = evidenceRecordUri(record.id);
 
@@ -198,6 +198,18 @@ export function validateEvidenceRecord(record: EvidenceRecord): EvidenceRecord {
   const parsed = EvidenceRecordSchema.safeParse(record);
 
   if (!parsed.success) {
+    const unsupportedSourceFactIssue = parsed.error.issues.find((issue) =>
+      isUnsupportedSourceFactMessage(issue.message)
+    );
+
+    if (unsupportedSourceFactIssue !== undefined) {
+      throw new EvidenceStoreError(
+        "unsupported_source_fact",
+        unsupportedSourceFactIssue.message,
+        parsed.error
+      );
+    }
+
     throw new EvidenceStoreError(
       "invalid_evidence",
       "Evidence record does not match the evidence schema",
@@ -205,40 +217,45 @@ export function validateEvidenceRecord(record: EvidenceRecord): EvidenceRecord {
     );
   }
 
-  const evidence = parsed.data;
-  assertEvidenceSupport(evidence);
-
-  return evidence;
+  return parsed.data;
 }
 
-function assertEvidenceSupport(record: EvidenceRecord) {
-  if (requiresSourceRefs(record.class) && record.sourceRefs.length === 0) {
-    throw new EvidenceStoreError(
-      "unsupported_source_fact",
-      `${record.class} evidence must include sourceRefs`
-    );
-  }
-
-  if (record.class === "conflict" && record.sourceRefs.length < 2) {
-    throw new EvidenceStoreError(
-      "unsupported_source_fact",
-      "conflict evidence must include at least two sourceRefs"
-    );
-  }
-
-  if (
-    record.class === "source_fact" &&
-    (record.authority === "model" || record.authority === "generated")
-  ) {
-    throw new EvidenceStoreError(
-      "unsupported_source_fact",
-      "source_fact evidence cannot use model or generated authority"
-    );
-  }
+function withEvidenceDefaults(record: EvidenceRecord): EvidenceRecord {
+  return {
+    ...record,
+    redactionPolicy: record.redactionPolicy ?? "operator",
+    sourceRefs: record.sourceRefs.map((sourceRef) =>
+      normalizeSourceRef(sourceRef, record)
+    )
+  };
 }
 
-function requiresSourceRefs(evidenceClass: EvidenceClass) {
-  return evidenceClass === "source_fact" || evidenceClass === "derived_fact";
+function normalizeSourceRef(
+  sourceRef: SourceRef,
+  record: EvidenceRecord
+): SourceRef {
+  if (typeof sourceRef === "string") {
+    return sourceRef;
+  }
+
+  return {
+    ...sourceRef,
+    authority: sourceRef.authority ?? record.authority,
+    redactionClass: sourceRef.redactionClass ?? "operator",
+    ...(sourceRef.captureToolCallId === undefined &&
+    record.createdBy.toolCallId !== undefined
+      ? { captureToolCallId: record.createdBy.toolCallId }
+      : {})
+  };
+}
+
+function isUnsupportedSourceFactMessage(message: string) {
+  return (
+    message.endsWith("evidence must include sourceRefs") ||
+    message === "conflict evidence must include at least two sourceRefs" ||
+    message === "source_fact evidence cannot use model or generated authority" ||
+    message === "source_fact evidence sourceRefs must carry trusted authority"
+  );
 }
 
 function parseEvidenceRecord(

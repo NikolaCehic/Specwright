@@ -149,6 +149,102 @@ describe("artifact store", () => {
     );
   });
 
+  test("important claims cannot cite their owning artifact as evidence", async () => {
+    const paths = getArtifactStorePaths(rootDir, "run-claim-self-citation");
+    const error = await captureError(() =>
+      appendArtifact({
+        rootDir,
+        runId: "run-claim-self-citation",
+        record: artifactRecord({
+          artifactId: "plan-claim-self",
+          artifactType: "plan",
+          content: {
+            steps: ["cite important claim self"]
+          },
+          evidenceRefs: ["evidence:repo:package-json"],
+          claimLevel: "derived_fact",
+          importantClaims: [
+            {
+              claim: "The plan is proof of its own source facts.",
+              claimLevel: "source_fact",
+              evidenceRefs: ["artifact:plan-claim-self#importantClaims.0"],
+              confidence: "high",
+              authority: "repo"
+            }
+          ]
+        })
+      })
+    );
+
+    expect(error).toBeInstanceOf(ArtifactStoreError);
+    expect((error as ArtifactStoreError).code).toBe(
+      "generated_self_citation"
+    );
+    await expect(readFile(paths.indexPath, "utf8")).rejects.toThrow();
+  });
+
+  test("source_fact important claims cannot use model authority", async () => {
+    const error = await captureError(() =>
+      appendArtifact({
+        rootDir,
+        runId: "run-source-fact-model-authority",
+        record: artifactRecord({
+          artifactId: "plan-model-authority",
+          artifactType: "plan",
+          content: {
+            steps: ["promote model text"]
+          },
+          importantClaims: [
+            {
+              claim: "A model statement is a source fact.",
+              claimLevel: "source_fact",
+              evidenceRefs: ["evidence:repo:package-json"],
+              confidence: "high",
+              authority: "model"
+            }
+          ]
+        })
+      })
+    );
+
+    expect(error).toBeInstanceOf(ArtifactStoreError);
+    expect((error as ArtifactStoreError).code).toBe("unsupported_claim");
+    expect((error as ArtifactStoreError).message).toBe(
+      "source_fact claims cannot use model or generated authority"
+    );
+  });
+
+  test("unknown important claims can be recorded without evidence refs", async () => {
+    const artifact = await appendArtifact({
+      rootDir,
+      runId: "run-unknown-claim",
+      record: artifactRecord({
+        artifactId: "plan-unknown-claim",
+        artifactType: "plan",
+        content: {
+          steps: ["record the gap"]
+        },
+        claimLevel: "assumption",
+        importantClaims: [
+          {
+            claim: "The browser-rendered layout remains unknown.",
+            claimLevel: "unknown",
+            evidenceRefs: [],
+            confidence: "low",
+            authority: "model"
+          }
+        ]
+      })
+    });
+
+    expect(artifact.importantClaims?.[0]).toMatchObject({
+      owningArtifactId: "plan-unknown-claim",
+      fieldPath: "importantClaims.0",
+      verificationStatus: "unverified",
+      redactionPolicy: "operator"
+    });
+  });
+
   test("writes canonical content under artifacts", async () => {
     const artifact = await appendArtifact({
       rootDir,
