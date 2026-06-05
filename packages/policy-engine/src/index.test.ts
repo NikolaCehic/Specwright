@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { PolicyVerdictSchema } from "@specwright/schemas";
 import { evaluatePolicy } from "./index";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
@@ -28,6 +29,7 @@ describe("policy engine fixtures", () => {
 
       const verdict = evaluatePolicy(request, policyBundle);
 
+      expect(PolicyVerdictSchema.parse(verdict)).toEqual(verdict);
       expect(verdict).toEqual(expected);
       expect(evaluatePolicy(request, policyBundle)).toEqual(verdict);
     });

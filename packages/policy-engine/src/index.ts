@@ -1,29 +1,32 @@
 import { createHash } from "node:crypto";
-import type {
+import {
+  PolicyVerdictSchema,
+  type ApprovalDecision,
+  type BudgetState,
+  type PolicyBundle,
+  type PolicyConstraint,
+  type PolicyObligation,
+  type PolicyRuleEffect,
+  type PolicyRuleLayer,
+  type PolicyRuleMatch as RuleMatch,
+  type PolicyVerdict,
+  type PolicyVerdictStatus,
+  type RunState
+} from "@specwright/schemas";
+
+export type {
   ApprovalDecision,
   BudgetState,
   PolicyBundle,
+  PolicyConstraint,
+  PolicyObligation,
+  PolicyRuleEffect,
+  PolicyRuleLayer,
+  PolicyRuleMatch as RuleMatch,
+  PolicyVerdict,
+  PolicyVerdictStatus,
   RunState
 } from "@specwright/schemas";
-
-export type PolicyVerdictStatus = "allow" | "deny" | "approval_required";
-
-export type PolicyRuleLayer =
-  | "runtime_invariant"
-  | "host"
-  | "workspace"
-  | "harness"
-  | "phase"
-  | "capability"
-  | "run_mode"
-  | "approval";
-
-export type PolicyRuleEffect =
-  | "allow"
-  | "deny"
-  | "approval_required"
-  | "constrain"
-  | "obligate";
 
 export type PolicyRisk = "low" | "medium" | "high" | "critical";
 
@@ -60,43 +63,6 @@ export type PolicyRequest = {
     approvals?: ApprovalState | ApprovalDecision[];
     sourceTrust?: Record<string, unknown>;
   };
-};
-
-export type RuleMatch = {
-  ruleId: string;
-  layer: PolicyRuleLayer;
-  effect: PolicyRuleEffect;
-  reason: string;
-};
-
-export type PolicyConstraint = {
-  kind: string;
-  value: unknown;
-  sourceRuleId: string;
-};
-
-export type PolicyObligation = {
-  kind:
-    | "record_event"
-    | "redact"
-    | "stage_write"
-    | "run_eval"
-    | "require_evidence"
-    | "attach_trace"
-    | "mark_external_source"
-    | "request_human_review";
-  params?: Record<string, unknown>;
-  sourceRuleId: string;
-};
-
-export type PolicyVerdict = {
-  status: PolicyVerdictStatus;
-  approvalId?: string;
-  reasons: string[];
-  constraints: PolicyConstraint[];
-  obligations: PolicyObligation[];
-  matchedRules: RuleMatch[];
-  decisionHash: string;
 };
 
 export type PolicyArgMatcher = {
@@ -530,13 +496,13 @@ function verdictForStatus(
   };
 
   if (status === "approval_required") {
-    return {
+    return PolicyVerdictSchema.parse({
       ...base,
       approvalId: approvalId ?? "approval_required"
-    };
+    });
   }
 
-  return base;
+  return PolicyVerdictSchema.parse(base);
 }
 
 function collectExplicitRules(bundle: FixturePolicyBundle) {

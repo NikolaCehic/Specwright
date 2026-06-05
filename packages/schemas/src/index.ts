@@ -148,15 +148,31 @@ export function isTrustedSourceAuthority(authority: SourceAuthority) {
   }
 }
 
+export const DecisionStatusSchema = z.enum([
+  "allow",
+  "deny",
+  "approval_required",
+  "pass",
+  "fail",
+  "needs_review",
+  "skipped",
+  "repaired"
+]);
+export type DecisionStatus = z.infer<typeof DecisionStatusSchema>;
+
 export const EvalVerdictStatusSchema = z.enum([
   "pass",
   "fail",
   "needs_review",
-  "skipped"
+  "skipped",
+  "repaired"
 ]);
 export type EvalVerdictStatus = z.infer<typeof EvalVerdictStatusSchema>;
 
-export const EvalSeveritySchema = z.enum(["advisory", "blocking"]);
+export const DecisionSeveritySchema = z.enum(["advisory", "blocking"]);
+export type DecisionSeverity = z.infer<typeof DecisionSeveritySchema>;
+
+export const EvalSeveritySchema = DecisionSeveritySchema;
 export type EvalSeverity = z.infer<typeof EvalSeveritySchema>;
 
 export const ApprovalDecisionValueSchema = z.enum([
@@ -167,6 +183,193 @@ export const ApprovalDecisionValueSchema = z.enum([
 export type ApprovalDecisionValue = z.infer<
   typeof ApprovalDecisionValueSchema
 >;
+
+export const DecisionEvidenceRefsSchema = z.array(nonEmptyString);
+export type DecisionEvidenceRefs = z.infer<typeof DecisionEvidenceRefsSchema>;
+
+export const DecisionProducedBySchema = z
+  .object({
+    kind: z.enum(["deterministic", "model_assisted", "human"]),
+    ref: nonEmptyString
+  })
+  .strict();
+export type DecisionProducedBy = z.infer<typeof DecisionProducedBySchema>;
+
+export const DecisionProvenanceSchema = z
+  .object({
+    runId: nonEmptyString.optional(),
+    phase: nonEmptyString.optional(),
+    evaluatedAt: z.string().datetime({ offset: true }).optional(),
+    decisionHash: nonEmptyString.optional(),
+    causationIds: z.array(nonEmptyString).optional(),
+    traceId: nonEmptyString.optional()
+  })
+  .strict();
+export type DecisionProvenance = z.infer<typeof DecisionProvenanceSchema>;
+
+export const DecisionFindingSchema = z
+  .object({
+    id: nonEmptyString.optional(),
+    code: nonEmptyString.optional(),
+    message: nonEmptyString,
+    severity: DecisionSeveritySchema.optional(),
+    targetRef: nonEmptyString.optional(),
+    evidenceRefs: DecisionEvidenceRefsSchema.optional(),
+    repairHint: nonEmptyString.optional(),
+    path: nonEmptyString.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type DecisionFinding = z.infer<typeof DecisionFindingSchema>;
+
+export const DecisionConstraintSchema = z
+  .object({
+    kind: nonEmptyString,
+    value: z.unknown(),
+    sourceRuleId: nonEmptyString.optional()
+  })
+  .strict();
+export type DecisionConstraint = z.infer<typeof DecisionConstraintSchema>;
+
+export const DecisionObligationSchema = z
+  .object({
+    kind: nonEmptyString,
+    params: MetadataSchema.optional(),
+    sourceRuleId: nonEmptyString.optional()
+  })
+  .strict();
+export type DecisionObligation = z.infer<typeof DecisionObligationSchema>;
+
+export const PolicyVerdictStatusSchema = z.enum([
+  "allow",
+  "deny",
+  "approval_required"
+]);
+export type PolicyVerdictStatus = z.infer<typeof PolicyVerdictStatusSchema>;
+
+export const PolicyRuleLayerSchema = z.enum([
+  "runtime_invariant",
+  "host",
+  "workspace",
+  "harness",
+  "phase",
+  "capability",
+  "run_mode",
+  "approval"
+]);
+export type PolicyRuleLayer = z.infer<typeof PolicyRuleLayerSchema>;
+
+export const PolicyRuleEffectSchema = z.enum([
+  "allow",
+  "deny",
+  "approval_required",
+  "constrain",
+  "obligate"
+]);
+export type PolicyRuleEffect = z.infer<typeof PolicyRuleEffectSchema>;
+
+export const PolicyRuleMatchSchema = z
+  .object({
+    ruleId: nonEmptyString,
+    layer: PolicyRuleLayerSchema,
+    effect: PolicyRuleEffectSchema,
+    reason: nonEmptyString
+  })
+  .strict();
+export type PolicyRuleMatch = z.infer<typeof PolicyRuleMatchSchema>;
+
+export const PolicyConstraintSchema = DecisionConstraintSchema.extend({
+  sourceRuleId: nonEmptyString
+});
+export type PolicyConstraint = z.infer<typeof PolicyConstraintSchema>;
+
+export const PolicyObligationSchema = DecisionObligationSchema.extend({
+  kind: z.enum([
+    "record_event",
+    "redact",
+    "stage_write",
+    "run_eval",
+    "require_evidence",
+    "attach_trace",
+    "mark_external_source",
+    "request_human_review"
+  ]),
+  sourceRuleId: nonEmptyString
+});
+export type PolicyObligation = z.infer<typeof PolicyObligationSchema>;
+
+export const PolicyVerdictSchema = z
+  .object({
+    status: PolicyVerdictStatusSchema,
+    approvalId: nonEmptyString.optional(),
+    reasons: z.array(nonEmptyString),
+    constraints: z.array(PolicyConstraintSchema),
+    obligations: z.array(PolicyObligationSchema),
+    matchedRules: z.array(PolicyRuleMatchSchema),
+    decisionHash: nonEmptyString,
+    requestHash: nonEmptyString.optional(),
+    policyBundleHash: nonEmptyString.optional(),
+    resolutionLayerOrder: z.array(PolicyRuleLayerSchema).optional(),
+    provenance: DecisionProvenanceSchema.optional()
+  })
+  .strict();
+export type PolicyVerdict = z.infer<typeof PolicyVerdictSchema>;
+
+export const GateVerdictStatusSchema = z.enum([
+  "pass",
+  "fail",
+  "needs_review"
+]);
+export type GateVerdictStatus = z.infer<typeof GateVerdictStatusSchema>;
+
+export const GateSeveritySchema = DecisionSeveritySchema;
+export type GateSeverity = z.infer<typeof GateSeveritySchema>;
+
+export const GateRequiredActionSchema = z.enum([
+  "repair",
+  "clarify",
+  "approve",
+  "fail_run"
+]);
+export type GateRequiredAction = z.infer<typeof GateRequiredActionSchema>;
+
+export const GateObligationSchema = DecisionObligationSchema.extend({
+  kind: z.enum([
+    "run_eval",
+    "request_clarification",
+    "create_repair_task",
+    "promote_artifact",
+    "attach_evidence",
+    "mark_assumption"
+  ]),
+  sourceRuleId: nonEmptyString.optional()
+});
+export type GateObligation = z.infer<typeof GateObligationSchema>;
+
+export const GateFindingSchema = DecisionFindingSchema.extend({
+  id: nonEmptyString,
+  severity: GateSeveritySchema,
+  evidenceRefs: DecisionEvidenceRefsSchema
+});
+export type GateFinding = z.infer<typeof GateFindingSchema>;
+
+export const GateVerdictSchema = z
+  .object({
+    gateId: nonEmptyString,
+    phase: nonEmptyString,
+    status: GateVerdictStatusSchema,
+    severity: GateSeveritySchema,
+    reasons: z.array(nonEmptyString),
+    findings: z.array(GateFindingSchema),
+    evidenceRefs: DecisionEvidenceRefsSchema,
+    requiredAction: GateRequiredActionSchema.optional(),
+    obligations: z.array(GateObligationSchema),
+    evaluatedAt: z.string().datetime({ offset: true }),
+    evaluator: DecisionProducedBySchema,
+    provenance: DecisionProvenanceSchema.optional()
+  })
+  .strict();
+export type GateVerdict = z.infer<typeof GateVerdictSchema>;
 
 export const AttachmentRefSchema = z
   .object({
@@ -389,6 +592,12 @@ export const ApprovalRequestSchema = z
   .object({
     approvalId: nonEmptyString,
     reason: nonEmptyString.optional(),
+    subjectRef: nonEmptyString.optional(),
+    requestedAction: nonEmptyString.optional(),
+    riskSummary: nonEmptyString.optional(),
+    policyVerdictRef: nonEmptyString.optional(),
+    constraints: MetadataSchema.optional(),
+    requiredFor: nonEmptyString.optional(),
     metadata: MetadataSchema.optional()
   })
   .strict();
@@ -398,10 +607,55 @@ export const HumanQuestionSchema = z
   .object({
     questionId: nonEmptyString,
     prompt: nonEmptyString,
+    subjectRef: nonEmptyString.optional(),
+    allowedDecisionValues: z.array(nonEmptyString).optional(),
+    requiredExpertise: nonEmptyString.optional(),
+    requiredFor: nonEmptyString.optional(),
     metadata: MetadataSchema.optional()
   })
   .strict();
 export type HumanQuestion = z.infer<typeof HumanQuestionSchema>;
+
+export const HumanReviewSchema = z
+  .object({
+    id: nonEmptyString,
+    gateId: nonEmptyString.optional(),
+    phase: nonEmptyString.optional(),
+    subjectRef: nonEmptyString.optional(),
+    question: nonEmptyString,
+    allowedDecisionValues: z.array(nonEmptyString).optional(),
+    requiredExpertise: nonEmptyString.optional(),
+    requiredFor: nonEmptyString,
+    expectedAnswerSchema: nonEmptyString.optional(),
+    reviewResult: nonEmptyString.optional(),
+    constraints: MetadataSchema.optional(),
+    comments: nonEmptyString.optional(),
+    unresolvedQuestions: z.array(nonEmptyString).optional(),
+    causationIds: z.array(nonEmptyString).optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type HumanReview = z.infer<typeof HumanReviewSchema>;
+
+export const GateHumanQuestionSchema = HumanReviewSchema.extend({
+  gateId: nonEmptyString,
+  phase: nonEmptyString
+});
+export type GateHumanQuestion = z.infer<typeof GateHumanQuestionSchema>;
+
+export const GateApprovalRequestSchema = z
+  .object({
+    id: nonEmptyString,
+    gateId: nonEmptyString,
+    phase: nonEmptyString,
+    reason: nonEmptyString,
+    requiredFor: nonEmptyString,
+    riskSummary: nonEmptyString.optional(),
+    constraints: MetadataSchema.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type GateApprovalRequest = z.infer<typeof GateApprovalRequestSchema>;
 
 export const ArtifactRefSchema = z
   .object({
@@ -840,38 +1094,77 @@ function sourceRefCarriesTrustedAuthority(sourceRef: SourceRef) {
   );
 }
 
-export const EvalFindingSchema = z
-  .object({
-    message: nonEmptyString,
-    code: nonEmptyString.optional(),
-    targetRef: nonEmptyString.optional(),
-    path: nonEmptyString.optional(),
-    severity: EvalSeveritySchema.optional(),
-    evidenceRefs: z.array(nonEmptyString).optional(),
-    repairHint: nonEmptyString.optional(),
-    metadata: MetadataSchema.optional()
-  })
-  .strict();
+export const EvalFindingSchema = DecisionFindingSchema;
 export type EvalFinding = z.infer<typeof EvalFindingSchema>;
 
-export const EvalProducedBySchema = z
-  .object({
-    kind: z.enum(["deterministic", "model_assisted", "human"]),
-    ref: nonEmptyString
-  })
-  .strict();
+export const EvalProducedBySchema = DecisionProducedBySchema;
 export type EvalProducedBy = z.infer<typeof EvalProducedBySchema>;
 
 export const RepairTaskSchema = z
   .object({
-    task: nonEmptyString,
+    id: nonEmptyString.optional(),
+    repairId: nonEmptyString.optional(),
+    task: nonEmptyString.optional(),
+    gateId: nonEmptyString.optional(),
+    failedPhase: nonEmptyString.optional(),
     targetRef: nonEmptyString.optional(),
-    constraints: MetadataSchema.optional()
+    sourceFindingId: nonEmptyString.optional(),
+    problem: nonEmptyString.optional(),
+    requiredCorrection: nonEmptyString.optional(),
+    requiredEvidenceRefs: DecisionEvidenceRefsSchema.optional(),
+    allowedTools: z.array(nonEmptyString).optional(),
+    blockedTools: z.array(nonEmptyString).optional(),
+    allowedRefs: z.array(nonEmptyString).optional(),
+    acceptanceChecks: z.array(nonEmptyString).optional(),
+    successGate: nonEmptyString.optional(),
+    successEval: nonEmptyString.optional(),
+    createdFromFindingIds: z.array(nonEmptyString).optional(),
+    expiresAt: z.string().datetime({ offset: true }).optional(),
+    escalationRule: nonEmptyString.optional(),
+    producedBy: DecisionProducedBySchema.optional(),
+    constraints: MetadataSchema.optional(),
+    metadata: MetadataSchema.optional()
   })
-  .strict();
+  .strict()
+  .superRefine((task, context) => {
+    if (task.task === undefined && task.problem === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "repair tasks require task or problem",
+        path: ["task"]
+      });
+    }
+  });
 export type RepairTask = z.infer<typeof RepairTaskSchema>;
 
-export const EvalVerdictSchema = z
+export const GateRepairTaskSchema = RepairTaskSchema.superRefine(
+  (task, context) => {
+    const requiredFields = [
+      "id",
+      "gateId",
+      "failedPhase",
+      "problem",
+      "requiredEvidenceRefs",
+      "allowedTools",
+      "blockedTools",
+      "successGate",
+      "createdFromFindingIds"
+    ] as const;
+
+    for (const field of requiredFields) {
+      if (task[field] === undefined) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `gate repair tasks require ${field}`,
+          path: [field]
+        });
+      }
+    }
+  }
+);
+export type GateRepairTask = z.infer<typeof GateRepairTaskSchema>;
+
+export const EvalVerdictContractSchema = z
   .object({
     evalId: nonEmptyString,
     targetRef: nonEmptyString,
@@ -880,19 +1173,49 @@ export const EvalVerdictSchema = z
     findings: z.array(EvalFindingSchema),
     evidenceRefs: z.array(nonEmptyString),
     producedBy: EvalProducedBySchema,
-    repairTask: RepairTaskSchema.optional()
+    repairTask: RepairTaskSchema.optional(),
+    provenance: DecisionProvenanceSchema.optional()
   })
   .strict();
-export type EvalVerdict = z.infer<typeof EvalVerdictSchema>;
+export type EvalVerdictContract = z.infer<typeof EvalVerdictContractSchema>;
+export type EvalVerdict = Omit<EvalVerdictContract, "status"> & {
+  status: Exclude<EvalVerdictStatus, "repaired">;
+};
+export const EvalVerdictSchema = EvalVerdictContractSchema as z.ZodType<
+  EvalVerdict,
+  z.ZodTypeDef,
+  unknown
+>;
 
 export const ApprovalDecisionSchema = z
   .object({
     approvalId: nonEmptyString,
     decision: ApprovalDecisionValueSchema,
     humanMessage: nonEmptyString.optional(),
-    constraints: MetadataSchema.optional()
+    decidedAt: z.string().datetime({ offset: true }).optional(),
+    expiresAt: z.string().datetime({ offset: true }).optional(),
+    constraints: MetadataSchema.optional(),
+    resultingConstraints: MetadataSchema.optional(),
+    causationIds: z.array(nonEmptyString).optional(),
+    metadata: MetadataSchema.optional()
   })
-  .strict();
+  .strict()
+  .superRefine((decision, context) => {
+    const metadata = decision.metadata;
+
+    if (
+      metadata !== undefined &&
+      (metadata.claimLevel === "source_fact" ||
+        metadata.authority === "source_fact" ||
+        metadata.sourceAuthority === "source_fact")
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "approval decisions cannot assert source facts",
+        path: ["metadata"]
+      });
+    }
+  });
 export type ApprovalDecision = z.infer<typeof ApprovalDecisionSchema>;
 
 const runtimeEventEnvelopeFields = {
@@ -1068,51 +1391,6 @@ export type ToolCompletedEventPayload = z.infer<
   typeof ToolCompletedEventPayloadSchema
 >;
 
-const policyVerdictStatusSchema = z.enum(["allow", "deny", "approval_required"]);
-
-const PolicyVerdictSchema = z
-  .object({
-    status: policyVerdictStatusSchema,
-    approvalId: nonEmptyString.optional(),
-    reasons: z.array(nonEmptyString).default([]),
-    constraints: z
-      .array(
-        z
-          .object({
-            kind: nonEmptyString,
-            value: z.unknown(),
-            sourceRuleId: nonEmptyString
-          })
-          .strict()
-      )
-      .default([]),
-    obligations: z
-      .array(
-        z
-          .object({
-            kind: nonEmptyString,
-            params: MetadataSchema.optional(),
-            sourceRuleId: nonEmptyString
-          })
-          .strict()
-      )
-      .default([]),
-    matchedRules: z
-      .array(
-        z
-          .object({
-            ruleId: nonEmptyString,
-            layer: nonEmptyString,
-            effect: nonEmptyString,
-            reason: nonEmptyString
-          })
-          .strict()
-      )
-      .default([]),
-    decisionHash: nonEmptyString.optional()
-  })
-  .strict();
-
 const PolicyRequestSchema = z
   .object({
     requestId: nonEmptyString,
@@ -1137,7 +1415,7 @@ export const ToolAuthorizedEventPayloadSchema = z
   .object({
     approvalId: nonEmptyString.optional(),
     request: ToolCallRequestSnapshotSchema.optional(),
-    policyStatus: policyVerdictStatusSchema.optional(),
+    policyStatus: PolicyVerdictStatusSchema.optional(),
     policyVerdict: PolicyVerdictSchema.optional()
   })
   .strict()
@@ -1163,7 +1441,7 @@ export const ToolDeniedEventPayloadSchema = z
     approvalId: nonEmptyString.optional(),
     request: ToolCallRequestSnapshotSchema.optional(),
     result: ToolCallResultSchema.optional(),
-    policyStatus: policyVerdictStatusSchema.optional(),
+    policyStatus: PolicyVerdictStatusSchema.optional(),
     policyVerdict: PolicyVerdictSchema.optional(),
     reason: nonEmptyString.optional()
   })
@@ -1187,97 +1465,7 @@ export type ToolDeniedEventPayload = z.infer<
   typeof ToolDeniedEventPayloadSchema
 >;
 
-const gateSeveritySchema = z.enum(["blocking", "advisory"]);
-const gateRequiredActionSchema = z.enum([
-  "repair",
-  "clarify",
-  "approve",
-  "fail_run"
-]);
-
-const GateFindingSchema = z
-  .object({
-    id: nonEmptyString,
-    severity: gateSeveritySchema,
-    message: nonEmptyString,
-    targetRef: nonEmptyString.optional(),
-    evidenceRefs: z.array(nonEmptyString),
-    repairHint: nonEmptyString.optional()
-  })
-  .strict();
-
-const GateObligationSchema = z
-  .object({
-    kind: z.enum([
-      "run_eval",
-      "request_clarification",
-      "create_repair_task",
-      "promote_artifact",
-      "attach_evidence",
-      "mark_assumption"
-    ]),
-    params: MetadataSchema.optional()
-  })
-  .strict();
-
-const GateVerdictSchema = z
-  .object({
-    gateId: nonEmptyString,
-    phase: nonEmptyString,
-    status: z.enum(["pass", "fail", "needs_review"]),
-    severity: gateSeveritySchema,
-    reasons: z.array(nonEmptyString),
-    findings: z.array(GateFindingSchema),
-    evidenceRefs: z.array(nonEmptyString),
-    requiredAction: gateRequiredActionSchema.optional(),
-    obligations: z.array(GateObligationSchema),
-    evaluatedAt: z.string().datetime({ offset: true }),
-    evaluator: z
-      .object({
-        kind: z.enum(["deterministic", "model_assisted", "human"]),
-        ref: nonEmptyString
-      })
-      .strict()
-  })
-  .strict();
-
-const GateHumanQuestionSchema = z
-  .object({
-    id: nonEmptyString,
-    gateId: nonEmptyString,
-    phase: nonEmptyString,
-    question: nonEmptyString,
-    requiredFor: nonEmptyString,
-    expectedAnswerSchema: nonEmptyString.optional()
-  })
-  .strict();
-
-const GateApprovalRequestSchema = z
-  .object({
-    id: nonEmptyString,
-    gateId: nonEmptyString,
-    phase: nonEmptyString,
-    reason: nonEmptyString,
-    requiredFor: nonEmptyString
-  })
-  .strict();
-
-const GateRepairTaskSchema = z
-  .object({
-    id: nonEmptyString,
-    gateId: nonEmptyString,
-    failedPhase: nonEmptyString,
-    targetRef: nonEmptyString.optional(),
-    problem: nonEmptyString,
-    requiredEvidenceRefs: z.array(nonEmptyString),
-    allowedTools: z.array(nonEmptyString),
-    blockedTools: z.array(nonEmptyString),
-    successGate: nonEmptyString,
-    createdFromFindingIds: z.array(nonEmptyString)
-  })
-  .strict();
-
-const GateLifecycleInstructionSchema = z.discriminatedUnion("kind", [
+export const GateLifecycleInstructionSchema = z.discriminatedUnion("kind", [
   z
     .object({
       kind: z.literal("continue"),
@@ -1320,6 +1508,9 @@ const GateLifecycleInstructionSchema = z.discriminatedUnion("kind", [
     })
     .strict()
 ]);
+export type GateLifecycleInstruction = z.infer<
+  typeof GateLifecycleInstructionSchema
+>;
 
 export const GateEvaluatedEventPayloadSchema = z
   .object({

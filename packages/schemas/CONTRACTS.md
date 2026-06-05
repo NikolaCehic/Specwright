@@ -117,6 +117,22 @@ Unknown-field posture is recorded under extension points. `metadata` means the d
 | `RedactionPolicy` | type | evidence | governance | public | 01 Shared Schemas | durable | same as schema | Inferred type for artifact/evidence redaction policy fields. |
 | `CreatedBySchema` | schema | evidence | observability | public | 07 Evidence Store | durable | strict | Evidence producer reference. |
 | `CreatedBy` | type | evidence | observability | public | 07 Evidence Store | durable | same as schema | Inferred type for `CreatedBySchema`. |
+| `DecisionStatusSchema` | enum | lifecycle | governance | public | 01 Shared Schemas | durable | none | Shared lifecycle decision status enum across policy, gate, and eval contracts. |
+| `DecisionStatus` | type | lifecycle | governance | public | 01 Shared Schemas | durable | same as schema | Inferred type for `DecisionStatusSchema`. |
+| `DecisionSeveritySchema` | enum | lifecycle | verification | public | 01 Shared Schemas | durable | none | Shared advisory/blocking severity primitive. |
+| `DecisionSeverity` | type | lifecycle | verification | public | 01 Shared Schemas | durable | same as schema | Inferred type for `DecisionSeveritySchema`. |
+| `DecisionEvidenceRefsSchema` | schema | evidence | lifecycle | public | 01 Shared Schemas | embedded | strict array | Shared evidence reference list primitive for decision contracts. |
+| `DecisionEvidenceRefs` | type | evidence | lifecycle | public | 01 Shared Schemas | embedded | same as schema | Inferred type for `DecisionEvidenceRefsSchema`. |
+| `DecisionProducedBySchema` | schema | observability | lifecycle | public | 01 Shared Schemas | embedded | strict | Shared deterministic/model-assisted/human producer reference. |
+| `DecisionProducedBy` | type | observability | lifecycle | public | 01 Shared Schemas | embedded | same as schema | Inferred type for `DecisionProducedBySchema`. |
+| `DecisionProvenanceSchema` | schema | observability | lifecycle | public | 01 Shared Schemas | embedded | strict optional fields | Shared decision provenance mixin. |
+| `DecisionProvenance` | type | observability | lifecycle | public | 01 Shared Schemas | embedded | same as schema | Inferred type for `DecisionProvenanceSchema`. |
+| `DecisionFindingSchema` | schema | verification | evidence | public | 01 Shared Schemas | embedded | metadata; strict | Shared finding primitive for eval and gate contracts. |
+| `DecisionFinding` | type | verification | evidence | public | 01 Shared Schemas | embedded | same as schema | Inferred type for `DecisionFindingSchema`. |
+| `DecisionConstraintSchema` | schema | governance | lifecycle | public | 01 Shared Schemas | embedded | strict | Shared constraint primitive for decision contracts. |
+| `DecisionConstraint` | type | governance | lifecycle | public | 01 Shared Schemas | embedded | same as schema | Inferred type for `DecisionConstraintSchema`. |
+| `DecisionObligationSchema` | schema | governance | lifecycle | public | 01 Shared Schemas | embedded | metadata; strict | Shared obligation primitive for policy and gate contracts. |
+| `DecisionObligation` | type | governance | lifecycle | public | 01 Shared Schemas | embedded | same as schema | Inferred type for `DecisionObligationSchema`. |
 | `EvidenceRecordSchema` | schema | evidence | observability | public | 07 Evidence Store | durable | metadata; strict | Canonical evidence record. |
 | `EvidenceRecord` | type | evidence | observability | public | 07 Evidence Store | durable | same as schema | Inferred type for `EvidenceRecordSchema`. |
 | `MvpArtifactTypeSchema` | enum | artifact | compatibility | public | Artifact Store | durable | none | v0 artifact type enum. |
@@ -134,10 +150,48 @@ Unknown-field posture is recorded under extension points. `metadata` means the d
 | `EvalFinding` | type | verification | evidence | public | 07 Eval Runner | durable | same as schema | Inferred type for `EvalFindingSchema`. |
 | `EvalProducedBySchema` | schema | verification | observability | public | 07 Eval Runner | durable | strict | Eval producer reference. |
 | `EvalProducedBy` | type | verification | observability | public | 07 Eval Runner | durable | same as schema | Inferred type for `EvalProducedBySchema`. |
+| `EvalVerdictContractSchema` | schema | verification | lifecycle | public | 07 Eval Runner | durable | strict | Repaired-aware eval verdict contract validator. |
+| `EvalVerdictContract` | type | verification | lifecycle | public | 07 Eval Runner | durable | same as schema | Inferred type for `EvalVerdictContractSchema`. |
 | `RepairTaskSchema` | schema | lifecycle | verification | public | 05 Gate Engine / 07 Eval Runner | durable | constraints; strict | Repair instruction contract. |
 | `RepairTask` | type | lifecycle | verification | public | 05 Gate Engine / 07 Eval Runner | durable | same as schema | Inferred type for `RepairTaskSchema`. |
+| `GateRepairTaskSchema` | schema | lifecycle | verification | public | 05 Gate Engine | durable | strict refinement | Gate instruction repair task contract. |
+| `GateRepairTask` | type | lifecycle | verification | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateRepairTaskSchema`. |
 | `EvalVerdictSchema` | schema | verification | lifecycle | public | 07 Eval Runner | durable | strict | Eval verdict and optional repair task. |
 | `EvalVerdict` | type | verification | lifecycle | public | 07 Eval Runner | durable | same as schema | Inferred type for `EvalVerdictSchema`. |
+| `PolicyVerdictStatusSchema` | enum | governance | lifecycle | public | 04 Policy Engine | durable | none | Policy verdict status enum. |
+| `PolicyVerdictStatus` | type | governance | lifecycle | public | 04 Policy Engine | durable | same as schema | Inferred type for `PolicyVerdictStatusSchema`. |
+| `PolicyRuleLayerSchema` | enum | governance | lifecycle | public | 04 Policy Engine | durable | none | Policy rule resolution layer enum. |
+| `PolicyRuleLayer` | type | governance | lifecycle | public | 04 Policy Engine | durable | same as schema | Inferred type for `PolicyRuleLayerSchema`. |
+| `PolicyRuleEffectSchema` | enum | governance | lifecycle | public | 04 Policy Engine | durable | none | Policy rule effect enum. |
+| `PolicyRuleEffect` | type | governance | lifecycle | public | 04 Policy Engine | durable | same as schema | Inferred type for `PolicyRuleEffectSchema`. |
+| `PolicyRuleMatchSchema` | schema | governance | lifecycle | public | 04 Policy Engine | durable | strict | Matched policy rule contract. |
+| `PolicyRuleMatch` | type | governance | lifecycle | public | 04 Policy Engine | durable | same as schema | Inferred type for `PolicyRuleMatchSchema`. |
+| `PolicyConstraintSchema` | schema | governance | lifecycle | public | 04 Policy Engine | durable | strict | Policy verdict constraint contract. |
+| `PolicyConstraint` | type | governance | lifecycle | public | 04 Policy Engine | durable | same as schema | Inferred type for `PolicyConstraintSchema`. |
+| `PolicyObligationSchema` | schema | governance | lifecycle | public | 04 Policy Engine | durable | strict | Policy verdict obligation contract. |
+| `PolicyObligation` | type | governance | lifecycle | public | 04 Policy Engine | durable | same as schema | Inferred type for `PolicyObligationSchema`. |
+| `PolicyVerdictSchema` | schema | governance | lifecycle | public | 04 Policy Engine | durable | strict | Deterministic policy verdict contract. |
+| `PolicyVerdict` | type | governance | lifecycle | public | 04 Policy Engine | durable | same as schema | Inferred type for `PolicyVerdictSchema`. |
+| `GateVerdictStatusSchema` | enum | lifecycle | verification | public | 05 Gate Engine | durable | none | Gate verdict status enum. |
+| `GateVerdictStatus` | type | lifecycle | verification | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateVerdictStatusSchema`. |
+| `GateSeveritySchema` | enum | lifecycle | verification | public | 05 Gate Engine | durable | none | Gate verdict severity alias of `DecisionSeveritySchema`. |
+| `GateSeverity` | type | lifecycle | verification | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateSeveritySchema`. |
+| `GateRequiredActionSchema` | enum | lifecycle | verification | public | 05 Gate Engine | durable | none | Required gate remediation action enum. |
+| `GateRequiredAction` | type | lifecycle | verification | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateRequiredActionSchema`. |
+| `GateObligationSchema` | schema | lifecycle | governance | public | 05 Gate Engine | durable | strict | Gate verdict obligation contract. |
+| `GateObligation` | type | lifecycle | governance | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateObligationSchema`. |
+| `GateFindingSchema` | schema | verification | evidence | public | 05 Gate Engine | durable | metadata; strict | Gate verdict finding contract. |
+| `GateFinding` | type | verification | evidence | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateFindingSchema`. |
+| `GateVerdictSchema` | schema | lifecycle | verification | public | 05 Gate Engine | durable | strict | Gate verdict contract. |
+| `GateVerdict` | type | lifecycle | verification | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateVerdictSchema`. |
+| `HumanReviewSchema` | schema | governance | lifecycle | public | 05 Gate Engine / approvals | durable | metadata; strict | Human review decision request/result contract. |
+| `HumanReview` | type | governance | lifecycle | public | 05 Gate Engine / approvals | durable | same as schema | Inferred type for `HumanReviewSchema`. |
+| `GateHumanQuestionSchema` | schema | governance | lifecycle | public | 05 Gate Engine | durable | metadata; strict | Gate lifecycle instruction human question contract. |
+| `GateHumanQuestion` | type | governance | lifecycle | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateHumanQuestionSchema`. |
+| `GateApprovalRequestSchema` | schema | governance | lifecycle | public | 05 Gate Engine | durable | metadata; strict | Gate lifecycle instruction approval request contract. |
+| `GateApprovalRequest` | type | governance | lifecycle | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateApprovalRequestSchema`. |
+| `GateLifecycleInstructionSchema` | schema | lifecycle | verification | public | 05 Gate Engine | durable | discriminated union; strict | Gate lifecycle instruction contract. |
+| `GateLifecycleInstruction` | type | lifecycle | verification | public | 05 Gate Engine | durable | same as schema | Inferred type for `GateLifecycleInstructionSchema`. |
 | `ApprovalDecisionSchema` | schema | governance | lifecycle | public | 04 Policy Engine / approvals | durable | constraints; strict | Human approval decision. |
 | `ApprovalDecision` | type | governance | lifecycle | public | 04 Policy Engine / approvals | durable | same as schema | Inferred type for `ApprovalDecisionSchema`. |
 | `RuntimeEventContractMetadataSchema` | schema | event | compatibility | public | 01 Shared Schemas / 02 Run Store | durable | strict | Event contract id, version, and schema hash metadata. |
@@ -226,3 +280,34 @@ None of the current exported symbols are marked internal. Package-private helper
 - `packages/eval-runner/src/index.ts:22` defines `EvalRunnerInput`, and `packages/eval-runner/src/index.ts:77` defines `RunEvalRequest`. Eval verdicts are shared, but eval request and target input contracts remain local.
 - `packages/run-reports/src/index.ts:31` defines `RunReport`. Reports are egress projections named by the vault, but no report/reference contract currently exists in `packages/schemas`.
 - `packages/tool-broker/src/index.ts:134` defines local `CapabilityDefinition`, and `packages/tool-broker/src/index.ts:245` defines local `ToolCallContext`. `ToolDefinitionSchema`, `ToolCallRequestSchema`, and `ToolCallResultSchema` exist, but broker registry/context authority is still package-local.
+
+## Packet 01-04 Lifecycle Decision Alignment Addendum
+
+Packet 01-04 adds the lifecycle decision language to `packages/schemas` as the shared authority for policy, gate, eval, approval, repair, and human-review decision contracts.
+
+Aligned shared primitives:
+
+- `DecisionStatusSchema`
+- `DecisionSeveritySchema`
+- `DecisionFindingSchema`
+- `DecisionEvidenceRefsSchema`
+- `DecisionObligationSchema`
+- `DecisionConstraintSchema`
+- `DecisionProducedBySchema`
+- `DecisionProvenanceSchema`
+
+Aligned verdict/request contracts:
+
+- `PolicyVerdictSchema`, `PolicyRuleMatchSchema`, `PolicyConstraintSchema`, and `PolicyObligationSchema`
+- `GateVerdictSchema`, `GateFindingSchema`, `GateObligationSchema`, and `GateLifecycleInstructionSchema`
+- `EvalVerdictSchema`, `EvalVerdictContractSchema`, `EvalFindingSchema`, and `EvalProducedBySchema`
+- `ApprovalDecisionSchema`
+- `RepairTaskSchema` and `GateRepairTaskSchema`
+- `HumanQuestionSchema`, `HumanReviewSchema`, `GateHumanQuestionSchema`, `ApprovalRequestSchema`, and `GateApprovalRequestSchema`
+
+The packet keeps two request/review projection shapes distinctly named instead of silently merging them:
+
+- Runtime state projections continue to use `ApprovalRequestSchema.approvalId` and `HumanQuestionSchema.questionId`, preserving existing run-store state keys.
+- Gate lifecycle instructions use `GateApprovalRequestSchema` and `GateHumanQuestionSchema`, preserving the gate-engine instruction language (`id`, `gateId`, `phase`, `requiredFor`) while making it shared and validated.
+
+`EvalVerdictStatusSchema` and `EvalVerdictContractSchema` include `repaired`. The `EvalVerdict` runtime-emitted type remains narrowed to the statuses the current deterministic EvalRunner emits so existing runtime trace status behavior does not change.
