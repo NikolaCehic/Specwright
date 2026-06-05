@@ -509,6 +509,21 @@ const DEFAULT_CAPABILITY_GRANT_REGISTRY = {
         registryId: "specwright.local.capability-grants.v0",
         authorityId: "specwright.registry.operator"
       }
+    },
+    {
+      grantId: "grant.specwright.test.0.1.0",
+      packageId: "specwright.test",
+      versionPins: ["0.1.0"],
+      allowedTools: ["fs.read"],
+      allowedRequireApproval: [],
+      allowedToolDefinitions: ["fs.read"],
+      allowedPolicyEffects: [],
+      allowedPolicyLayers: [],
+      allowedRuntimeInvariantToolIds: [],
+      issuer: {
+        registryId: "specwright.local.capability-grants.v0",
+        authorityId: "specwright.registry.operator"
+      }
     }
   ]
 } satisfies CapabilityGrantRegistry;
