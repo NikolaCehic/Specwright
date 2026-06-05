@@ -4,8 +4,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  CHECKPOINT_INTERVAL,
   EVENT_INTEGRITY_ALGO,
   EVENT_INTEGRITY_GENESIS_SEED,
+  RUN_STATE_CHECKPOINT_VERSION,
   appendEvent,
   canonicalizeEventContent,
   createRun,
@@ -14,13 +16,17 @@ import {
   materializeRunState,
   parseEventLog,
   projectRunState,
+  readCheckpoint,
   readEvents,
+  rebuildFromCheckpoint,
   replayRunState,
   RunStoreError,
   verifyRunIntegrity,
-  type HarnessSnapshot
+  writeCheckpoint,
+  type HarnessSnapshot,
+  type RunStateCheckpoint
 } from "./index";
-import { RuntimeEventSchema } from "@specwright/schemas";
+import { RunStateSchema, RuntimeEventSchema } from "@specwright/schemas";
 import type {
   RunInput,
   RuntimeEvent,
@@ -211,6 +217,233 @@ describe("run store", () => {
         runId: "run-integrity"
       })
     );
+  });
+
+  test("rebuilds from checkpoints at sequence zero, middle, and tail exactly like full replay", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-checkpoint-equivalence",
+      traceId: "trace-checkpoint-equivalence",
+      input: runInput,
+      harness
+    });
+    await appendPhaseEvents("run-checkpoint-equivalence", 8);
+
+    const paths = getRunStorePaths(rootDir, "run-checkpoint-equivalence");
+    const events = await readEvents({
+      rootDir,
+      runId: "run-checkpoint-equivalence"
+    });
+    const fullReplay = projectRunState(events);
+
+    for (const coveredSequence of [0, 4, events.length - 1]) {
+      await writeCheckpoint(
+        paths,
+        buildCheckpoint("run-checkpoint-equivalence", events, coveredSequence)
+      );
+
+      const rebuilt = await rebuildFromCheckpoint({
+        rootDir,
+        runId: "run-checkpoint-equivalence"
+      });
+      const materialized = await materializeRunState({
+        rootDir,
+        runId: "run-checkpoint-equivalence"
+      });
+
+      expect(rebuilt.usedCheckpoint).toBe(true);
+      expect(rebuilt.reducedEventCount).toBe(
+        events.length - 1 - coveredSequence
+      );
+      expect(rebuilt.state).toEqual(fullReplay);
+      expect(JSON.stringify(rebuilt.state, null, 2)).toBe(
+        JSON.stringify(fullReplay, null, 2)
+      );
+      expect(materialized).toEqual(fullReplay);
+      expect(RunStateSchema.safeParse(rebuilt.state).success).toBe(true);
+    }
+  });
+
+  test("falls back to full replay when checkpoints are missing, corrupt, schema-invalid, or stale", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-checkpoint-fallback",
+      traceId: "trace-checkpoint-fallback",
+      input: runInput,
+      harness
+    });
+    await appendPhaseEvents("run-checkpoint-fallback", 5);
+
+    const paths = getRunStorePaths(rootDir, "run-checkpoint-fallback");
+    const events = await readEvents({
+      rootDir,
+      runId: "run-checkpoint-fallback"
+    });
+    const fullReplay = projectRunState(events);
+
+    await rm(paths.checkpointPath, { force: true });
+    let rebuilt = await rebuildFromCheckpoint({
+      rootDir,
+      runId: "run-checkpoint-fallback"
+    });
+
+    expect(rebuilt.usedCheckpoint).toBe(false);
+    expect(rebuilt.reducedEventCount).toBe(events.length);
+    expect(rebuilt.state).toEqual(fullReplay);
+
+    await writeFile(paths.checkpointPath, "{\"checkpointVersion\":");
+    expect(await readCheckpoint(paths)).toBeUndefined();
+    rebuilt = await rebuildFromCheckpoint({
+      rootDir,
+      runId: "run-checkpoint-fallback"
+    });
+    expect(rebuilt.usedCheckpoint).toBe(false);
+    expect(rebuilt.state).toEqual(fullReplay);
+
+    await writeFile(
+      paths.checkpointPath,
+      `${JSON.stringify({
+        checkpointVersion: RUN_STATE_CHECKPOINT_VERSION,
+        runId: "run-checkpoint-fallback",
+        coveredSequence: 0,
+        coveredLastEventId: events[0]?.id,
+        state: {
+          status: "running"
+        }
+      })}\n`
+    );
+    expect(await readCheckpoint(paths)).toBeUndefined();
+    rebuilt = await rebuildFromCheckpoint({
+      rootDir,
+      runId: "run-checkpoint-fallback"
+    });
+    expect(rebuilt.usedCheckpoint).toBe(false);
+    expect(rebuilt.state).toEqual(fullReplay);
+
+    await writeFile(
+      paths.checkpointPath,
+      `${JSON.stringify({
+        ...buildCheckpoint("run-checkpoint-fallback", events, 2),
+        coveredLastEventId: "stale-event-id",
+        state: {
+          ...projectRunState(events.slice(0, 3)),
+          lastEventId: "stale-event-id"
+        }
+      })}\n`
+    );
+    rebuilt = await rebuildFromCheckpoint({
+      rootDir,
+      runId: "run-checkpoint-fallback"
+    });
+    expect(rebuilt.usedCheckpoint).toBe(false);
+    expect(rebuilt.state).toEqual(fullReplay);
+  });
+
+  test("does not let a checkpoint bypass broken-ledger quarantine", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-checkpoint-broken",
+      traceId: "trace-checkpoint-broken",
+      input: runInput,
+      harness
+    });
+    await appendPhaseEvents("run-checkpoint-broken", 2);
+
+    const paths = getRunStorePaths(rootDir, "run-checkpoint-broken");
+    const events = await readEvents({
+      rootDir,
+      runId: "run-checkpoint-broken"
+    });
+    await writeCheckpoint(
+      paths,
+      buildCheckpoint("run-checkpoint-broken", events, 1)
+    );
+
+    const forged = RuntimeEventSchema.parse({
+      id: "forged-checkpoint-bypass",
+      runId: "run-checkpoint-broken",
+      type: "run.completed",
+      timestamp: "2026-05-29T00:00:03.000Z",
+      sequence: events.length,
+      traceId: "trace-checkpoint-broken",
+      payload: {
+        reason: "out-of-band"
+      }
+    });
+    const beforeState = await readFile(paths.statePath, "utf8");
+
+    await writeFile(paths.eventsPath, `${JSON.stringify(forged)}\n`, {
+      flag: "a"
+    });
+
+    const rebuiltError = await captureError(() =>
+      rebuildFromCheckpoint({
+        rootDir,
+        runId: "run-checkpoint-broken"
+      })
+    );
+    const materializedError = await captureError(() =>
+      materializeRunState({
+        rootDir,
+        runId: "run-checkpoint-broken"
+      })
+    );
+    const afterState = await readFile(paths.statePath, "utf8");
+
+    expect(rebuiltError).toBeInstanceOf(RunStoreError);
+    expect((rebuiltError as RunStoreError).code).toBe("integrity_broken");
+    expect(materializedError).toBeInstanceOf(RunStoreError);
+    expect((materializedError as RunStoreError).code).toBe("integrity_broken");
+    expect(afterState).toBe(beforeState);
+  });
+
+  test("keeps reduced-event cost bounded after deterministic checkpoint refresh", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-checkpoint-cost",
+      traceId: "trace-checkpoint-cost",
+      input: runInput,
+      harness
+    });
+
+    const appendCount = CHECKPOINT_INTERVAL * 2 + 7;
+    for (let index = 0; index < appendCount; index += 1) {
+      await appendEvent({
+        rootDir,
+        runId: "run-checkpoint-cost",
+        type: "phase.entered",
+        payload: {
+          phase: `phase-${index}`
+        },
+        timestamp: `2026-05-29T00:${String(Math.floor(index / 60)).padStart(
+          2,
+          "0"
+        )}:${String(index % 60).padStart(2, "0")}.000Z`
+      });
+    }
+
+    const paths = getRunStorePaths(rootDir, "run-checkpoint-cost");
+    const checkpoint = await readCheckpoint(paths);
+    const events = await readEvents({
+      rootDir,
+      runId: "run-checkpoint-cost"
+    });
+    const rebuilt = await rebuildFromCheckpoint({
+      rootDir,
+      runId: "run-checkpoint-cost"
+    });
+    const fullReplay = projectRunState(events);
+    const expectedCoveredSequence = CHECKPOINT_INTERVAL * 2;
+    const expectedTailCost = appendCount - expectedCoveredSequence;
+
+    expect(checkpoint?.coveredSequence).toBe(expectedCoveredSequence);
+    expect(rebuilt.usedCheckpoint).toBe(true);
+    expect(rebuilt.reducedEventCount).toBe(expectedTailCost);
+    expect(rebuilt.reducedEventCount).toBeLessThanOrEqual(CHECKPOINT_INTERVAL);
+    expect(events.length).toBe(appendCount + 1);
+    expect(events.length).toBeGreaterThan(CHECKPOINT_INTERVAL * 2);
+    expect(rebuilt.reducedEventCount).toBeLessThan(events.length);
+    expect(rebuilt.state).toEqual(fullReplay);
   });
 
   test("rebuilds state.json from events instead of trusting stale projection", async () => {
@@ -693,6 +926,45 @@ async function captureError(operation: () => Promise<unknown>) {
   }
 
   throw new Error("Expected operation to fail");
+}
+
+async function appendPhaseEvents(runId: string, count: number) {
+  for (let index = 0; index < count; index += 1) {
+    await appendEvent({
+      rootDir,
+      runId,
+      type: "phase.entered",
+      payload: {
+        phase: `phase-${index}`
+      },
+      timestamp: `2026-05-29T00:00:${String(index).padStart(2, "0")}.000Z`
+    });
+  }
+}
+
+function buildCheckpoint(
+  runId: string,
+  events: readonly RuntimeEvent[],
+  coveredSequence: number
+): RunStateCheckpoint {
+  const coveredEvent = events[coveredSequence];
+
+  if (coveredEvent === undefined) {
+    throw new Error(`Missing event at sequence ${coveredSequence}`);
+  }
+
+  const state = projectRunState(events.slice(0, coveredSequence + 1));
+
+  return {
+    checkpointVersion: RUN_STATE_CHECKPOINT_VERSION,
+    runId,
+    coveredSequence,
+    coveredLastEventId: coveredEvent.id,
+    state,
+    ...(coveredEvent.integrity === undefined
+      ? {}
+      : { coveredHeadHash: coveredEvent.integrity.hash })
+  };
 }
 
 async function readEventFixture(name: string) {
