@@ -1219,6 +1219,15 @@ export const ApprovalDecisionSchema = z
   });
 export type ApprovalDecision = z.infer<typeof ApprovalDecisionSchema>;
 
+const RuntimeEventIntegritySchema = z
+  .object({
+    algo: nonEmptyString,
+    hash: nonEmptyString,
+    prevHash: nonEmptyString
+  })
+  .strict();
+export type RuntimeEventIntegrity = z.infer<typeof RuntimeEventIntegritySchema>;
+
 const runtimeEventEnvelopeFields = {
   id: nonEmptyString,
   runId: nonEmptyString,
@@ -1226,7 +1235,8 @@ const runtimeEventEnvelopeFields = {
   sequence: z.number().int().nonnegative(),
   traceId: nonEmptyString,
   causationId: nonEmptyString.optional(),
-  correlationId: nonEmptyString.optional()
+  correlationId: nonEmptyString.optional(),
+  integrity: RuntimeEventIntegritySchema.optional()
 };
 
 const RUNTIME_EVENT_CONTRACT_VERSION = "1";

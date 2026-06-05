@@ -1272,7 +1272,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
     },
-    "canonicalHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
+    "canonicalHash": "sha256:c6a528b1b0d1e639130fec19559fa6ad875ef8c42a9c30d26b794bacb377f546",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event.positive.json",
@@ -1346,9 +1346,9 @@ const contractRegistryData = [
   {
     "authority": {
       "ownerReviewGroup": "shared-schema-contract-review",
-      "semantics": "Runtime event envelope helper with optional compatibility metadata. Durable posture: durable. Extension posture: strict, metadata optional."
+      "semantics": "Runtime event envelope helper with optional compatibility and integrity metadata. Durable posture: durable. Extension posture: strict, metadata optional, integrity optional."
     },
-    "canonicalHash": "sha256:ad7e635333711a938840742bc21c193cbe06f916ab70e829146c743c82f5ccf1",
+    "canonicalHash": "sha256:c82002a85b93e7eb7f45f854ad0e82e4a3944488161322465026e5b77086daa1",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event-envelope.positive.json",
@@ -1358,7 +1358,8 @@ const contractRegistryData = [
     "exportName": "RuntimeEventEnvelopeSchema",
     "extensionPoints": [
       "strict",
-      "metadata optional"
+      "metadata optional",
+      "integrity optional"
     ],
     "family": "event",
     "generatedArtifacts": {
@@ -1370,7 +1371,7 @@ const contractRegistryData = [
     },
     "id": "specwright.event.runtime-event-envelope",
     "migrationDescriptors": [],
-    "notes": "Runtime event envelope helper with optional compatibility metadata.",
+    "notes": "Runtime event envelope helper with optional compatibility and integrity metadata.",
     "owner": "01 Shared Schemas / 02 Run Store",
     "redaction": {
       "defaultClass": "operator",

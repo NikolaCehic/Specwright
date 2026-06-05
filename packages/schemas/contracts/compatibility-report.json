@@ -344,13 +344,13 @@
     {
       "baselineHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
+      "classification": "migration-required",
+      "currentHash": "sha256:c6a528b1b0d1e639130fec19559fa6ad875ef8c42a9c30d26b794bacb377f546",
       "currentVersion": "1",
       "exportName": "RuntimeEventSchema",
       "id": "specwright.event.runtime-event",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:032e1e74c1a0a2bdbc6c8520b7edf923563d4e50207aca2e032a985d2229bb05",
@@ -366,13 +366,13 @@
     {
       "baselineHash": "sha256:ad7e635333711a938840742bc21c193cbe06f916ab70e829146c743c82f5ccf1",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:ad7e635333711a938840742bc21c193cbe06f916ab70e829146c743c82f5ccf1",
+      "classification": "migration-required",
+      "currentHash": "sha256:c82002a85b93e7eb7f45f854ad0e82e4a3944488161322465026e5b77086daa1",
       "currentVersion": "1",
       "exportName": "RuntimeEventEnvelopeSchema",
       "id": "specwright.event.runtime-event-envelope",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:837d353fd10767218af0161d212403f3ce48f7ef51ee065af41f54e5dcc9f42d",
@@ -1093,8 +1093,14 @@
   "generatedAt": "deterministic",
   "registryVersion": "scope-01.packet-05",
   "releasePolicy": {
-    "auditExportChanges": [],
-    "changedContractIds": [],
+    "auditExportChanges": [
+      "specwright.event.runtime-event",
+      "specwright.event.runtime-event-envelope"
+    ],
+    "changedContractIds": [
+      "specwright.event.runtime-event",
+      "specwright.event.runtime-event-envelope"
+    ],
     "compatibilityClasses": {
       "specwright.adapter.host-kind": "unchanged",
       "specwright.artifact.artifact-claim": "unchanged",
@@ -1127,9 +1133,9 @@
       "specwright.event.run.completed": "unchanged",
       "specwright.event.run.failed": "unchanged",
       "specwright.event.run.started": "unchanged",
-      "specwright.event.runtime-event": "unchanged",
+      "specwright.event.runtime-event": "migration-required",
       "specwright.event.runtime-event-contract-metadata": "unchanged",
-      "specwright.event.runtime-event-envelope": "unchanged",
+      "specwright.event.runtime-event-envelope": "migration-required",
       "specwright.event.tool.authorized": "unchanged",
       "specwright.event.tool.completed": "unchanged",
       "specwright.event.tool.denied": "unchanged",
@@ -1196,20 +1202,29 @@
       "specwright.verification.gate-check-type": "unchanged",
       "specwright.verification.gate-finding": "unchanged"
     },
-    "conformanceResultSummary": "all registered fixtures pass current validators",
+    "conformanceResultSummary": "migration review required before release",
     "contractRegistryVersion": "scope-01.packet-05",
-    "generatedSdkSurfaceChanges": [],
-    "migrationRequirements": [],
+    "generatedSdkSurfaceChanges": [
+      "specwright.event.runtime-event",
+      "specwright.event.runtime-event-envelope"
+    ],
+    "migrationRequirements": [
+      "specwright.event.runtime-event",
+      "specwright.event.runtime-event-envelope"
+    ],
     "redactionChanges": [],
-    "unsupportedHistoricalVersions": []
+    "unsupportedHistoricalVersions": [
+      "specwright.event.runtime-event@1",
+      "specwright.event.runtime-event-envelope@1"
+    ]
   },
   "summary": {
     "additive-compatible": 0,
     "backward-compatible": 0,
     "breaking": 0,
     "forward-compatible": 0,
-    "migration-required": 0,
+    "migration-required": 2,
     "patch-compatible": 0,
-    "unchanged": 99
+    "unchanged": 97
   }
 }
