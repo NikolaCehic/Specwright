@@ -69,6 +69,20 @@ import type {
   HarnessDependencyResolver,
   ResolvedDependency
 } from "./dependency-resolver";
+import {
+  CompatibilityAdmissionError,
+  admitHarnessCompatibility
+} from "./compatibility/admission";
+import {
+  DEFAULT_COMPATIBILITY_MATRIX,
+  DEFAULT_RUNTIME_VERSION
+} from "./compatibility/matrix";
+import type {
+  CompatibilityAdmission,
+  CompatibilitySourceFile
+} from "./compatibility/admission";
+import type { CompatibilityMatrix } from "./compatibility/matrix";
+import type { MigrationDescriptor } from "./compatibility/migration";
 
 export {
   AttestationSchema,
@@ -117,6 +131,35 @@ export {
   parseDependencyDeclarations,
   resolveAndPinDependencies
 } from "./dependency-resolver";
+export {
+  ClassifyTransitionInputSchema,
+  CompatibilityClassSchema,
+  classifyTransition,
+  detectCapabilitySurfaceWidening
+} from "./compatibility/classify";
+export {
+  CompatibilityManifestEnvelopeSchema,
+  admitHarnessCompatibility,
+  parseCompatibilityManifestEnvelope
+} from "./compatibility/admission";
+export {
+  CompatibilityMatrixRowSchema,
+  CompatibilityMatrixSchema,
+  DEFAULT_COMPATIBILITY_MATRIX,
+  DEFAULT_RUNTIME_VERSION,
+  LoaderBehaviorSchema,
+  loadCompatibilityMatrixFromFile,
+  lookupCompatibilityMatrix
+} from "./compatibility/matrix";
+export {
+  MigrationDescriptorBodySchema,
+  MigrationDescriptorSchema,
+  MigrationDescriptorSignatureSchema,
+  applyMigrationDescriptor,
+  canonicalizeMigrationDescriptor,
+  parseMigrationDescriptor,
+  verifyMigrationDescriptor
+} from "./compatibility/migration";
 export type {
   Attestation,
   HarnessTrustEvent,
@@ -149,6 +192,27 @@ export type {
   ResolvedDependency,
   ReviewedDependencyPin
 } from "./dependency-resolver";
+export type {
+  CapabilitySurface,
+  CapabilityWidening,
+  ClassifyTransitionInput,
+  CompatibilityClass
+} from "./compatibility/classify";
+export type {
+  CompatibilityAdmission,
+  CompatibilityManifestEnvelope
+} from "./compatibility/admission";
+export type {
+  CompatibilityMatrix,
+  CompatibilityMatrixRow,
+  LoaderBehavior
+} from "./compatibility/matrix";
+export type {
+  MigrationDescriptor,
+  MigrationDescriptorBody,
+  MigrationDescriptorSignature,
+  MigrationResult
+} from "./compatibility/migration";
 
 export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
@@ -166,16 +230,23 @@ export type LoadHarnessPackageOptions = {
   onGrantEvent?(event: HarnessGrantEvent): void | Promise<void>;
   dependencyResolver?: HarnessDependencyResolver;
   onDependencyEvent?(event: HarnessDependencyEvent): void | Promise<void>;
+  runtimeVersion?: string;
+  compatibilityMatrix?: CompatibilityMatrix;
+  migrationDescriptor?: MigrationDescriptor;
+  migrationTrustStore?: TrustStore;
+  migrationNow?: Date | string;
 };
 
 export type HarnessLoadRecord = {
   snapshot: HarnessSnapshot;
   grant: GrantEvaluation;
   dependencies: DependencyResolution;
+  compatibility: CompatibilityAdmission;
   trust?: TrustVerdict;
 };
 
 export type HarnessLoaderErrorCode =
+  | "compatibility_denied"
   | "dependency_unresolved"
   | "duplicate_id"
   | "grant_denied"
@@ -262,22 +333,13 @@ export async function loadHarnessPackageWithRecord(
   const loadedAt = normalizeLoadedAt(
     typeof input === "string" ? undefined : input.loadedAt
   );
-  const loadedFiles: SourceFile[] = [];
-  const manifestFile = await readRequiredFile(
+  let loadedFiles: SourceFile[] = [];
+  let manifestFile = await readRequiredFile(
     packageDir,
     HARNESS_MANIFEST_FILE
   );
   loadedFiles.push(manifestFile);
-
-  const manifest = parseManifest(manifestFile);
-  const manifestSchemaVersion = manifest.schemaVersion;
-
-  if (manifestSchemaVersion !== SUPPORTED_HARNESS_SCHEMA_VERSION) {
-    throw new HarnessLoaderError(
-      "unsupported_schema_version",
-      `Unsupported harness schemaVersion ${manifestSchemaVersion}`
-    );
-  }
+  const rawManifest = parseDataFile(manifestFile);
 
   const [
     phaseFiles,
@@ -309,6 +371,24 @@ export async function loadHarnessPackageWithRecord(
     ...roleFiles,
     ...promptFiles
   );
+
+  const compatibility = enforceCompatibilityAdmission({
+    input,
+    rawManifest,
+    loadedFiles
+  });
+  loadedFiles = compatibility.files;
+  manifestFile = compatibility.manifestFile;
+
+  const manifest = parseManifest(manifestFile);
+  const manifestSchemaVersion = manifest.schemaVersion;
+
+  if (manifestSchemaVersion !== SUPPORTED_HARNESS_SCHEMA_VERSION) {
+    throw new HarnessLoaderError(
+      "unsupported_schema_version",
+      `Unsupported harness schemaVersion ${manifestSchemaVersion}`
+    );
+  }
 
   const phases = orderDefinitions(
     [
@@ -456,7 +536,73 @@ export async function loadHarnessPackageWithRecord(
     snapshot: deepFreeze(snapshot),
     grant,
     dependencies,
+    compatibility: compatibility.admission,
     ...(trust === undefined ? {} : { trust })
+  };
+}
+
+function enforceCompatibilityAdmission(context: {
+  input: string | LoadHarnessPackageOptions;
+  rawManifest: unknown;
+  loadedFiles: readonly SourceFile[];
+}) {
+  try {
+    const admitted = admitHarnessCompatibility({
+      rawManifest: context.rawManifest,
+      files: context.loadedFiles,
+      targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+      runtimeVersion:
+        typeof context.input === "string"
+          ? DEFAULT_RUNTIME_VERSION
+          : context.input.runtimeVersion ?? DEFAULT_RUNTIME_VERSION,
+      matrix:
+        typeof context.input === "string"
+          ? DEFAULT_COMPATIBILITY_MATRIX
+          : context.input.compatibilityMatrix ?? DEFAULT_COMPATIBILITY_MATRIX,
+      ...(typeof context.input === "string" ||
+      context.input.migrationDescriptor === undefined
+        ? {}
+        : { migrationDescriptor: context.input.migrationDescriptor }),
+      ...(typeof context.input === "string" ||
+      context.input.migrationTrustStore === undefined
+        ? {}
+        : { migrationTrustStore: context.input.migrationTrustStore }),
+      ...(typeof context.input === "string" ||
+      context.input.migrationNow === undefined
+        ? {}
+        : { migrationNow: context.input.migrationNow }),
+      computeSpecHash
+    });
+
+    return {
+      files: admitted.files.map(sourceFileFromCompatibilityFile),
+      manifestFile: sourceFileFromCompatibilityFile(admitted.manifestFile),
+      admission: admitted.admission
+    };
+  } catch (error) {
+    if (!(error instanceof CompatibilityAdmissionError)) {
+      throw error;
+    }
+
+    throw new HarnessLoaderError(
+      error.code,
+      `Harness compatibility admission failed: ${error.reason}`,
+      error,
+      {
+        reason: error.reason,
+        ...(error.details === undefined ? {} : { details: error.details })
+      }
+    );
+  }
+}
+
+function sourceFileFromCompatibilityFile(
+  file: CompatibilitySourceFile
+): SourceFile {
+  return {
+    absolutePath: file.absolutePath ?? file.relativePath,
+    relativePath: file.relativePath,
+    raw: file.raw
   };
 }
 

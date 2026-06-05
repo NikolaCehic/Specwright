@@ -1,0 +1,21 @@
+{
+  "matrixId": "specwright.test.harness-loader.compatibility.v1",
+  "rows": [
+    {
+      "id": "current-v0-load",
+      "runtimeVersion": "current",
+      "harnessSchemaVersion": "specwright.harness.v0",
+      "packageVersionRange": "*",
+      "supportClass": "content-stable",
+      "loaderBehavior": "load"
+    },
+    {
+      "id": "historical-v0alpha-migrate",
+      "runtimeVersion": "current",
+      "harnessSchemaVersion": "specwright.harness.v0alpha",
+      "packageVersionRange": "*",
+      "supportClass": "migration-required",
+      "loaderBehavior": "migrate"
+    }
+  ]
+}
