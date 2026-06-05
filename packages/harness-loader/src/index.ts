@@ -56,6 +56,19 @@ import type {
   GrantSource,
   HarnessGrantEvent
 } from "./capability-grant";
+import {
+  DEFAULT_DEPENDENCY_RESOLVER,
+  DependencyResolutionError,
+  buildDependenciesPinnedEvent,
+  canonicalDependencyHashSegments,
+  resolveAndPinDependencies
+} from "./dependency-resolver";
+import type {
+  DependencyResolution,
+  HarnessDependencyEvent,
+  HarnessDependencyResolver,
+  ResolvedDependency
+} from "./dependency-resolver";
 
 export {
   AttestationSchema,
@@ -86,6 +99,24 @@ export {
   loadCapabilityGrantRegistryFromFile,
   parseCapabilityGrant
 } from "./capability-grant";
+export {
+  DEFAULT_DEPENDENCY_RESOLVER,
+  DependencyRegistrySchema,
+  DependencyResolutionError,
+  FixtureBackedHarnessDependencyResolver,
+  HarnessDependenciesPinnedEventSchema,
+  HarnessDependencyDeclarationSchema,
+  RegistryDependencyResolver,
+  ResolvedDependencySchema,
+  ReviewedDependencyPinSchema,
+  buildDependenciesPinnedEvent,
+  canonicalizeResolvedDependencies,
+  dependencyContentHash,
+  loadDependencyRegistryFromFile,
+  loadFixtureDependencyResolverFromFile,
+  parseDependencyDeclarations,
+  resolveAndPinDependencies
+} from "./dependency-resolver";
 export type {
   Attestation,
   HarnessTrustEvent,
@@ -108,6 +139,16 @@ export type {
   HarnessGrantEvent,
   RequestedCapabilitySurface
 } from "./capability-grant";
+export type {
+  DependencyRegistry,
+  DependencyRejectReason,
+  DependencyResolution,
+  HarnessDependencyDeclaration,
+  HarnessDependencyEvent,
+  HarnessDependencyResolver,
+  ResolvedDependency,
+  ReviewedDependencyPin
+} from "./dependency-resolver";
 
 export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
@@ -123,16 +164,21 @@ export type LoadHarnessPackageOptions = {
   onTrustEvent?(event: HarnessTrustEvent): void | Promise<void>;
   grantSource?: GrantSource;
   onGrantEvent?(event: HarnessGrantEvent): void | Promise<void>;
+  dependencyResolver?: HarnessDependencyResolver;
+  onDependencyEvent?(event: HarnessDependencyEvent): void | Promise<void>;
 };
 
 export type HarnessLoadRecord = {
   snapshot: HarnessSnapshot;
   grant: GrantEvaluation;
+  dependencies: DependencyResolution;
   trust?: TrustVerdict;
 };
 
 export type HarnessLoaderErrorCode =
+  | "dependency_unresolved"
   | "duplicate_id"
+  | "grant_denied"
   | "invalid_artifact_schema"
   | "invalid_definition"
   | "invalid_graph"
@@ -142,7 +188,6 @@ export type HarnessLoaderErrorCode =
   | "missing_harness_manifest"
   | "missing_reference"
   | "parse_error"
-  | "grant_denied"
   | "trust_rejected"
   | "unsupported_schema_version";
 
@@ -382,7 +427,11 @@ export async function loadHarnessPackageWithRecord(
     policies,
     tools
   });
-  const specHash = computeSpecHash(loadedFiles);
+  const dependencies = await enforceDependencyResolution({
+    input,
+    manifest
+  });
+  const specHash = computeSpecHash(loadedFiles, dependencies.resolved);
   const snapshot = HarnessSnapshotSchema.parse({
     id: manifest.id,
     version: manifest.version,
@@ -401,9 +450,12 @@ export async function loadHarnessPackageWithRecord(
     metadata: mergeTrustProvenance(manifest.metadata, trust)
   });
 
+  await emitDependencyEvent(input, manifest, specHash, dependencies);
+
   return {
     snapshot: deepFreeze(snapshot),
     grant,
+    dependencies,
     ...(trust === undefined ? {} : { trust })
   };
 }
@@ -615,6 +667,76 @@ function grantDeniedError(
       }
     }
   );
+}
+
+async function enforceDependencyResolution(context: {
+  input: string | LoadHarnessPackageOptions;
+  manifest: HarnessManifest;
+}): Promise<DependencyResolution> {
+  const resolver =
+    typeof context.input === "string"
+      ? DEFAULT_DEPENDENCY_RESOLVER
+      : context.input.dependencyResolver ?? DEFAULT_DEPENDENCY_RESOLVER;
+
+  try {
+    const resolution = await resolveAndPinDependencies({
+      manifest: context.manifest,
+      resolver,
+      strict: dependencyStrictMode(context.manifest)
+    });
+
+    return resolution;
+  } catch (error) {
+    if (!(error instanceof DependencyResolutionError)) {
+      throw error;
+    }
+
+    throw dependencyDeniedError(context.manifest, error);
+  }
+}
+
+async function emitDependencyEvent(
+  input: string | LoadHarnessPackageOptions,
+  manifest: HarnessManifest,
+  specHash: string,
+  resolution: DependencyResolution
+) {
+  if (typeof input === "string" || resolution.resolved.length === 0) {
+    return;
+  }
+
+  await input.onDependencyEvent?.(
+    buildDependenciesPinnedEvent(
+      manifest.id,
+      manifest.version,
+      specHash,
+      resolution
+    )
+  );
+}
+
+function dependencyDeniedError(
+  manifest: HarnessManifest,
+  error: DependencyResolutionError
+) {
+  const dependencyName = error.dependencyName ?? "unknown";
+
+  return new HarnessLoaderError(
+    "dependency_unresolved",
+    `Dependency resolution failed for ${manifest.id}@${manifest.version}: ${dependencyName} (${error.reason})`,
+    error,
+    {
+      reason: error.reason,
+      details: {
+        dependencyName,
+        ...(error.details === undefined ? {} : error.details)
+      }
+    }
+  );
+}
+
+function dependencyStrictMode(manifest: HarnessManifest) {
+  return !isRecord(manifest.runtime) || manifest.runtime.strict !== false;
 }
 
 function mergeTrustProvenance(
@@ -1475,15 +1597,27 @@ function normalizeLoadedAt(value: Date | string | undefined) {
 }
 
 export function computeSpecHash(
-  files: readonly Pick<SourceFile, "relativePath" | "raw">[]
+  files: readonly Pick<SourceFile, "relativePath" | "raw">[],
+  dependencies: readonly ResolvedDependency[] = []
 ) {
-  const payload = [...files]
+  const filePayload = [...files]
     .sort((left, right) => left.relativePath.localeCompare(right.relativePath))
     .map(
       (file) =>
         `${file.relativePath}\0${file.raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n")}`
     )
     .join("\0");
+  const dependencySegments = canonicalDependencyHashSegments(dependencies);
+  const payload =
+    dependencySegments.length === 0
+      ? filePayload
+      : [
+          filePayload,
+          "schemaVersion",
+          SUPPORTED_HARNESS_SCHEMA_VERSION,
+          "dependencies",
+          ...dependencySegments
+        ].join("\0");
 
   return hashString(payload);
 }

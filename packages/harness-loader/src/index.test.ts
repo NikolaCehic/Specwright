@@ -8,14 +8,25 @@ import {
   evaluateGrant,
   HarnessLoaderError,
   loadCapabilityGrantRegistryFromFile,
+  loadDependencyRegistryFromFile,
   loadHarnessPackage,
   loadHarnessPackageWithRecord,
   RegistryGrantSource,
   SUPPORTED_HARNESS_SCHEMA_VERSION
 } from "./index";
-import type { CapabilityGrant, HarnessGrantEvent } from "./index";
+import type {
+  CapabilityGrant,
+  HarnessDependencyEvent,
+  HarnessGrantEvent
+} from "./index";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+const DEP_ALPHA_HASH =
+  "sha256:433c9d4f8f84eea4656559cb7cb3040fa74023a7fc0668f9b05d79fa4bf3dead";
+const DEP_BETA_HASH =
+  "sha256:f55ad70e2ef3c77e3b633dd0743dc42ddf328e2b5c3d2ac060134e4a2c842edd";
+const WRONG_DEP_HASH =
+  "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 
 let rootDir: string;
 
@@ -465,6 +476,147 @@ phases:
     expect(Object.isFrozen(first)).toBe(true);
   });
 
+  test("leaves an empty dependency closure out of hash and events", async () => {
+    const packageDir = join(repoRoot, "harnesses/default");
+    const events: HarnessDependencyEvent[] = [];
+
+    const record = await loadHarnessPackageWithRecord({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      dependencyResolver: await dependencyResolverFromFixture(
+        "reviewed-registry.json"
+      ),
+      onDependencyEvent(event) {
+        events.push(event);
+      }
+    });
+
+    expect(record.dependencies).toEqual({
+      declarations: [],
+      resolved: []
+    });
+    expect(record.snapshot.specHash).toBe(
+      "sha256:d878da67ae18d763e9f61bad0e3f15a883f78cd77ac17823a0a4a67e35847135"
+    );
+    expect(events).toHaveLength(0);
+  });
+
+  test("pins reviewed dependencies and folds the closure into specHash", async () => {
+    const packageDir = dependencyFixturePackageDir("multi-dependency");
+    const dependencyResolver = await dependencyResolverFromFixture(
+      "reviewed-registry.json"
+    );
+    const events: HarnessDependencyEvent[] = [];
+
+    const first = await loadHarnessPackageWithRecord({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      dependencyResolver,
+      onDependencyEvent(event) {
+        events.push(event);
+      }
+    });
+    const second = await loadHarnessPackageWithRecord({
+      packageDir,
+      loadedAt: "2026-05-30T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      dependencyResolver
+    });
+
+    expect(first.dependencies.resolved).toEqual([
+      {
+        name: "specwright.dep.alpha",
+        version: "1.0.0",
+        contentHash: DEP_ALPHA_HASH,
+        trustTier: "first-party"
+      },
+      {
+        name: "specwright.dep.beta",
+        version: "2.1.0",
+        contentHash: DEP_BETA_HASH,
+        trustTier: "first-party"
+      }
+    ]);
+    expect(first.snapshot.specHash).toStartWith("sha256:");
+    expect(first.snapshot.specHash).not.toBe(
+      "sha256:d878da67ae18d763e9f61bad0e3f15a883f78cd77ac17823a0a4a67e35847135"
+    );
+    expect(first.snapshot.specHash).toBe(second.snapshot.specHash);
+    expect("dependencies" in first.snapshot).toBe(false);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: "harness.dependencies.pinned",
+      payload: {
+        packageId: "specwright.test",
+        version: "0.1.0",
+        specHash: first.snapshot.specHash,
+        dependencies: first.dependencies.resolved
+      }
+    });
+  });
+
+  test("fails closed when a dependency cannot be resolved", async () => {
+    const error = await captureDependencyFixtureDenial("unresolved");
+
+    expect((error as HarnessLoaderError).reason).toBe("dependency_unresolved");
+    expect((error as HarnessLoaderError).details).toMatchObject({
+      dependencyName: "specwright.dep.missing"
+    });
+  });
+
+  test("fails closed when a dependency resolves to a different hash", async () => {
+    const error = await captureDependencyFixtureDenial("hash-mismatch");
+
+    expect((error as HarnessLoaderError).reason).toBe(
+      "dependency_hash_mismatch"
+    );
+    expect((error as HarnessLoaderError).details).toMatchObject({
+      dependencyName: "specwright.dep.alpha",
+      expected: WRONG_DEP_HASH,
+      actual: DEP_ALPHA_HASH
+    });
+  });
+
+  test("fails closed on unpinned dependencies in strict mode", async () => {
+    const error = await captureDependencyFixtureDenial("unpinned", {
+      strict: false
+    });
+
+    expect((error as HarnessLoaderError).reason).toBe("dependency_unpinned");
+  });
+
+  test("fails closed on range dependencies in strict mode", async () => {
+    const error = await captureDependencyFixtureDenial("range-resolved");
+
+    expect((error as HarnessLoaderError).reason).toBe(
+      "dependency_range_not_pinned"
+    );
+  });
+
+  test("fails closed on conflicting dependency declarations", async () => {
+    const error = await captureDependencyFixtureDenial("conflicting-range");
+
+    expect((error as HarnessLoaderError).reason).toBe("dependency_conflict");
+    expect((error as HarnessLoaderError).details).toMatchObject({
+      dependencyName: "specwright.dep.alpha"
+    });
+  });
+
+  test("fails closed on dependency trust-tier violations", async () => {
+    const error = await captureDependencyFixtureDenial("trust-tier-violation");
+
+    expect((error as HarnessLoaderError).reason).toBe(
+      "dependency_trust_tier_violation"
+    );
+    expect((error as HarnessLoaderError).details).toMatchObject({
+      dependencyName: "specwright.dep.community",
+      requiredTrustTier: "first-party",
+      resolvedTrustTier: "community"
+    });
+  });
+
   test("evaluateGrant and grant events are deterministic", () => {
     const requested = {
       tools: ["fs.read", "shell.exec", "fs.read"],
@@ -682,6 +834,20 @@ async function grantSourceFromFixture(name: string) {
   );
 }
 
+async function dependencyResolverFromFixture(name: string) {
+  return loadDependencyRegistryFromFile(
+    join(repoRoot, "packages/harness-loader/test/fixtures/dependencies", name)
+  );
+}
+
+function dependencyFixturePackageDir(name: string) {
+  return join(
+    repoRoot,
+    "packages/harness-loader/test/fixtures/dependencies",
+    name
+  );
+}
+
 async function writeHarnessPackage(
   name: string,
   files: Record<string, string>
@@ -696,6 +862,32 @@ async function writeHarnessPackage(
   }
 
   return packageDir;
+}
+
+async function captureDependencyFixtureDenial(
+  name: string,
+  options: { strict?: boolean } = {}
+) {
+  const packageDir = dependencyFixturePackageDir(name);
+  let snapshot: unknown;
+
+  const error = await captureError(async () => {
+    snapshot = await loadHarnessPackage({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      dependencyResolver: await dependencyResolverFromFixture(
+        "reviewed-registry.json"
+      ),
+      ...(options.strict === undefined ? {} : { strict: options.strict })
+    });
+  });
+
+  expect(snapshot).toBeUndefined();
+  expect(error).toBeInstanceOf(HarnessLoaderError);
+  expect((error as HarnessLoaderError).code).toBe("dependency_unresolved");
+
+  return error;
 }
 
 async function captureError(operation: () => Promise<unknown>) {

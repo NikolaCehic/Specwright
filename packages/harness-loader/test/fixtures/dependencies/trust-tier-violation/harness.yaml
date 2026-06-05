@@ -1,0 +1,12 @@
+id: specwright.test
+version: 0.1.0
+schemaVersion: specwright.harness.v0
+metadata:
+  trustTier: first-party
+phases:
+  - id: intake
+dependencies:
+  - name: specwright.dep.community
+    versionRange: 1.0.0
+    pinnedHash: sha256:a5531e7802bf7ba4f83211399ad4fe8cfe864ea2c9e277f9bca0f46c55dab05f
+    trustTier: first-party
