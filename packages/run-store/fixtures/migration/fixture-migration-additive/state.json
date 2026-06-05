@@ -1,0 +1,15 @@
+{
+  "runId": "fixture-migration-additive",
+  "status": "completed",
+  "phase": "evidence",
+  "harness": {
+    "id": "default",
+    "version": "0.0.0",
+    "specHash": "sha256:migration-fixture"
+  },
+  "budgets": {},
+  "pendingApprovals": [],
+  "pendingQuestions": [],
+  "artifacts": [],
+  "lastEventId": "event-3-completed"
+}

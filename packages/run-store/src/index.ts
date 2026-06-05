@@ -7,7 +7,7 @@ declare module "node:crypto" {
 }
 
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
   ApprovalRequestSchema,
@@ -38,8 +38,34 @@ export const TRACE_FILE = "trace.json";
 export const DECISIONS_FILE = "decisions.jsonl";
 export const SUMMARY_FILE = "summary.md";
 export const CHECKPOINT_FILE = "state.checkpoint.json";
+export const RUN_PACKAGE_VERSION_FILE = "run.version.json";
+export const MIGRATIONS_FILE = "migrations.jsonl";
 export const RUN_STATE_CHECKPOINT_VERSION = 1;
 export const CHECKPOINT_INTERVAL = 128;
+export const RUN_PACKAGE_VERSION_RECORD_VERSION = 1;
+export const MIGRATION_RECORD_VERSION = 1;
+export const MIGRATION_RECORD_HASH_PREFIX = "sha256:";
+export const MIGRATION_RECORD_GENESIS_SEED = `${MIGRATION_RECORD_HASH_PREFIX}${"0".repeat(64)}`;
+export const RUN_STORE_BASELINE_VERSION = {
+  packageLayoutVersion: "specwright.run-package.v0",
+  ledgerFormatVersion: "specwright.ledger.plain-jsonl.v0",
+  projectionVersion: "specwright.reducer.baseline.v0",
+  snapshotFormatVersion: "specwright.snapshot.none.v0",
+  backendAdapterVersion: "specwright.backend.file.v0"
+} as const;
+export const RUN_STORE_CURRENT_VERSION = {
+  packageLayoutVersion: "specwright.run-package.v1",
+  ledgerFormatVersion: "specwright.ledger.integrity-jsonl.v1",
+  projectionVersion: "specwright.reducer.current.v1",
+  snapshotFormatVersion: "specwright.snapshot.checkpoint.v1",
+  backendAdapterVersion: "specwright.backend.file.v1"
+} as const;
+export const RUN_STORE_CURRENT_REDUCER_ID =
+  RUN_STORE_CURRENT_VERSION.projectionVersion;
+export const RUN_STORE_BASELINE_REDUCER_ID =
+  RUN_STORE_BASELINE_VERSION.projectionVersion;
+export const RUN_STORE_TOOL_ARTIFACT_ADDITIVE_REDUCER_ID =
+  "specwright.reducer.tool-artifact-additive.v1";
 
 export type RunStoreErrorCode =
   | "approval_mismatch"
@@ -54,11 +80,13 @@ export type RunStoreErrorCode =
   | "invalid_run_id"
   | "invalid_sequence"
   | "legal_hold_active"
+  | "migration_failed"
   | "missing_events"
   | "raw_read_denied"
   | "run_exists"
   | "run_not_started"
   | "unclassified_field"
+  | "unknown_version"
   | "unknown_event_contract"
   | "unsupported_event_version";
 
@@ -88,6 +116,8 @@ export type RunStorePaths = {
   evidenceDir: string;
   cacheDir: string;
   checkpointPath: string;
+  versionPath: string;
+  migrationsPath: string;
   evalsDir: string;
   summaryPath: string;
 };
@@ -150,6 +180,147 @@ export type RebuildFromCheckpointResult = {
   usedCheckpoint: boolean;
   reducedEventCount: number;
 };
+
+export type RunPackageVersion = {
+  packageLayoutVersion: string;
+  ledgerFormatVersion: string;
+  projectionVersion: string;
+  snapshotFormatVersion: string;
+  backendAdapterVersion: string;
+};
+
+export type RunPackageVersionRecord = {
+  recordVersion: typeof RUN_PACKAGE_VERSION_RECORD_VERSION;
+  version: RunPackageVersion;
+  migrationId?: string;
+  migrationNote?: string;
+};
+
+export type MigrationCompatibilityClass =
+  | "patch-compatible"
+  | "additive-projection"
+  | "additive-layout"
+  | "forward-compatible"
+  | "backward-compatible"
+  | "migration-required"
+  | "breaking";
+
+export type MigrationIntegritySummary =
+  | {
+      status: "verified";
+      eventCount: number;
+      headHash: string;
+    }
+  | {
+      status: "unchained";
+      eventCount: number;
+    };
+
+export type MigrationSequenceRange = {
+  from: number;
+  to: number;
+};
+
+export type MigrationRecord = {
+  recordVersion: typeof MIGRATION_RECORD_VERSION;
+  sequence: number;
+  runId: string;
+  migrationId: string;
+  fromVersion: RunPackageVersion;
+  toVersion: RunPackageVersion;
+  compatibilityClass: MigrationCompatibilityClass;
+  dataLoss: boolean;
+  compatibilityReducerId: string;
+  coveredSequenceRange: MigrationSequenceRange | null;
+  migrationNote: string;
+  integrityBefore: MigrationIntegritySummary;
+  integrityAfter: MigrationIntegritySummary;
+  createdAt: string;
+  approvalRef?: string;
+  prevRecordHash: string;
+  recordHash: string;
+};
+
+export type MigrationReducer = (state: RunState, event: RuntimeEvent) => void;
+
+export type MigrationEventMapperInput = {
+  rawEvent: Record<string, unknown>;
+  line: string;
+  index: number;
+  expectedRunId: string;
+  parseError: RunStoreError;
+};
+
+export type MigrationEventMapper = (
+  input: MigrationEventMapperInput
+) => RuntimeEvent;
+
+export type MigrationDescriptor = {
+  migrationId: string;
+  fromVersion: RunPackageVersion;
+  toVersion: RunPackageVersion;
+  compatibilityClass: MigrationCompatibilityClass;
+  dataLoss: boolean;
+  migrationNote: string;
+  compatibilityReducerId: string;
+  compatibilityReducer: MigrationReducer;
+  requiresApproval?: boolean;
+  mapEvent?: MigrationEventMapper;
+};
+
+export type MigrateRunPackageOptions = {
+  rootDir?: string | undefined;
+  runId: string;
+  descriptor: MigrationDescriptor;
+  expectedState?: RunState;
+  migratedAt?: Date | string;
+  approvalRef?: string;
+};
+
+export type MigrationResult =
+  | {
+      status: "migrated";
+      runId: string;
+      fromVersion: RunPackageVersion;
+      toVersion: RunPackageVersion;
+      record: MigrationRecord;
+      state: RunState;
+      eventsHashBefore: string;
+      eventsHashAfter: string;
+      deterministicReplayHash: string;
+    }
+  | {
+      status: "skipped_already_current";
+      runId: string;
+      version: RunPackageVersion;
+    };
+
+export type MigrationCohortRunResult =
+  | MigrationResult
+  | {
+      status: "failed";
+      runId: string;
+      code: RunStoreErrorCode;
+      message: string;
+      pointer?: {
+        sequence: number;
+      };
+    };
+
+export type MigrationCohortResult = {
+  descriptor: MigrationDescriptor;
+  results: MigrationCohortRunResult[];
+};
+
+const MIGRATION_COMPATIBILITY_CLASSES = new Set<MigrationCompatibilityClass>([
+  "patch-compatible",
+  "additive-projection",
+  "additive-layout",
+  "forward-compatible",
+  "backward-compatible",
+  "migration-required",
+  "breaking"
+]);
 
 export type RedactedHashReference = {
   redacted: true;
@@ -274,6 +445,8 @@ export function getRunStorePaths(rootDir: string | undefined, runId: string) {
     evidenceDir: join(runDir, "evidence"),
     cacheDir: join(runDir, "cache"),
     checkpointPath: join(runDir, "cache", CHECKPOINT_FILE),
+    versionPath: join(runDir, RUN_PACKAGE_VERSION_FILE),
+    migrationsPath: join(runDir, MIGRATIONS_FILE),
     evalsDir: join(runDir, "evals"),
     summaryPath: join(runDir, SUMMARY_FILE)
   } satisfies RunStorePaths;
@@ -333,6 +506,10 @@ export async function createRun(
 
   await appendJsonLine(paths.eventsPath, event);
   await writeProjection(paths, state);
+  await writePackageVersion(paths, {
+    recordVersion: RUN_PACKAGE_VERSION_RECORD_VERSION,
+    version: RUN_STORE_CURRENT_VERSION
+  });
 
   return {
     runId,
@@ -375,7 +552,7 @@ export async function appendEvent<TPayload>(
       : builtEvent;
   const events = [...existingEvents, event];
   const updatedIntegrity = verifyParsedRunIntegrity(events);
-  const { state } = await rebuildStateFromCheckpoint({
+  const { state } = await rebuildStateForPackage({
     paths,
     runId,
     events,
@@ -399,6 +576,8 @@ export async function readEvents(options: {
   const runId = assertSafeRunId(options.runId);
   const paths = getRunStorePaths(options.rootDir, runId);
   let raw: string;
+
+  await assertReadablePackageVersion(paths);
 
   try {
     raw = await readFile(paths.eventsPath, "utf8");
@@ -511,6 +690,352 @@ export async function readRunState(
   });
 }
 
+export async function detectPackageVersion(
+  input:
+    | RunStorePaths
+    | {
+        rootDir?: string | undefined;
+        runId: string;
+      }
+): Promise<RunPackageVersion> {
+  const paths = isRunStorePaths(input)
+    ? input
+    : getRunStorePaths(input.rootDir, input.runId);
+  let raw: string;
+
+  try {
+    raw = await readFile(paths.versionPath, "utf8");
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return RUN_STORE_BASELINE_VERSION;
+    }
+
+    throw new RunStoreError(
+      "unknown_version",
+      `Cannot read run package version marker at ${paths.versionPath}`,
+      error
+    );
+  }
+
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new RunStoreError(
+      "unknown_version",
+      `Run package version marker at ${paths.versionPath} is not valid JSON`,
+      error
+    );
+  }
+
+  const record = parseRunPackageVersionRecord(parsed);
+
+  if (record === undefined) {
+    throw new RunStoreError(
+      "unknown_version",
+      `Run package version marker at ${paths.versionPath} is malformed`
+    );
+  }
+
+  return record.version;
+}
+
+export function validateMigrationDescriptor(
+  descriptor: MigrationDescriptor
+): MigrationDescriptor {
+  if (!isRecord(descriptor)) {
+    throw new RunStoreError(
+      "migration_failed",
+      "Migration descriptor must be an object"
+    );
+  }
+
+  requireNonEmptyString(descriptor.migrationId, "migrationId");
+  requireNonEmptyString(descriptor.migrationNote, "migrationNote");
+  requireNonEmptyString(
+    descriptor.compatibilityReducerId,
+    "compatibilityReducerId"
+  );
+  assertRunPackageVersion(descriptor.fromVersion, "fromVersion");
+  assertRunPackageVersion(descriptor.toVersion, "toVersion");
+
+  if (!MIGRATION_COMPATIBILITY_CLASSES.has(descriptor.compatibilityClass)) {
+    throw new RunStoreError(
+      "migration_failed",
+      `Unsupported migration compatibility class ${String(
+        descriptor.compatibilityClass
+      )}`
+    );
+  }
+
+  if (typeof descriptor.dataLoss !== "boolean") {
+    throw new RunStoreError(
+      "migration_failed",
+      "Migration descriptor dataLoss must be boolean"
+    );
+  }
+
+  if (typeof descriptor.compatibilityReducer !== "function") {
+    throw new RunStoreError(
+      "migration_failed",
+      "Migration descriptor must declare a compatibility reducer"
+    );
+  }
+
+  if (
+    (descriptor.dataLoss || descriptor.compatibilityClass === "breaking") &&
+    descriptor.requiresApproval !== true
+  ) {
+    throw new RunStoreError(
+      "migration_failed",
+      "Data-loss or breaking migrations must require approval metadata"
+    );
+  }
+
+  if (!isKnownRunPackageVersion(descriptor.fromVersion)) {
+    throw new RunStoreError(
+      "unknown_version",
+      "Migration descriptor fromVersion is not registered"
+    );
+  }
+
+  if (!versionsEqual(descriptor.toVersion, RUN_STORE_CURRENT_VERSION)) {
+    throw new RunStoreError(
+      "unknown_version",
+      "Migration descriptor toVersion must target the current run-store version"
+    );
+  }
+
+  return descriptor;
+}
+
+export async function migrateRunPackage(
+  options: MigrateRunPackageOptions
+): Promise<MigrationResult> {
+  const descriptor = validateMigrationDescriptor(options.descriptor);
+  const runId = assertSafeRunId(options.runId);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  const temporaryPaths: string[] = [];
+  const originalEventsBytes = await readRequiredFile(
+    paths.eventsPath,
+    "missing_events",
+    `Missing event log for run ${runId}`
+  );
+  const originalStateBytes = await readOptionalFile(paths.statePath);
+  const originalVersionBytes = await readOptionalFile(paths.versionPath);
+  const originalMigrationsBytes = await readOptionalFile(paths.migrationsPath);
+  const eventsHashBefore = hashRawBytes(originalEventsBytes);
+
+  try {
+    const detectedVersion = await detectPackageVersion(paths);
+
+    if (versionsEqual(detectedVersion, descriptor.toVersion)) {
+      return {
+        status: "skipped_already_current",
+        runId,
+        version: detectedVersion
+      };
+    }
+
+    if (!versionsEqual(detectedVersion, descriptor.fromVersion)) {
+      throw new RunStoreError(
+        "unknown_version",
+        `Run ${runId} has version ${versionLabel(
+          detectedVersion
+        )}; descriptor ${descriptor.migrationId} migrates ${versionLabel(
+          descriptor.fromVersion
+        )}`
+      );
+    }
+
+    if (
+      descriptor.requiresApproval === true &&
+      requireNonEmptyString(options.approvalRef, "approvalRef") === undefined
+    ) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration ${descriptor.migrationId} requires approval metadata`
+      );
+    }
+
+    const events = parseHistoricalEventLogForMigration(
+      originalEventsBytes,
+      runId,
+      descriptor
+    );
+    const integrityBefore = verifyParsedRunIntegrity(events);
+
+    if (integrityBefore.status === "broken") {
+      throw integrityBrokenError(runId, integrityBefore);
+    }
+
+    const state = projectRunStateWithReducer(
+      events,
+      descriptor.compatibilityReducer
+    );
+    const integrityAfter = verifyParsedRunIntegrity(events);
+
+    if (integrityAfter.status === "broken") {
+      throw integrityBrokenError(runId, integrityAfter);
+    }
+
+    const existingRecords = parseMigrationRecordLog(
+      originalMigrationsBytes ?? "",
+      runId
+    );
+    const migrationRecord = buildMigrationRecord({
+      descriptor,
+      runId,
+      sequence: existingRecords.length,
+      eventCount: events.length,
+      integrityBefore: integritySummary(integrityBefore),
+      integrityAfter: integritySummary(integrityAfter),
+      createdAt: normalizeTimestamp(options.migratedAt),
+      prevRecordHash:
+        existingRecords.at(-1)?.recordHash ?? MIGRATION_RECORD_GENESIS_SEED,
+      approvalRef: options.approvalRef
+    });
+    const nextMigrationsBytes = appendMigrationRecordBytes(
+      originalMigrationsBytes ?? "",
+      migrationRecord
+    );
+    const versionRecord: RunPackageVersionRecord = {
+      recordVersion: RUN_PACKAGE_VERSION_RECORD_VERSION,
+      version: descriptor.toVersion,
+      migrationId: descriptor.migrationId,
+      migrationNote: descriptor.migrationNote
+    };
+
+    await stageAndRenameJson(
+      paths.migrationsPath,
+      nextMigrationsBytes,
+      temporaryPaths
+    );
+    await stageAndRenameJson(
+      paths.statePath,
+      `${JSON.stringify(state, null, 2)}\n`,
+      temporaryPaths
+    );
+    await stageAndRenameJson(
+      paths.versionPath,
+      `${JSON.stringify(versionRecord, null, 2)}\n`,
+      temporaryPaths
+    );
+
+    const eventsHashAfter = hashRawBytes(await readFile(paths.eventsPath, "utf8"));
+
+    if (eventsHashAfter !== eventsHashBefore) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration ${descriptor.migrationId} changed authoritative events.jsonl bytes`
+      );
+    }
+
+    const firstReplay = await materializeRunState({
+      rootDir: options.rootDir,
+      runId
+    });
+    const secondReplay = await materializeRunState({
+      rootDir: options.rootDir,
+      runId
+    });
+    const deterministicReplayHash = hashStableJson(firstReplay);
+
+    if (stableJson(firstReplay) !== stableJson(secondReplay)) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration ${descriptor.migrationId} replay is not deterministic`
+      );
+    }
+
+    if (
+      options.expectedState !== undefined &&
+      stableJson(firstReplay) !== stableJson(options.expectedState)
+    ) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration ${descriptor.migrationId} replay does not match expected RunState`
+      );
+    }
+
+    return {
+      status: "migrated",
+      runId,
+      fromVersion: descriptor.fromVersion,
+      toVersion: descriptor.toVersion,
+      record: migrationRecord,
+      state: firstReplay,
+      eventsHashBefore,
+      eventsHashAfter,
+      deterministicReplayHash
+    };
+  } catch (error) {
+    await restoreMigrationOutputs({
+      paths,
+      temporaryPaths,
+      originalStateBytes,
+      originalVersionBytes,
+      originalMigrationsBytes
+    });
+
+    throw error;
+  }
+}
+
+export async function migrateCohort(options: {
+  rootDir?: string | undefined;
+  runIds: readonly string[];
+  descriptor: MigrationDescriptor;
+  expectedStates?: Record<string, RunState>;
+  migratedAt?: Date | string;
+  approvalRef?: string;
+}): Promise<MigrationCohortResult> {
+  const descriptor = validateMigrationDescriptor(options.descriptor);
+  const results: MigrationCohortRunResult[] = [];
+
+  for (const runId of options.runIds) {
+    try {
+      const migrateOptions: MigrateRunPackageOptions = {
+        rootDir: options.rootDir,
+        runId,
+        descriptor,
+        ...(options.expectedStates?.[runId] === undefined
+          ? {}
+          : { expectedState: options.expectedStates[runId] }),
+        ...(options.migratedAt === undefined
+          ? {}
+          : { migratedAt: options.migratedAt }),
+        ...(options.approvalRef === undefined
+          ? {}
+          : { approvalRef: options.approvalRef })
+      };
+
+      results.push(
+        await migrateRunPackage(migrateOptions)
+      );
+    } catch (error) {
+      const pointer = migrationPointer(error);
+
+      results.push({
+        status: "failed",
+        runId,
+        code: error instanceof RunStoreError ? error.code : "migration_failed",
+        message:
+          error instanceof Error
+            ? error.message
+            : `Migration failed for run ${runId}`,
+        ...(pointer === undefined ? {} : { pointer })
+      });
+    }
+  }
+
+  return {
+    descriptor,
+    results
+  };
+}
+
 export function redactForEgress(
   value: unknown,
   options: RedactForEgressOptions = {}
@@ -557,7 +1082,7 @@ export async function rebuildFromCheckpoint(options: {
     runId
   });
 
-  return rebuildStateFromCheckpoint({
+  return rebuildStateForPackage({
     paths,
     runId,
     events,
@@ -605,6 +1130,13 @@ export async function readCheckpoint(
 }
 
 export function projectRunState(events: readonly RuntimeEvent[]): RunState {
+  return projectRunStateWithReducer(events, reduceEvent);
+}
+
+function projectRunStateWithReducer(
+  events: readonly RuntimeEvent[],
+  reducer: MigrationReducer
+): RunState {
   if (events.length === 0) {
     throw new RunStoreError(
       "run_not_started",
@@ -645,7 +1177,7 @@ export function projectRunState(events: readonly RuntimeEvent[]): RunState {
       );
     }
 
-    reduceEvent(state, event);
+    reducer(state, event);
     state.lastEventId = event.id;
   }
 
@@ -660,6 +1192,25 @@ export function projectRunState(events: readonly RuntimeEvent[]): RunState {
   }
 
   return parsed.data;
+}
+
+async function rebuildStateForPackage(input: {
+  paths: RunStorePaths;
+  runId: string;
+  events: readonly RuntimeEvent[];
+  integrity: RunIntegrityVerdict;
+}): Promise<RebuildFromCheckpointResult> {
+  const reducer = await selectProjectionReducerForPackage(input.paths);
+
+  if (reducer.reducerId !== RUN_STORE_CURRENT_REDUCER_ID) {
+    return {
+      state: projectRunStateWithReducer(input.events, reducer.reduce),
+      usedCheckpoint: false,
+      reducedEventCount: input.events.length
+    };
+  }
+
+  return rebuildStateFromCheckpoint(input);
 }
 
 async function rebuildStateFromCheckpoint(input: {
@@ -874,6 +1425,752 @@ function parseCheckpointRecord(value: unknown): RunStateCheckpoint | undefined {
       ? {}
       : { coveredHeadHash: value.coveredHeadHash })
   };
+}
+
+async function assertReadablePackageVersion(paths: RunStorePaths) {
+  const version = await detectPackageVersion(paths);
+
+  if (!isKnownRunPackageVersion(version)) {
+    throw new RunStoreError(
+      "unknown_version",
+      `Run package version ${versionLabel(version)} is not registered`
+    );
+  }
+}
+
+async function selectProjectionReducerForPackage(paths: RunStorePaths): Promise<{
+  reducerId: string;
+  reduce: MigrationReducer;
+}> {
+  const version = await detectPackageVersion(paths);
+
+  if (!isKnownRunPackageVersion(version)) {
+    throw new RunStoreError(
+      "unknown_version",
+      `Run package version ${versionLabel(version)} is not registered`
+    );
+  }
+
+  if (!versionsEqual(version, RUN_STORE_CURRENT_VERSION)) {
+    return {
+      reducerId: RUN_STORE_CURRENT_REDUCER_ID,
+      reduce: reduceEvent
+    };
+  }
+
+  const records = await readMigrationRecords(paths);
+  const reducerId =
+    records.at(-1)?.compatibilityReducerId ?? RUN_STORE_CURRENT_REDUCER_ID;
+  const reducer = compatibilityReducerById(reducerId);
+
+  if (reducer === undefined) {
+    throw new RunStoreError(
+      "unknown_version",
+      `No registered compatibility reducer ${reducerId}`
+    );
+  }
+
+  return {
+    reducerId,
+    reduce: reducer
+  };
+}
+
+function compatibilityReducerById(
+  reducerId: string
+): MigrationReducer | undefined {
+  switch (reducerId) {
+    case RUN_STORE_CURRENT_REDUCER_ID:
+    case RUN_STORE_BASELINE_REDUCER_ID:
+      return reduceEvent;
+    case RUN_STORE_TOOL_ARTIFACT_ADDITIVE_REDUCER_ID:
+      return reduceToolCompletedArtifacts;
+    default:
+      return undefined;
+  }
+}
+
+function reduceToolCompletedArtifacts(state: RunState, event: RuntimeEvent) {
+  reduceEvent(state, event);
+
+  if (event.type !== "tool.completed" || !isRecord(event.payload)) {
+    return;
+  }
+
+  const result = recordValue(event.payload.result);
+  const output = recordValue(result.output);
+  const artifact = parseNestedArtifact(output);
+
+  if (artifact !== undefined) {
+    state.artifacts = upsertByKey(state.artifacts, artifact, "artifactId");
+  }
+}
+
+async function readMigrationRecords(
+  paths: RunStorePaths
+): Promise<MigrationRecord[]> {
+  const raw = await readOptionalFile(paths.migrationsPath);
+
+  return parseMigrationRecordLog(raw ?? "", undefined);
+}
+
+function parseMigrationRecordLog(
+  raw: string,
+  expectedRunId: string | undefined
+) {
+  if (raw.length === 0) {
+    return [];
+  }
+
+  const lines = raw.split(/\r?\n/);
+
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
+
+  const records: MigrationRecord[] = [];
+  let prevRecordHash = MIGRATION_RECORD_GENESIS_SEED;
+
+  for (const [index, line] of lines.entries()) {
+    if (line.trim() === "") {
+      throw new RunStoreError(
+        "migration_failed",
+        `Blank migration record at line ${index + 1}`
+      );
+    }
+
+    let parsedJson: unknown;
+
+    try {
+      parsedJson = JSON.parse(line) as unknown;
+    } catch (error) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Invalid JSON at migration record line ${index + 1}`,
+        error
+      );
+    }
+
+    const record = parseMigrationRecord(parsedJson);
+
+    if (record === undefined) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Invalid migration record at line ${index + 1}`
+      );
+    }
+
+    if (record.sequence !== index) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration record ${record.migrationId} has sequence ${record.sequence}, expected ${index}`
+      );
+    }
+
+    if (expectedRunId !== undefined && record.runId !== expectedRunId) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration record ${record.migrationId} belongs to ${record.runId}, expected ${expectedRunId}`
+      );
+    }
+
+    if (record.prevRecordHash !== prevRecordHash) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration record ${record.migrationId} prevRecordHash does not match the prior record`
+      );
+    }
+
+    const expectedHash = hashMigrationRecordContent(record);
+
+    if (record.recordHash !== expectedHash) {
+      throw new RunStoreError(
+        "migration_failed",
+        `Migration record ${record.migrationId} hash does not match its content`
+      );
+    }
+
+    records.push(record);
+    prevRecordHash = record.recordHash;
+  }
+
+  return records;
+}
+
+function parseMigrationRecord(value: unknown): MigrationRecord | undefined {
+  if (!isRecord(value) || value.recordVersion !== MIGRATION_RECORD_VERSION) {
+    return undefined;
+  }
+
+  const runId =
+    typeof value.runId === "string" && value.runId.length > 0
+      ? value.runId
+      : undefined;
+  const migrationId =
+    typeof value.migrationId === "string" && value.migrationId.length > 0
+      ? value.migrationId
+      : undefined;
+  const compatibilityClass = MIGRATION_COMPATIBILITY_CLASSES.has(
+    value.compatibilityClass as MigrationCompatibilityClass
+  )
+    ? (value.compatibilityClass as MigrationCompatibilityClass)
+    : undefined;
+  const fromVersion = isRunPackageVersion(value.fromVersion)
+    ? value.fromVersion
+    : undefined;
+  const toVersion = isRunPackageVersion(value.toVersion)
+    ? value.toVersion
+    : undefined;
+  const coveredSequenceRange = parseMigrationSequenceRange(
+    value.coveredSequenceRange
+  );
+  const integrityBefore = parseMigrationIntegritySummary(value.integrityBefore);
+  const integrityAfter = parseMigrationIntegritySummary(value.integrityAfter);
+
+  if (
+    typeof value.sequence !== "number" ||
+    !Number.isInteger(value.sequence) ||
+    value.sequence < 0 ||
+    runId === undefined ||
+    migrationId === undefined ||
+    fromVersion === undefined ||
+    toVersion === undefined ||
+    compatibilityClass === undefined ||
+    typeof value.dataLoss !== "boolean" ||
+    typeof value.compatibilityReducerId !== "string" ||
+    value.compatibilityReducerId.length === 0 ||
+    coveredSequenceRange === undefined ||
+    typeof value.migrationNote !== "string" ||
+    value.migrationNote.length === 0 ||
+    integrityBefore === undefined ||
+    integrityAfter === undefined ||
+    typeof value.createdAt !== "string" ||
+    value.createdAt.length === 0 ||
+    (value.approvalRef !== undefined &&
+      (typeof value.approvalRef !== "string" || value.approvalRef.length === 0)) ||
+    typeof value.prevRecordHash !== "string" ||
+    value.prevRecordHash.length === 0 ||
+    typeof value.recordHash !== "string" ||
+    value.recordHash.length === 0
+  ) {
+    return undefined;
+  }
+
+  return {
+    recordVersion: MIGRATION_RECORD_VERSION,
+    sequence: value.sequence,
+    runId,
+    migrationId,
+    fromVersion,
+    toVersion,
+    compatibilityClass,
+    dataLoss: value.dataLoss,
+    compatibilityReducerId: value.compatibilityReducerId,
+    coveredSequenceRange,
+    migrationNote: value.migrationNote,
+    integrityBefore,
+    integrityAfter,
+    createdAt: value.createdAt,
+    ...(value.approvalRef === undefined
+      ? {}
+      : { approvalRef: value.approvalRef }),
+    prevRecordHash: value.prevRecordHash,
+    recordHash: value.recordHash
+  };
+}
+
+function parseMigrationSequenceRange(
+  value: unknown
+): MigrationSequenceRange | null | undefined {
+  if (value === null) {
+    return null;
+  }
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  if (
+    typeof value.from !== "number" ||
+    typeof value.to !== "number" ||
+    !Number.isInteger(value.from) ||
+    !Number.isInteger(value.to) ||
+    value.from < 0 ||
+    value.to < value.from
+  ) {
+    return undefined;
+  }
+
+  return {
+    from: value.from,
+    to: value.to
+  };
+}
+
+function parseMigrationIntegritySummary(
+  value: unknown
+): MigrationIntegritySummary | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  if (
+    value.status === "verified" &&
+    typeof value.eventCount === "number" &&
+    Number.isInteger(value.eventCount) &&
+    value.eventCount >= 0 &&
+    typeof value.headHash === "string" &&
+    value.headHash.length > 0
+  ) {
+    return {
+      status: "verified",
+      eventCount: value.eventCount,
+      headHash: value.headHash
+    };
+  }
+
+  if (
+    value.status === "unchained" &&
+    typeof value.eventCount === "number" &&
+    Number.isInteger(value.eventCount) &&
+    value.eventCount >= 0
+  ) {
+    return {
+      status: "unchained",
+      eventCount: value.eventCount
+    };
+  }
+
+  return undefined;
+}
+
+function buildMigrationRecord(input: {
+  descriptor: MigrationDescriptor;
+  runId: string;
+  sequence: number;
+  eventCount: number;
+  integrityBefore: MigrationIntegritySummary;
+  integrityAfter: MigrationIntegritySummary;
+  createdAt: string;
+  prevRecordHash: string;
+  approvalRef?: string | undefined;
+}): MigrationRecord {
+  const recordWithoutHash: Omit<MigrationRecord, "recordHash"> = {
+    recordVersion: MIGRATION_RECORD_VERSION,
+    sequence: input.sequence,
+    runId: input.runId,
+    migrationId: input.descriptor.migrationId,
+    fromVersion: input.descriptor.fromVersion,
+    toVersion: input.descriptor.toVersion,
+    compatibilityClass: input.descriptor.compatibilityClass,
+    dataLoss: input.descriptor.dataLoss,
+    compatibilityReducerId: input.descriptor.compatibilityReducerId,
+    coveredSequenceRange:
+      input.eventCount === 0 ? null : { from: 0, to: input.eventCount - 1 },
+    migrationNote: input.descriptor.migrationNote,
+    integrityBefore: input.integrityBefore,
+    integrityAfter: input.integrityAfter,
+    createdAt: input.createdAt,
+    ...(input.approvalRef === undefined ? {} : { approvalRef: input.approvalRef }),
+    prevRecordHash: input.prevRecordHash
+  };
+  const record = {
+    ...recordWithoutHash,
+    recordHash: hashMigrationRecordContent(recordWithoutHash)
+  };
+  const parsed = parseMigrationRecord(record);
+
+  if (parsed === undefined) {
+    throw new RunStoreError(
+      "migration_failed",
+      `Migration record ${input.descriptor.migrationId} does not validate`
+    );
+  }
+
+  return parsed;
+}
+
+function hashMigrationRecordContent(
+  record: Omit<MigrationRecord, "recordHash"> | MigrationRecord
+) {
+  const { recordHash, ...content } = record as MigrationRecord;
+  void recordHash;
+  const digest = createHash("sha256")
+    .update(canonicalJsonStringify(content))
+    .digest("hex");
+
+  return `${MIGRATION_RECORD_HASH_PREFIX}${digest}`;
+}
+
+function appendMigrationRecordBytes(raw: string, record: MigrationRecord) {
+  parseMigrationRecordLog(raw, record.runId);
+
+  const prefix = raw.length === 0 || raw.endsWith("\n") ? raw : `${raw}\n`;
+
+  return `${prefix}${JSON.stringify(record)}\n`;
+}
+
+function integritySummary(
+  verdict: Exclude<RunIntegrityVerdict, { status: "broken" }>
+): MigrationIntegritySummary {
+  return verdict.status === "verified"
+    ? {
+        status: "verified",
+        eventCount: verdict.eventCount,
+        headHash: verdict.headHash
+      }
+    : {
+        status: "unchained",
+        eventCount: verdict.eventCount
+      };
+}
+
+function parseHistoricalEventLogForMigration(
+  raw: string,
+  expectedRunId: string,
+  descriptor: MigrationDescriptor
+) {
+  const lines = raw.split(/\r?\n/);
+
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
+
+  return lines.map((line, index) =>
+    parseHistoricalEventLineForMigration(
+      line,
+      index,
+      expectedRunId,
+      descriptor
+    )
+  );
+}
+
+function parseHistoricalEventLineForMigration(
+  line: string,
+  index: number,
+  expectedRunId: string,
+  descriptor: MigrationDescriptor
+): RuntimeEvent {
+  if (line.trim() === "") {
+    throw new RunStoreError(
+      "corrupt_event",
+      `Blank JSONL event at line ${index + 1}`
+    );
+  }
+
+  let parsedJson: unknown;
+
+  try {
+    parsedJson = JSON.parse(line) as unknown;
+  } catch (error) {
+    throw new RunStoreError(
+      "corrupt_event",
+      `Invalid JSON at event log line ${index + 1}`,
+      error
+    );
+  }
+
+  assertHistoricalEnvelope(parsedJson, index, expectedRunId);
+
+  try {
+    return parseEventLine(line, index, expectedRunId);
+  } catch (error) {
+    const parseError =
+      error instanceof RunStoreError
+        ? error
+        : new RunStoreError(
+            "invalid_event",
+            `Invalid historical event at line ${index + 1}`,
+            error
+          );
+
+    if (!isMappableHistoricalEventError(parseError)) {
+      throw parseError;
+    }
+
+    if (descriptor.mapEvent === undefined) {
+      throw new RunStoreError(
+        "invalid_event",
+        `Historical event at line ${index + 1} is incompatible and descriptor ${descriptor.migrationId} declares no mapping`,
+        parseError
+      );
+    }
+
+    const mapped = descriptor.mapEvent({
+      rawEvent: parsedJson,
+      line,
+      index,
+      expectedRunId,
+      parseError
+    });
+    const parsedMapped = RuntimeEventSchema.safeParse(mapped);
+
+    if (!parsedMapped.success) {
+      throw new RunStoreError(
+        hasPayloadIssue(parsedMapped.error) ? "invalid_event_payload" : "invalid_event",
+        `Descriptor ${descriptor.migrationId} mapped event at line ${index + 1} to an invalid current event`,
+        parsedMapped.error
+      );
+    }
+
+    if (parsedMapped.data.runId !== expectedRunId) {
+      throw new RunStoreError(
+        "invalid_event",
+        `Mapped event at line ${index + 1} belongs to ${parsedMapped.data.runId}, expected ${expectedRunId}`
+      );
+    }
+
+    if (parsedMapped.data.sequence !== index) {
+      throw new RunStoreError(
+        "invalid_sequence",
+        `Mapped event at line ${index + 1} has sequence ${parsedMapped.data.sequence}, expected ${index}`
+      );
+    }
+
+    return parsedMapped.data;
+  }
+}
+
+function assertHistoricalEnvelope(
+  value: unknown,
+  index: number,
+  expectedRunId: string
+): asserts value is Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new RunStoreError(
+      "invalid_event",
+      `Runtime event at line ${index + 1} must be an object`
+    );
+  }
+
+  if (value.runId !== expectedRunId) {
+    throw new RunStoreError(
+      "invalid_event",
+      `Event at line ${index + 1} belongs to ${String(
+        value.runId
+      )}, expected ${expectedRunId}`
+    );
+  }
+
+  if (value.sequence !== index) {
+    throw new RunStoreError(
+      "invalid_sequence",
+      `Event at line ${index + 1} has sequence ${String(
+        value.sequence
+      )}, expected ${index}`
+    );
+  }
+}
+
+function isMappableHistoricalEventError(error: RunStoreError) {
+  return [
+    "invalid_event",
+    "invalid_event_payload",
+    "unknown_event_contract",
+    "unsupported_event_version"
+  ].includes(error.code);
+}
+
+async function writePackageVersion(
+  paths: RunStorePaths,
+  record: RunPackageVersionRecord
+) {
+  await writeJsonAtomic(paths.versionPath, record);
+}
+
+function parseRunPackageVersionRecord(
+  value: unknown
+): RunPackageVersionRecord | undefined {
+  if (!isRecord(value) || value.recordVersion !== RUN_PACKAGE_VERSION_RECORD_VERSION) {
+    return undefined;
+  }
+
+  const version = isRunPackageVersion(value.version)
+    ? value.version
+    : undefined;
+
+  if (
+    version === undefined ||
+    (value.migrationId !== undefined &&
+      (typeof value.migrationId !== "string" || value.migrationId.length === 0)) ||
+    (value.migrationNote !== undefined &&
+      (typeof value.migrationNote !== "string" ||
+        value.migrationNote.length === 0))
+  ) {
+    return undefined;
+  }
+
+  return {
+    recordVersion: RUN_PACKAGE_VERSION_RECORD_VERSION,
+    version,
+    ...(value.migrationId === undefined ? {} : { migrationId: value.migrationId }),
+    ...(value.migrationNote === undefined
+      ? {}
+      : { migrationNote: value.migrationNote })
+  };
+}
+
+function assertRunPackageVersion(value: unknown, label: string) {
+  if (!isRunPackageVersion(value)) {
+    throw new RunStoreError(
+      "migration_failed",
+      `Migration descriptor ${label} is not a valid run package version`
+    );
+  }
+}
+
+function isRunPackageVersion(value: unknown): value is RunPackageVersion {
+  return (
+    isRecord(value) &&
+    typeof value.packageLayoutVersion === "string" &&
+    value.packageLayoutVersion.length > 0 &&
+    typeof value.ledgerFormatVersion === "string" &&
+    value.ledgerFormatVersion.length > 0 &&
+    typeof value.projectionVersion === "string" &&
+    value.projectionVersion.length > 0 &&
+    typeof value.snapshotFormatVersion === "string" &&
+    value.snapshotFormatVersion.length > 0 &&
+    typeof value.backendAdapterVersion === "string" &&
+    value.backendAdapterVersion.length > 0
+  );
+}
+
+function isKnownRunPackageVersion(version: RunPackageVersion) {
+  return (
+    versionsEqual(version, RUN_STORE_BASELINE_VERSION) ||
+    versionsEqual(version, RUN_STORE_CURRENT_VERSION)
+  );
+}
+
+function versionsEqual(left: RunPackageVersion, right: RunPackageVersion) {
+  return (
+    left.packageLayoutVersion === right.packageLayoutVersion &&
+    left.ledgerFormatVersion === right.ledgerFormatVersion &&
+    left.projectionVersion === right.projectionVersion &&
+    left.snapshotFormatVersion === right.snapshotFormatVersion &&
+    left.backendAdapterVersion === right.backendAdapterVersion
+  );
+}
+
+function versionLabel(version: RunPackageVersion) {
+  return [
+    version.packageLayoutVersion,
+    version.ledgerFormatVersion,
+    version.projectionVersion,
+    version.snapshotFormatVersion,
+    version.backendAdapterVersion
+  ].join(" / ");
+}
+
+function isRunStorePaths(value: unknown): value is RunStorePaths {
+  return isRecord(value) && typeof value.versionPath === "string";
+}
+
+async function readRequiredFile(
+  path: string,
+  code: RunStoreErrorCode,
+  message: string
+) {
+  try {
+    return await readFile(path, "utf8");
+  } catch (error) {
+    throw new RunStoreError(code, message, error);
+  }
+}
+
+async function readOptionalFile(path: string) {
+  try {
+    return await readFile(path, "utf8");
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return undefined;
+    }
+
+    throw error;
+  }
+}
+
+async function stageAndRenameJson(
+  path: string,
+  bytes: string,
+  temporaryPaths: string[]
+) {
+  const tempPath = `${path}.${randomUUID()}.tmp`;
+  temporaryPaths.push(tempPath);
+  await writeFile(tempPath, bytes, { flag: "wx" });
+  await rename(tempPath, path);
+}
+
+async function restoreMigrationOutputs(input: {
+  paths: RunStorePaths;
+  temporaryPaths: readonly string[];
+  originalStateBytes: string | undefined;
+  originalVersionBytes: string | undefined;
+  originalMigrationsBytes: string | undefined;
+}) {
+  await Promise.all(
+    input.temporaryPaths.map((path) => rm(path, { force: true }))
+  );
+  await restoreFile(input.paths.statePath, input.originalStateBytes);
+  await restoreFile(input.paths.versionPath, input.originalVersionBytes);
+  await restoreFile(input.paths.migrationsPath, input.originalMigrationsBytes);
+}
+
+async function restoreFile(path: string, bytes: string | undefined) {
+  if (bytes === undefined) {
+    await rm(path, { force: true });
+    return;
+  }
+
+  await writeFile(path, bytes);
+}
+
+function migrationPointer(error: unknown) {
+  if (error instanceof RunStoreError && isRecord(error.cause)) {
+    const sequence = error.cause.brokenAtSequence;
+
+    if (
+      typeof sequence === "number" &&
+      Number.isInteger(sequence) &&
+      sequence >= 0
+    ) {
+      return {
+        sequence
+      };
+    }
+  }
+
+  return undefined;
+}
+
+function stableJson(value: unknown) {
+  return `${JSON.stringify(value, null, 2)}\n`;
+}
+
+function hashStableJson(value: unknown) {
+  return hashRawBytes(stableJson(value));
+}
+
+function hashRawBytes(bytes: string) {
+  const digest = createHash("sha256").update(bytes).digest("hex");
+
+  return `sha256:${digest}`;
+}
+
+function requireNonEmptyString(value: unknown, label: string) {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (typeof value !== "string" || value.length === 0) {
+    throw new RunStoreError(
+      "migration_failed",
+      `Migration descriptor ${label} must be a non-empty string`
+    );
+  }
+
+  return value;
 }
 
 function cloneRunState(state: RunState): RunState {

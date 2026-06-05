@@ -128,11 +128,13 @@ export const RunStoreErrorCodeSchema = z.enum([
   "invalid_run_id",
   "invalid_sequence",
   "legal_hold_active",
+  "migration_failed",
   "missing_events",
   "raw_read_denied",
   "run_exists",
   "run_not_started",
   "unclassified_field",
+  "unknown_version",
   "unknown_event_contract",
   "unsupported_event_version"
 ]);
