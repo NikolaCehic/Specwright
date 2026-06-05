@@ -1,0 +1,21 @@
+{
+  "$id": "specwright.evidence.evidence-class",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "source_fact",
+    "derived_fact",
+    "inference",
+    "assumption",
+    "human_decision",
+    "unknown",
+    "conflict"
+  ],
+  "title": "EvidenceClassSchema",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:9b4a0590fec1eea1b8f4e03b1c9a558ccff292bb3687c0efcfdcbeffaf4d8372",
+    "id": "specwright.evidence.evidence-class",
+    "status": "public",
+    "version": "1"
+  }
+}

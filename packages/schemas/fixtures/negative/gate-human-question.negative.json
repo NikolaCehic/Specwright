@@ -1,0 +1,6 @@
+{
+  "id": "question:contract-registry",
+  "phase": "shared-schemas",
+  "question": "Confirm compatibility classification.",
+  "requiredFor": "gate:contract.registry"
+}

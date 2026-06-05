@@ -1,0 +1,48 @@
+{
+  "$id": "specwright.governance.approval-request",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approvalId": {
+      "type": "string"
+    },
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "policyVerdictRef": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "requestedAction": {
+      "type": "string"
+    },
+    "requiredFor": {
+      "type": "string"
+    },
+    "riskSummary": {
+      "type": "string"
+    },
+    "subjectRef": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "approvalId"
+  ],
+  "title": "ApprovalRequestSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:03f150a243081e10eff082e97ed7a1abcd2b9131cd50721f3e652694c5b990ce",
+    "id": "specwright.governance.approval-request",
+    "status": "public",
+    "version": "1"
+  }
+}

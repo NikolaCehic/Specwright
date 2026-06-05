@@ -1,0 +1,20 @@
+{
+  "$id": "specwright.evidence.redaction-class",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "model",
+    "adapter",
+    "operator",
+    "audit",
+    "restricted",
+    "secret"
+  ],
+  "title": "RedactionClassSchema",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:5d63b3d2427bdf3d824c6821ec4f22daaeabce95d4955601c2b6e2e52428d31a",
+    "id": "specwright.evidence.redaction-class",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { ZodTypeAny } from "zod";
+import { RUNTIME_EVENT_SCHEMA_HASHES } from "./generated/event-hashes";
 
 const nonEmptyString = z.string().min(1);
 
@@ -1230,44 +1231,7 @@ const runtimeEventEnvelopeFields = {
 
 const RUNTIME_EVENT_CONTRACT_VERSION = "1";
 
-const runtimeEventSchemaHashes = {
-  "artifact.recorded":
-    "sha256:f7c441e6d4f13d98b0499c1bf9c96993e7aa8de8c62eca29fe6ab3cfd18646c8",
-  "decision.recorded":
-    "sha256:1aa776e0f2fbebf7097badde9e18158331dafd220f53f5e35ec20f5d783a05e6",
-  "eval.completed":
-    "sha256:969c055d2739ee88bc8d480b981b76b2746f250034ab0fe0dd69bf809dd3f8aa",
-  "evidence.recorded":
-    "sha256:134cc6fbbebd05fc090c3570b6ed766e6445298f63ca4b0d6a11f0064f6cf973",
-  "gate.evaluated":
-    "sha256:4c6722719d8b6d5f9845431c4d0e4eadcb4fb462267b02978a562069e6346535",
-  "harness.loaded":
-    "sha256:0f35da17d5efe780854780975b8a809d37168fe8275a2824f81825d51992f0e8",
-  "human.answer_recorded":
-    "sha256:15fe78cab7efe4330d4f50737f53a61f3f85860f27970fcb5efcdb2d9bdcc0fa",
-  "human.input_requested":
-    "sha256:b59c49a3e80f7276cf84de0c3e68e9a07da349851a22882c339b547373e17a11",
-  "phase.entered":
-    "sha256:9ce6c0ad5c5a7ae89895b8e6e26c69432747be3b068b0857c71ea85f9bf03dcb",
-  "phase.transitioned":
-    "sha256:8616b9af9acfe0ff64a0957fb01acfac172846ce4af4c913fb90ed8f417a8cbf",
-  "policy.evaluated":
-    "sha256:197da68a3cf63bd9cba551c1f0af59b0c3be79bcc1ef509bd3285cb8838023f8",
-  "run.completed":
-    "sha256:c4f62260441e8c587332ba3d25a59e528b3f33e90e53243cd3f10e623aa2f503",
-  "run.failed":
-    "sha256:7c925ac0ba23531d2ae83d8b5e6db828c53897c1574689c9fa396e8238dc2b53",
-  "run.started":
-    "sha256:e0b598e6bbbfd99ddc1311970f7dcc99d0d3407253bdb111f342ac0250fd1931",
-  "tool.authorized":
-    "sha256:6a75eb1b6d112347d2f6ebe90e7c7870a72df9dbe99c61a563b21cebdf4d0b2b",
-  "tool.completed":
-    "sha256:aef559a3a5b84a2d98820f916f939b6557e9f1a43667d49621b9c5f3344bd556",
-  "tool.denied":
-    "sha256:8ad3e31eaa027c5c79c6f8c74bc9acc086c5edc7194e0e52459f74ce438f4c59",
-  "tool.requested":
-    "sha256:f4f018f792761e4038f88ed56ad39bdd242160a38f4a93ee7fd9380f03ff6c57"
-} as const;
+const runtimeEventSchemaHashes = RUNTIME_EVENT_SCHEMA_HASHES;
 
 export const RuntimeEventContractMetadataSchema = z
   .object({

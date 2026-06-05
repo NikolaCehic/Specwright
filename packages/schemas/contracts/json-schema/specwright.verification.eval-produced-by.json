@@ -1,0 +1,30 @@
+{
+  "$id": "specwright.verification.eval-produced-by",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "enum": [
+        "deterministic",
+        "model_assisted",
+        "human"
+      ]
+    },
+    "ref": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "ref"
+  ],
+  "title": "EvalProducedBySchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:802dcc42fe732274a5619c63a31dde4cd981ffad91cae319eb43f53f94f03447",
+    "id": "specwright.verification.eval-produced-by",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$id": "specwright.governance.policy-constraint",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "type": "string"
+    },
+    "sourceRuleId": {
+      "type": "string"
+    },
+    "value": {}
+  },
+  "required": [
+    "kind",
+    "sourceRuleId",
+    "value"
+  ],
+  "title": "PolicyConstraintSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:6f6d85a8af4f70931e4a9750244cc56d4bcae3dfca74a7494d22bebf7e899d2e",
+    "id": "specwright.governance.policy-constraint",
+    "status": "public",
+    "version": "1"
+  }
+}

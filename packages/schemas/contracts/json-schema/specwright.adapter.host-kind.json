@@ -1,0 +1,20 @@
+{
+  "$id": "specwright.adapter.host-kind",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "codex",
+    "claude-code",
+    "gemini-cli",
+    "opencode",
+    "cli",
+    "mcp"
+  ],
+  "title": "HostKindSchema",
+  "x-specwright-contract": {
+    "family": "adapter",
+    "hash": "sha256:999c69f48ea2d0dbba2bbe85ab51f9c37a71f190197b5435731beecdd27b4791",
+    "id": "specwright.adapter.host-kind",
+    "status": "public",
+    "version": "1"
+  }
+}

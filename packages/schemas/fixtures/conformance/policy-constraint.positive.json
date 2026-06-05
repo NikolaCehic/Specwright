@@ -1,0 +1,7 @@
+{
+  "kind": "fixture",
+  "sourceRuleId": "fixture",
+  "value": {
+    "fixture": true
+  }
+}

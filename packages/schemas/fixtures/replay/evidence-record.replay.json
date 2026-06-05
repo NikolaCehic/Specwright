@@ -1,0 +1,20 @@
+{
+  "authority": "repo",
+  "claim": "The contract registry is generated from the schema inventory.",
+  "class": "source_fact",
+  "confidence": "high",
+  "createdBy": {
+    "actionId": "generate-contract-registry",
+    "phase": "contract-generation"
+  },
+  "id": "evidence:contract-registry",
+  "redactionPolicy": "operator",
+  "sourceRefs": [
+    {
+      "authority": "repo",
+      "id": "repo:README.md",
+      "path": "README.md",
+      "redactionClass": "operator"
+    }
+  ]
+}

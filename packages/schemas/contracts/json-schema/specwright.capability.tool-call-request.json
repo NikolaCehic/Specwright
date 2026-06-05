@@ -1,0 +1,54 @@
+{
+  "$id": "specwright.capability.tool-call-request",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "args": {},
+    "idempotencyKey": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "requestedBy": {
+      "additionalProperties": false,
+      "properties": {
+        "evalId": {
+          "type": "string"
+        },
+        "gateId": {
+          "type": "string"
+        },
+        "modelCallId": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "phase"
+      ],
+      "type": "object"
+    },
+    "toolId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "args",
+    "idempotencyKey",
+    "reason",
+    "requestedBy",
+    "toolId"
+  ],
+  "title": "ToolCallRequestSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "capability",
+    "hash": "sha256:27b889571f5fdda2326bed316af9ce67a50fe0ba9f24d2b0db3ab224a6abdb08",
+    "id": "specwright.capability.tool-call-request",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "$id": "specwright.event.runtime-event-contract-metadata",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contractId": {
+      "type": "string"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "schemaHash": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "contractId",
+    "contractVersion",
+    "schemaHash"
+  ],
+  "title": "RuntimeEventContractMetadataSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:032e1e74c1a0a2bdbc6c8520b7edf923563d4e50207aca2e032a985d2229bb05",
+    "id": "specwright.event.runtime-event-contract-metadata",
+    "status": "public",
+    "version": "1"
+  }
+}

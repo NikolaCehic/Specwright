@@ -1,0 +1,20 @@
+{
+  "$id": "specwright.lifecycle.gate-kind",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "entry",
+    "exit",
+    "action",
+    "artifact",
+    "eval",
+    "repair"
+  ],
+  "title": "GateKindSchema",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:f3369ff62222b4f2f1fe9c97649650717e8e40ece4f8507f935e82c401ff73a6",
+    "id": "specwright.lifecycle.gate-kind",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$id": "specwright.governance.decision-constraint",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "type": "string"
+    },
+    "sourceRuleId": {
+      "type": "string"
+    },
+    "value": {}
+  },
+  "required": [
+    "kind",
+    "value"
+  ],
+  "title": "DecisionConstraintSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:9202576fcb1d6a4b1929965ac5b1352060cabeb9dc85e3f6558bff9eea4febc4",
+    "id": "specwright.governance.decision-constraint",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "artifactType": "plan",
+  "evidenceRefs": [
+    "evidence:contract-registry"
+  ],
+  "uri": "artifacts/contract-registry.json"
+}

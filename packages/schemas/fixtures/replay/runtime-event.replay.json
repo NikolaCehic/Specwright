@@ -1,0 +1,24 @@
+{
+  "id": "event:0",
+  "payload": {
+    "budgets": {},
+    "harness": {
+      "id": "default",
+      "specHash": "sha256:harness-fixture",
+      "version": "1.0.0"
+    },
+    "initialPhase": "shared-schemas",
+    "input": {
+      "harnessId": "default",
+      "host": {
+        "kind": "cli"
+      },
+      "task": "Generate the authoritative contract registry."
+    }
+  },
+  "runId": "run:contract-registry",
+  "sequence": 0,
+  "timestamp": "2026-06-05T00:00:00.000Z",
+  "traceId": "trace:contract-registry",
+  "type": "run.started"
+}

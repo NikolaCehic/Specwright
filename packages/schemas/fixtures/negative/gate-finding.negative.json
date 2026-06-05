@@ -1,0 +1,5 @@
+{
+  "id": "finding:contract-registry",
+  "message": "Registry fixture finding.",
+  "severity": "blocking"
+}

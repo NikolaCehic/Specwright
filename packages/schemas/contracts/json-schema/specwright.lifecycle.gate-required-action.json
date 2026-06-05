@@ -1,0 +1,18 @@
+{
+  "$id": "specwright.lifecycle.gate-required-action",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "repair",
+    "clarify",
+    "approve",
+    "fail_run"
+  ],
+  "title": "GateRequiredActionSchema",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:706169c840ede141c2226a5e0ada6bdf1db15fd65ff73b138829113602a1b186",
+    "id": "specwright.lifecycle.gate-required-action",
+    "status": "public",
+    "version": "1"
+  }
+}

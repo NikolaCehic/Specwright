@@ -1,0 +1,5 @@
+{
+  "id": "question:contract-registry",
+  "question": "Confirm compatibility classification.",
+  "requiredFor": "gate:contract.registry"
+}

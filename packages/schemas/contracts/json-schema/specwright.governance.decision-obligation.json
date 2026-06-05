@@ -1,0 +1,29 @@
+{
+  "$id": "specwright.governance.decision-obligation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "type": "string"
+    },
+    "params": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "sourceRuleId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "title": "DecisionObligationSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:a502606925cbc557488b8eb44797179b783b1ef25bc805d75d9e443ec9d94bbc",
+    "id": "specwright.governance.decision-obligation",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,214 @@
+{
+  "$id": "specwright.evidence.evidence-record",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority": {
+      "enum": [
+        "user",
+        "repo",
+        "design",
+        "external",
+        "model",
+        "generated"
+      ]
+    },
+    "claim": {
+      "type": "string"
+    },
+    "class": {
+      "enum": [
+        "source_fact",
+        "derived_fact",
+        "inference",
+        "assumption",
+        "human_decision",
+        "unknown",
+        "conflict"
+      ]
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "conflictGroup": {
+      "type": "string"
+    },
+    "createdBy": {
+      "additionalProperties": false,
+      "properties": {
+        "actionId": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "toolCallId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionId",
+        "phase"
+      ],
+      "type": "object"
+    },
+    "extractionMethod": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "redactionPolicy": {
+      "anyOf": [
+        {
+          "enum": [
+            "model",
+            "adapter",
+            "operator",
+            "audit",
+            "restricted",
+            "secret"
+          ]
+        },
+        {
+          "additionalProperties": {
+            "enum": [
+              "model",
+              "adapter",
+              "operator",
+              "audit",
+              "restricted",
+              "secret"
+            ]
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "referencedArtifactRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "referencedToolCallIds": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sourceRefs": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": false,
+            "properties": {
+              "authority": {
+                "enum": [
+                  "user",
+                  "repo",
+                  "design",
+                  "external",
+                  "model",
+                  "generated"
+                ]
+              },
+              "captureToolCallId": {
+                "type": "string"
+              },
+              "contentHash": {
+                "type": "string"
+              },
+              "externalTrustPolicy": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "locator": {
+                "type": "string"
+              },
+              "metadata": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "path": {
+                "type": "string"
+              },
+              "redactionClass": {
+                "enum": [
+                  "model",
+                  "adapter",
+                  "operator",
+                  "audit",
+                  "restricted",
+                  "secret"
+                ]
+              },
+              "snapshotTimestamp": {
+                "format": "date-time",
+                "type": "string"
+              },
+              "uri": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "authority",
+              "redactionClass"
+            ],
+            "type": "object",
+            "x-zod-effect": "refinement"
+          }
+        ]
+      },
+      "type": "array"
+    },
+    "supersededByEvidenceId": {
+      "type": "string"
+    },
+    "supersedesEvidenceId": {
+      "type": "string"
+    },
+    "supersessionReason": {
+      "type": "string"
+    },
+    "unknownReason": {
+      "type": "string"
+    },
+    "validationStatus": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "authority",
+    "claim",
+    "class",
+    "confidence",
+    "createdBy",
+    "id",
+    "redactionPolicy",
+    "sourceRefs"
+  ],
+  "title": "EvidenceRecordSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:824f8717885e63ec885f5d7bc5afde39355d03400a09f61fdba59fb83ac1cfea",
+    "id": "specwright.evidence.evidence-record",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

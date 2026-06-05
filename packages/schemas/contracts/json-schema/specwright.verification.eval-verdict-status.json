@@ -1,0 +1,19 @@
+{
+  "$id": "specwright.verification.eval-verdict-status",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "pass",
+    "fail",
+    "needs_review",
+    "skipped",
+    "repaired"
+  ],
+  "title": "EvalVerdictStatusSchema",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:be4dffa6bc11f271b8e77d5366f126d71039f483dd980be4454eb8c069cf9d27",
+    "id": "specwright.verification.eval-verdict-status",
+    "status": "public",
+    "version": "1"
+  }
+}

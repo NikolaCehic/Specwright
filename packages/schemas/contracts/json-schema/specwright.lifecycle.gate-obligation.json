@@ -1,0 +1,36 @@
+{
+  "$id": "specwright.lifecycle.gate-obligation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "enum": [
+        "run_eval",
+        "request_clarification",
+        "create_repair_task",
+        "promote_artifact",
+        "attach_evidence",
+        "mark_assumption"
+      ]
+    },
+    "params": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "sourceRuleId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind"
+  ],
+  "title": "GateObligationSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:2d621d3785e43f88f04aa2d8728e66269bf70d5729d155f93be3ae9c55256cea",
+    "id": "specwright.lifecycle.gate-obligation",
+    "status": "public",
+    "version": "1"
+  }
+}

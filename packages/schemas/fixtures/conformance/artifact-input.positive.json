@@ -1,0 +1,14 @@
+{
+  "artifactType": "plan",
+  "claimLevel": "derived_fact",
+  "content": {
+    "registryVersion": "scope-01.packet-05"
+  },
+  "evidenceRefs": [
+    "evidence:contract-registry"
+  ],
+  "producedBy": {
+    "actionId": "generate-contract-registry",
+    "phase": "contract-generation"
+  }
+}

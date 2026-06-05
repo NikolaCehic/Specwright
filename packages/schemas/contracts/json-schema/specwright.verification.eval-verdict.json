@@ -1,0 +1,259 @@
+{
+  "$id": "specwright.verification.eval-verdict",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "evalId": {
+      "type": "string"
+    },
+    "evidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "findings": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "path": {
+            "type": "string"
+          },
+          "repairHint": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "advisory",
+              "blocking"
+            ]
+          },
+          "targetRef": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "producedBy": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "deterministic",
+            "model_assisted",
+            "human"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "type": "object"
+    },
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "causationIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "decisionHash": {
+          "type": "string"
+        },
+        "evaluatedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object"
+    },
+    "repairTask": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptanceChecks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "allowedRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "allowedTools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "blockedTools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "createdFromFindingIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "escalationRule": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "failedPhase": {
+          "type": "string"
+        },
+        "gateId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "producedBy": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "deterministic",
+                "model_assisted",
+                "human"
+              ]
+            },
+            "ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "type": "object"
+        },
+        "repairId": {
+          "type": "string"
+        },
+        "requiredCorrection": {
+          "type": "string"
+        },
+        "requiredEvidenceRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sourceFindingId": {
+          "type": "string"
+        },
+        "successEval": {
+          "type": "string"
+        },
+        "successGate": {
+          "type": "string"
+        },
+        "targetRef": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object",
+      "x-zod-effect": "refinement"
+    },
+    "severity": {
+      "enum": [
+        "advisory",
+        "blocking"
+      ]
+    },
+    "status": {
+      "enum": [
+        "pass",
+        "fail",
+        "needs_review",
+        "skipped",
+        "repaired"
+      ]
+    },
+    "targetRef": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "evalId",
+    "evidenceRefs",
+    "findings",
+    "producedBy",
+    "severity",
+    "status",
+    "targetRef"
+  ],
+  "title": "EvalVerdictSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:e8885d9a2a81293f28d17e8e6ad68a18a267ca472511346a66ae12c4defe5679",
+    "id": "specwright.verification.eval-verdict",
+    "status": "public",
+    "version": "1"
+  }
+}

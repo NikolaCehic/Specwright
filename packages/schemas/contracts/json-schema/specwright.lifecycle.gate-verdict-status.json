@@ -1,0 +1,17 @@
+{
+  "$id": "specwright.lifecycle.gate-verdict-status",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "pass",
+    "fail",
+    "needs_review"
+  ],
+  "title": "GateVerdictStatusSchema",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:8578421450ae56f7c5489ab744d9608f1ca88336887603839b9d432fb2b57801",
+    "id": "specwright.lifecycle.gate-verdict-status",
+    "status": "public",
+    "version": "1"
+  }
+}

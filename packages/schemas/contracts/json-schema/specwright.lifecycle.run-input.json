@@ -1,0 +1,89 @@
+{
+  "$id": "specwright.lifecycle.run-input",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attachments": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "path": {
+            "type": "string"
+          },
+          "uri": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "cwd": {
+      "type": "string"
+    },
+    "harnessId": {
+      "type": "string"
+    },
+    "host": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "codex",
+            "claude-code",
+            "gemini-cli",
+            "opencode",
+            "cli",
+            "mcp"
+          ]
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "task": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "harnessId",
+    "host",
+    "task"
+  ],
+  "title": "RunInputSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:d87a5667838ea56eb09ec1ecdb87e7b927b024af4e52971378f8e74681e754f4",
+    "id": "specwright.lifecycle.run-input",
+    "status": "public",
+    "version": "1"
+  }
+}

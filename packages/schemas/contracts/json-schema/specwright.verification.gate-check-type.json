@@ -1,0 +1,21 @@
+{
+  "$id": "specwright.verification.gate-check-type",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "deterministic",
+    "schema",
+    "policy",
+    "eval",
+    "evidence",
+    "model_assisted",
+    "human_review"
+  ],
+  "title": "GateCheckTypeSchema",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:40d9f57fb4357430cb73b40b1362cb3612f96d10b5def54e9e80675bdbc57d44",
+    "id": "specwright.verification.gate-check-type",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "$id": "specwright.governance.policy-rule-layer",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "runtime_invariant",
+    "host",
+    "workspace",
+    "harness",
+    "phase",
+    "capability",
+    "run_mode",
+    "approval"
+  ],
+  "title": "PolicyRuleLayerSchema",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:66bab50cce92bbea740f25fc79ced457ae3ef52de16afd3bff0509f158291a66",
+    "id": "specwright.governance.policy-rule-layer",
+    "status": "public",
+    "version": "1"
+  }
+}

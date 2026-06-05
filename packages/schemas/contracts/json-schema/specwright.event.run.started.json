@@ -1,0 +1,128 @@
+{
+  "$id": "specwright.event.run.started",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "budgets": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "harness": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "specHash": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "specHash",
+        "version"
+      ],
+      "type": "object"
+    },
+    "initialPhase": {
+      "type": "string"
+    },
+    "input": {
+      "additionalProperties": false,
+      "properties": {
+        "attachments": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string"
+              },
+              "metadata": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "path": {
+                "type": "string"
+              },
+              "uri": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "kind"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "cwd": {
+          "type": "string"
+        },
+        "harnessId": {
+          "type": "string"
+        },
+        "host": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "codex",
+                "claude-code",
+                "gemini-cli",
+                "opencode",
+                "cli",
+                "mcp"
+              ]
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "harnessId",
+        "host",
+        "task"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "budgets",
+    "harness",
+    "initialPhase",
+    "input"
+  ],
+  "title": "RunStartedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:a670db6bd3212b2022150b28ed9b9636135886c9d7da76d98f926a060a047c53",
+    "id": "specwright.event.run.started",
+    "status": "public",
+    "version": "1"
+  }
+}

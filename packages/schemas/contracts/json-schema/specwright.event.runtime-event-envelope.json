@@ -1,0 +1,60 @@
+{
+  "$id": "specwright.event.runtime-event-envelope",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "causationId": {
+      "type": "string"
+    },
+    "contractId": {
+      "type": "string"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "correlationId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "payload": {},
+    "runId": {
+      "type": "string"
+    },
+    "schemaHash": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "number"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "traceId": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "payload",
+    "runId",
+    "sequence",
+    "timestamp",
+    "traceId",
+    "type"
+  ],
+  "title": "RuntimeEventEnvelopeSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:ad7e635333711a938840742bc21c193cbe06f916ab70e829146c743c82f5ccf1",
+    "id": "specwright.event.runtime-event-envelope",
+    "status": "public",
+    "version": "1"
+  }
+}

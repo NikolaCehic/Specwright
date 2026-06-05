@@ -1,0 +1,25 @@
+{
+  "$id": "specwright.event.phase.entered",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "phase": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "phase"
+  ],
+  "title": "PhaseEnteredEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:111f5b579d4a36b5dd06cd160287dc7c5d5ae6ee971134e9f680c743c6aefc37",
+    "id": "specwright.event.phase.entered",
+    "status": "public",
+    "version": "1"
+  }
+}

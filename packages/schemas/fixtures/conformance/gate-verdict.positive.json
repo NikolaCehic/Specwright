@@ -1,0 +1,19 @@
+{
+  "evaluatedAt": "2026-06-05T00:00:00.000Z",
+  "evaluator": {
+    "kind": "deterministic",
+    "ref": "specwright.schemas.generator"
+  },
+  "evidenceRefs": [
+    "evidence:contract-registry"
+  ],
+  "findings": [],
+  "gateId": "contract.registry",
+  "obligations": [],
+  "phase": "shared-schemas",
+  "reasons": [
+    "Registry fixture passed."
+  ],
+  "severity": "blocking",
+  "status": "pass"
+}

@@ -1,0 +1,7 @@
+{
+  "path": "fixture",
+  "schema": {
+    "fixture": true
+  },
+  "version": "fixture"
+}

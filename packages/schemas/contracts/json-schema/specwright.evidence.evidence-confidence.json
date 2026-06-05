@@ -1,0 +1,17 @@
+{
+  "$id": "specwright.evidence.evidence-confidence",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "title": "EvidenceConfidenceSchema",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:ace26c14af46825bca32a8480a9dcdb3cd40d466b223b2d4c9f65b16aafcf2d8",
+    "id": "specwright.evidence.evidence-confidence",
+    "status": "public",
+    "version": "1"
+  }
+}

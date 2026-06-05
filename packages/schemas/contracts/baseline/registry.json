@@ -1,0 +1,3689 @@
+[
+  {
+    "authority": {
+      "ownerReviewGroup": "adapter-contract-review",
+      "semantics": "Host identifier used by run input. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:999c69f48ea2d0dbba2bbe85ab51f9c37a71f190197b5435731beecdd27b4791",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/host-kind.positive.json",
+      "fixtures/negative/host-kind.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HostKindSchema",
+    "extensionPoints": [],
+    "family": "adapter",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/host-kind.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.adapter.host-kind.json",
+      "negativeFixture": "fixtures/negative/host-kind.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.adapter.host-kind",
+    "migrationDescriptors": [],
+    "notes": "Host identifier used by run input.",
+    "owner": "08 CLI Adapter / 09 MCP Adapter",
+    "redaction": {
+      "defaultClass": "adapter",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "none",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Source-backed artifact claim. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:0a77b1d767d44fb2ca00e259e81addd78748760e347545311d9a6b790dea22bf",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-claim.positive.json",
+      "fixtures/negative/artifact-claim.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ArtifactClaimSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-claim.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-claim.json",
+      "negativeFixture": "fixtures/negative/artifact-claim.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.artifact-claim",
+    "migrationDescriptors": [],
+    "notes": "Source-backed artifact claim.",
+    "owner": "Artifact Store / 07 Evidence Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Artifact file pointer. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:c1f104264211ee1045084ec1aad88f6c5a4f85463ed3c8d328fda90246548905",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-file-ref.positive.json",
+      "fixtures/negative/artifact-file-ref.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ArtifactFileRefSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-file-ref.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-file-ref.json",
+      "negativeFixture": "fixtures/negative/artifact-file-ref.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.artifact-file-ref",
+    "migrationDescriptors": [],
+    "notes": "Artifact file pointer.",
+    "owner": "Artifact Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "identity",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Artifact write input before durable record. Durable posture: transient. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:ccaa4cc753224f3dbb35e8b709917aa1deec16f32e158537181d240b60e96cf8",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-input.positive.json",
+      "fixtures/negative/artifact-input.negative.json"
+    ],
+    "durability": "transient",
+    "exportName": "ArtifactInputSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-input.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-input.json",
+      "negativeFixture": "fixtures/negative/artifact-input.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.artifact-input",
+    "migrationDescriptors": [],
+    "notes": "Artifact write input before durable record.",
+    "owner": "Artifact Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Artifact producer reference. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:82b6d08f900cbf6875fc2183e77aceaf80ac407c10fe3ee7cdaa21ca9104703c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-produced-by.positive.json",
+      "fixtures/negative/artifact-produced-by.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ArtifactProducedBySchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-produced-by.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-produced-by.json",
+      "negativeFixture": "fixtures/negative/artifact-produced-by.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.artifact-produced-by",
+    "migrationDescriptors": [],
+    "notes": "Artifact producer reference.",
+    "owner": "Artifact Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Canonical artifact record. Durable posture: durable. Extension posture: metadata required, strict."
+    },
+    "canonicalHash": "sha256:db022770fd4d2e3e7483026166feebe1673ae0b5f384b0326e7f2f71b964b412",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-record.positive.json",
+      "fixtures/negative/artifact-record.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ArtifactRecordSchema",
+    "extensionPoints": [
+      "metadata required",
+      "strict"
+    ],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-record.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-record.json",
+      "negativeFixture": "fixtures/negative/artifact-record.negative.json",
+      "replayFixture": "fixtures/replay/artifact-record.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.artifact-record",
+    "migrationDescriptors": [],
+    "notes": "Canonical artifact record.",
+    "owner": "Artifact Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Artifact reference in run state and events. Durable posture: derived. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:d952df020d86f93733b038236e3aa89d179ccf788b3db462d60553ec07a74ceb",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-ref.positive.json",
+      "fixtures/negative/artifact-ref.negative.json"
+    ],
+    "durability": "derived",
+    "exportName": "ArtifactRefSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-ref.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-ref.json",
+      "negativeFixture": "fixtures/negative/artifact-ref.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.artifact-ref",
+    "migrationDescriptors": [],
+    "notes": "Artifact reference in run state and events.",
+    "owner": "02 Run Store / Artifact Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Harness artifact schema reference. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:71c5e8e62ac388b75732edb7a7ed1e012e9ebc1b135deb0103eb8dd216e2a29e",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-schema-ref.positive.json",
+      "fixtures/negative/artifact-schema-ref.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ArtifactSchemaRefSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-schema-ref.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-schema-ref.json",
+      "negativeFixture": "fixtures/negative/artifact-schema-ref.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.artifact-schema-ref",
+    "migrationDescriptors": [],
+    "notes": "Harness artifact schema reference.",
+    "owner": "Artifact Store / 03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "v0 artifact type enum. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/mvp-artifact-type.positive.json",
+      "fixtures/negative/mvp-artifact-type.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "MvpArtifactTypeSchema",
+    "extensionPoints": [],
+    "family": "artifact",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/mvp-artifact-type.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.mvp-artifact-type.json",
+      "negativeFixture": "fixtures/negative/mvp-artifact-type.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.artifact.mvp-artifact-type",
+    "migrationDescriptors": [],
+    "notes": "v0 artifact type enum.",
+    "owner": "Artifact Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "compatibility",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Cache status in tool provenance and trace metadata. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:2264ce85475c87bfd636b799f00eee917b7c2b486eb20b3c734b4ddb8e6599c5",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/cache-status.positive.json",
+      "fixtures/negative/cache-status.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "CacheStatusSchema",
+    "extensionPoints": [],
+    "family": "capability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/cache-status.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.capability.cache-status.json",
+      "negativeFixture": "fixtures/negative/cache-status.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.capability.cache-status",
+    "migrationDescriptors": [],
+    "notes": "Cache status in tool provenance and trace metadata.",
+    "owner": "06 Tool Broker / 11 Trace Recorder",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Manifest tool allow/approval section. Durable posture: durable. Extension posture: object variant passthrough."
+    },
+    "canonicalHash": "sha256:982eb2c83abda40b63cca7dcc4566db67fef5df9264f20c74469c2872f1cac33",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/harness-manifest-tools.positive.json",
+      "fixtures/negative/harness-manifest-tools.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HarnessManifestToolsSchema",
+    "extensionPoints": [
+      "object variant passthrough"
+    ],
+    "family": "capability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/harness-manifest-tools.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.capability.harness-manifest-tools.json",
+      "negativeFixture": "fixtures/negative/harness-manifest-tools.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.capability.harness-manifest-tools",
+    "migrationDescriptors": [],
+    "notes": "Manifest tool allow/approval section.",
+    "owner": "03 Harness Loader / 06 Tool Broker",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Tool invocation request. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:27b889571f5fdda2326bed316af9ce67a50fe0ba9f24d2b0db3ab224a6abdb08",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-call-request.positive.json",
+      "fixtures/negative/tool-call-request.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolCallRequestSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "capability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-call-request.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.capability.tool-call-request.json",
+      "negativeFixture": "fixtures/negative/tool-call-request.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.capability.tool-call-request",
+    "migrationDescriptors": [],
+    "notes": "Tool invocation request.",
+    "owner": "06 Tool Broker",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Tool result with provenance envelope. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:2697fd9e9958d42e3d6411fe616ee3a7f4b15eddfae34842fb9a37a84abf095c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-call-result.positive.json",
+      "fixtures/negative/tool-call-result.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolCallResultSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "capability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-call-result.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.capability.tool-call-result.json",
+      "negativeFixture": "fixtures/negative/tool-call-result.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.capability.tool-call-result",
+    "migrationDescriptors": [],
+    "notes": "Tool result with provenance envelope.",
+    "owner": "06 Tool Broker",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Tool result status. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:4d2c4e7d39ad729d7819fc6b77601cc54a2093eed101c288e1788b15589fbabc",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-call-status.positive.json",
+      "fixtures/negative/tool-call-status.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolCallStatusSchema",
+    "extensionPoints": [],
+    "family": "capability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-call-status.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.capability.tool-call-status.json",
+      "negativeFixture": "fixtures/negative/tool-call-status.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.capability.tool-call-status",
+    "migrationDescriptors": [],
+    "notes": "Tool result status.",
+    "owner": "06 Tool Broker",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "none",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Declarative tool definition with unknown IO schemas. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:5aea8605e9b3a906b77e5d55620217bf086ac4093dcd36b28ced1e4f7e354687",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-definition.positive.json",
+      "fixtures/negative/tool-definition.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolDefinitionSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "capability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-definition.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.capability.tool-definition.json",
+      "negativeFixture": "fixtures/negative/tool-definition.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.capability.tool-definition",
+    "migrationDescriptors": [],
+    "notes": "Declarative tool definition with unknown IO schemas.",
+    "owner": "06 Tool Broker / 03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Literal harness schema version. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:e9c576bf33c829c70d6f5dd19400ba4f2d1283396bcc0fbde1123ae3103e9721",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/harness-schema-version.positive.json",
+      "fixtures/negative/harness-schema-version.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HarnessSchemaVersionSchema",
+    "extensionPoints": [],
+    "family": "compatibility",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/harness-schema-version.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.compatibility.harness-schema-version.json",
+      "negativeFixture": "fixtures/negative/harness-schema-version.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.compatibility.harness-schema-version",
+    "migrationDescriptors": [],
+    "notes": "Literal harness schema version.",
+    "owner": "03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared metadata extension primitive. Durable posture: embedded. Extension posture: arbitrary string keys."
+    },
+    "canonicalHash": "sha256:4b9c96c2a544fabc483ecc9b4a4d5bac424e9eea7c7a55feb687d63909aa15de",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/metadata.positive.json",
+      "fixtures/negative/metadata.negative.json"
+    ],
+    "durability": "embedded",
+    "exportName": "MetadataSchema",
+    "extensionPoints": [
+      "arbitrary string keys"
+    ],
+    "family": "compatibility",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/metadata.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.compatibility.metadata.json",
+      "negativeFixture": "fixtures/negative/metadata.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.compatibility.metadata",
+    "migrationDescriptors": [],
+    "notes": "Shared metadata extension primitive.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `artifact.recorded`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:e0e38fe8121eb83916a32e9df5e579375be806976937844e4ade9f73d548a80e",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/artifact-recorded-event-payload.positive.json",
+      "fixtures/negative/artifact-recorded-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ArtifactRecordedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/artifact-recorded-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.artifact.recorded.json",
+      "negativeFixture": "fixtures/negative/artifact-recorded-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/artifact-recorded-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.artifact.recorded",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `artifact.recorded`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "artifact",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `decision.recorded`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:a0634a6a7d9cde9eaf70b34abd90b1a7970bea8f4fe224d17f9c9ccb72d2c317",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-recorded-event-payload.positive.json",
+      "fixtures/negative/decision-recorded-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "DecisionRecordedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-recorded-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.decision.recorded.json",
+      "negativeFixture": "fixtures/negative/decision-recorded-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/decision-recorded-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.decision.recorded",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `decision.recorded`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `eval.completed`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:862f2affbefc19ce675e2c8071e5356033ba92cbb0f2993679ce7b34320e830a",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-completed-event-payload.positive.json",
+      "fixtures/negative/eval-completed-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalCompletedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-completed-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.eval.completed.json",
+      "negativeFixture": "fixtures/negative/eval-completed-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/eval-completed-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.eval.completed",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `eval.completed`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `evidence.recorded`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:ebc6e8da5fc7e8996ccb7db3000e3d6c563ff0579bf2d4b25b31a67e0605444c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/evidence-recorded-event-payload.positive.json",
+      "fixtures/negative/evidence-recorded-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvidenceRecordedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/evidence-recorded-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.evidence.recorded.json",
+      "negativeFixture": "fixtures/negative/evidence-recorded-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/evidence-recorded-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.evidence.recorded",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `evidence.recorded`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `gate.evaluated`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-evaluated-event-payload.positive.json",
+      "fixtures/negative/gate-evaluated-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateEvaluatedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-evaluated-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.gate.evaluated.json",
+      "negativeFixture": "fixtures/negative/gate-evaluated-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/gate-evaluated-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.gate.evaluated",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `gate.evaluated`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `harness.loaded`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:bf81a597052653e924e313dd53d7186f7fbc640f655c3ef1ac9dc3500ce8e17f",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/harness-loaded-event-payload.positive.json",
+      "fixtures/negative/harness-loaded-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HarnessLoadedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/harness-loaded-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.harness.loaded.json",
+      "negativeFixture": "fixtures/negative/harness-loaded-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/harness-loaded-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.harness.loaded",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `harness.loaded`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `human.answer_recorded`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:52471ec3cd37a589108ad5801588dbe00f1982ba22714388306e7ab2c9accdce",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/human-answer-recorded-event-payload.positive.json",
+      "fixtures/negative/human-answer-recorded-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HumanAnswerRecordedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/human-answer-recorded-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.human.answer_recorded.json",
+      "negativeFixture": "fixtures/negative/human-answer-recorded-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/human-answer-recorded-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.human.answer_recorded",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `human.answer_recorded`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `human.input_requested`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:20685e5ee3198602afcce33cf0b0eae911b8b6203d8e47eee0d1acf5dc6b7ab1",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/human-input-requested-event-payload.positive.json",
+      "fixtures/negative/human-input-requested-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HumanInputRequestedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/human-input-requested-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.human.input_requested.json",
+      "negativeFixture": "fixtures/negative/human-input-requested-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/human-input-requested-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.human.input_requested",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `human.input_requested`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `phase.entered`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:111f5b579d4a36b5dd06cd160287dc7c5d5ae6ee971134e9f680c743c6aefc37",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/phase-entered-event-payload.positive.json",
+      "fixtures/negative/phase-entered-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PhaseEnteredEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/phase-entered-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.phase.entered.json",
+      "negativeFixture": "fixtures/negative/phase-entered-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/phase-entered-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.phase.entered",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `phase.entered`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `phase.transitioned`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:f7b74f423e3ac779da8b71fbf6c6634057205d7955f7667a4438fadb611e5267",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/phase-transitioned-event-payload.positive.json",
+      "fixtures/negative/phase-transitioned-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PhaseTransitionedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/phase-transitioned-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.phase.transitioned.json",
+      "negativeFixture": "fixtures/negative/phase-transitioned-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/phase-transitioned-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.phase.transitioned",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `phase.transitioned`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `policy.evaluated`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:e6019e6428a7efa2241353501b44ef8837508a4e3a27b0d5947e55dbae57834a",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-evaluated-event-payload.positive.json",
+      "fixtures/negative/policy-evaluated-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyEvaluatedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-evaluated-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.policy.evaluated.json",
+      "negativeFixture": "fixtures/negative/policy-evaluated-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/policy-evaluated-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.policy.evaluated",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `policy.evaluated`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `run.completed`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:e37ba0c18b1d30ea8da7b9a082f2ed3cac18ac6cde717b101699ecd99d704528",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/run-completed-event-payload.positive.json",
+      "fixtures/negative/run-completed-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RunCompletedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/run-completed-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.run.completed.json",
+      "negativeFixture": "fixtures/negative/run-completed-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/run-completed-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.run.completed",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `run.completed`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `run.failed`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:798b78acec10d4ee5398ef0b16bdfc96fabe7877c8d547d84c2d0b3b9d99286e",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/run-failed-event-payload.positive.json",
+      "fixtures/negative/run-failed-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RunFailedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/run-failed-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.run.failed.json",
+      "negativeFixture": "fixtures/negative/run-failed-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/run-failed-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.run.failed",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `run.failed`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `run.started`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:a670db6bd3212b2022150b28ed9b9636135886c9d7da76d98f926a060a047c53",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/run-started-event-payload.positive.json",
+      "fixtures/negative/run-started-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RunStartedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/run-started-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.run.started.json",
+      "negativeFixture": "fixtures/negative/run-started-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/run-started-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.run.started",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `run.started`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
+    },
+    "canonicalHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/runtime-event.positive.json",
+      "fixtures/negative/runtime-event.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RuntimeEventSchema",
+    "extensionPoints": [
+      "strict typed payload union",
+      "metadata defaults"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/runtime-event.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.runtime-event.json",
+      "negativeFixture": "fixtures/negative/runtime-event.negative.json",
+      "replayFixture": "fixtures/replay/runtime-event.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.runtime-event",
+    "migrationDescriptors": [],
+    "notes": "Discriminated runtime event contract family keyed by `type`.",
+    "owner": "02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Event contract id, version, and schema hash metadata. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:032e1e74c1a0a2bdbc6c8520b7edf923563d4e50207aca2e032a985d2229bb05",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/runtime-event-contract-metadata.positive.json",
+      "fixtures/negative/runtime-event-contract-metadata.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RuntimeEventContractMetadataSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/runtime-event-contract-metadata.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.runtime-event-contract-metadata.json",
+      "negativeFixture": "fixtures/negative/runtime-event-contract-metadata.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.runtime-event-contract-metadata",
+    "migrationDescriptors": [],
+    "notes": "Event contract id, version, and schema hash metadata.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "compatibility",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Runtime event envelope helper with optional compatibility metadata. Durable posture: durable. Extension posture: strict, metadata optional."
+    },
+    "canonicalHash": "sha256:ad7e635333711a938840742bc21c193cbe06f916ab70e829146c743c82f5ccf1",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/runtime-event-envelope.positive.json",
+      "fixtures/negative/runtime-event-envelope.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RuntimeEventEnvelopeSchema",
+    "extensionPoints": [
+      "strict",
+      "metadata optional"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/runtime-event-envelope.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.runtime-event-envelope.json",
+      "negativeFixture": "fixtures/negative/runtime-event-envelope.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.runtime-event-envelope",
+    "migrationDescriptors": [],
+    "notes": "Runtime event envelope helper with optional compatibility metadata.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `tool.authorized`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:837d353fd10767218af0161d212403f3ce48f7ef51ee065af41f54e5dcc9f42d",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-authorized-event-payload.positive.json",
+      "fixtures/negative/tool-authorized-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolAuthorizedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-authorized-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.tool.authorized.json",
+      "negativeFixture": "fixtures/negative/tool-authorized-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/tool-authorized-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.tool.authorized",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `tool.authorized`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "capability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `tool.completed`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:4f968d003f7352138f68b03ef2aba6179a64386adcd924d915b39403a960b85d",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-completed-event-payload.positive.json",
+      "fixtures/negative/tool-completed-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolCompletedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-completed-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.tool.completed.json",
+      "negativeFixture": "fixtures/negative/tool-completed-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/tool-completed-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.tool.completed",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `tool.completed`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "capability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `tool.denied`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:8189752eb42678f931a04061084dcc6bfb24b280ed623a66c0fa60ba3ff5c18c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-denied-event-payload.positive.json",
+      "fixtures/negative/tool-denied-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolDeniedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-denied-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.tool.denied.json",
+      "negativeFixture": "fixtures/negative/tool-denied-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/tool-denied-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.tool.denied",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `tool.denied`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "capability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `tool.requested`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:88687b2da2fa70ad290d920ab1b83e65f1523e29fd86df3b00fa40f0441ad7d0",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/tool-requested-event-payload.positive.json",
+      "fixtures/negative/tool-requested-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ToolRequestedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/tool-requested-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.tool.requested.json",
+      "negativeFixture": "fixtures/negative/tool-requested-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/tool-requested-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.tool.requested",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `tool.requested`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "capability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Claim authority level. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:b261a8d2fb3226171c7b43f7245b4caa0a479ce636b7b78fb3240fba92314ba4",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/claim-level.positive.json",
+      "fixtures/negative/claim-level.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ClaimLevelSchema",
+    "extensionPoints": [],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/claim-level.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.claim-level.json",
+      "negativeFixture": "fixtures/negative/claim-level.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.claim-level",
+    "migrationDescriptors": [],
+    "notes": "Claim authority level.",
+    "owner": "07 Evidence / Artifact Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "artifact",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Evidence producer reference. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:bce7db9838d5642cde34c9076cced41a7cd720bb8a74514642cfa97975baee03",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/created-by.positive.json",
+      "fixtures/negative/created-by.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "CreatedBySchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/created-by.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.created-by.json",
+      "negativeFixture": "fixtures/negative/created-by.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.created-by",
+    "migrationDescriptors": [],
+    "notes": "Evidence producer reference.",
+    "owner": "07 Evidence Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared evidence reference list primitive for decision contracts. Durable posture: embedded. Extension posture: strict array."
+    },
+    "canonicalHash": "sha256:982b01ad2e96d3d6b5bee38034f57ee7dc129ba5c05c08fbc6f325226db0f7f7",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-evidence-refs.positive.json",
+      "fixtures/negative/decision-evidence-refs.negative.json"
+    ],
+    "durability": "embedded",
+    "exportName": "DecisionEvidenceRefsSchema",
+    "extensionPoints": [
+      "strict array"
+    ],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-evidence-refs.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.decision-evidence-refs.json",
+      "negativeFixture": "fixtures/negative/decision-evidence-refs.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.decision-evidence-refs",
+    "migrationDescriptors": [],
+    "notes": "Shared evidence reference list primitive for decision contracts.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Evidence record class. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:9b4a0590fec1eea1b8f4e03b1c9a558ccff292bb3687c0efcfdcbeffaf4d8372",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/evidence-class.positive.json",
+      "fixtures/negative/evidence-class.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvidenceClassSchema",
+    "extensionPoints": [],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/evidence-class.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.evidence-class.json",
+      "negativeFixture": "fixtures/negative/evidence-class.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.evidence-class",
+    "migrationDescriptors": [],
+    "notes": "Evidence record class.",
+    "owner": "07 Evidence Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "none",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Evidence and artifact claim confidence. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:ace26c14af46825bca32a8480a9dcdb3cd40d466b223b2d4c9f65b16aafcf2d8",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/evidence-confidence.positive.json",
+      "fixtures/negative/evidence-confidence.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvidenceConfidenceSchema",
+    "extensionPoints": [],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/evidence-confidence.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.evidence-confidence.json",
+      "negativeFixture": "fixtures/negative/evidence-confidence.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.evidence-confidence",
+    "migrationDescriptors": [],
+    "notes": "Evidence and artifact claim confidence.",
+    "owner": "07 Evidence Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "artifact",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Canonical evidence record. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:824f8717885e63ec885f5d7bc5afde39355d03400a09f61fdba59fb83ac1cfea",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/evidence-record.positive.json",
+      "fixtures/negative/evidence-record.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvidenceRecordSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/evidence-record.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.evidence-record.json",
+      "negativeFixture": "fixtures/negative/evidence-record.negative.json",
+      "replayFixture": "fixtures/replay/evidence-record.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.evidence-record",
+    "migrationDescriptors": [],
+    "notes": "Canonical evidence record.",
+    "owner": "07 Evidence Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Visibility class for artifact/evidence trust labels. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:5d63b3d2427bdf3d824c6821ec4f22daaeabce95d4955601c2b6e2e52428d31a",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/redaction-class.positive.json",
+      "fixtures/negative/redaction-class.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RedactionClassSchema",
+    "extensionPoints": [],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/redaction-class.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.redaction-class.json",
+      "negativeFixture": "fixtures/negative/redaction-class.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.redaction-class",
+    "migrationDescriptors": [],
+    "notes": "Visibility class for artifact/evidence trust labels.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": [
+        {
+          "class": "operator",
+          "path": "redactionPolicy"
+        },
+        {
+          "class": "operator",
+          "path": "redactionClass"
+        }
+      ]
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Authority carried by source-backed claims. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:094635c5632a6fc92da5894a469e092482299f22c7c68d1a2dcf18c1a765601d",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/source-authority.positive.json",
+      "fixtures/negative/source-authority.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "SourceAuthoritySchema",
+    "extensionPoints": [],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/source-authority.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.source-authority.json",
+      "negativeFixture": "fixtures/negative/source-authority.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.source-authority",
+    "migrationDescriptors": [],
+    "notes": "Authority carried by source-backed claims.",
+    "owner": "07 Evidence Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "audit-contract-review",
+      "semantics": "Source pointer primitive. Durable posture: durable. Extension posture: object variant metadata, passthrough."
+    },
+    "canonicalHash": "sha256:e2978ba774517416da912649c961fd22518df164add58bc60dc9c0e2a17bbb3f",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/source-ref.positive.json",
+      "fixtures/negative/source-ref.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "SourceRefSchema",
+    "extensionPoints": [
+      "object variant metadata",
+      "passthrough"
+    ],
+    "family": "evidence",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/source-ref.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.evidence.source-ref.json",
+      "negativeFixture": "fixtures/negative/source-ref.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.evidence.source-ref",
+    "migrationDescriptors": [],
+    "notes": "Source pointer primitive.",
+    "owner": "07 Evidence Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "identity",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Human approval decision. Durable posture: durable. Extension posture: constraints, strict."
+    },
+    "canonicalHash": "sha256:ea3fb5db2e4800b956b957617a0fdfd352dc2385558e132260a351012f8c8e43",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/approval-decision.positive.json",
+      "fixtures/negative/approval-decision.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ApprovalDecisionSchema",
+    "extensionPoints": [
+      "constraints",
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/approval-decision.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.approval-decision.json",
+      "negativeFixture": "fixtures/negative/approval-decision.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.approval-decision",
+    "migrationDescriptors": [],
+    "notes": "Human approval decision.",
+    "owner": "04 Policy Engine / approvals",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Human approval decision value. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:330639db8874b695ef9784ad765fcf6c8d38e347772e157d121e23198f2bb99c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/approval-decision-value.positive.json",
+      "fixtures/negative/approval-decision-value.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ApprovalDecisionValueSchema",
+    "extensionPoints": [],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/approval-decision-value.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.approval-decision-value.json",
+      "negativeFixture": "fixtures/negative/approval-decision-value.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.approval-decision-value",
+    "migrationDescriptors": [],
+    "notes": "Human approval decision value.",
+    "owner": "04 Policy Engine / approvals",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Pending approval request projection. Durable posture: derived. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:03f150a243081e10eff082e97ed7a1abcd2b9131cd50721f3e652694c5b990ce",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/approval-request.positive.json",
+      "fixtures/negative/approval-request.negative.json"
+    ],
+    "durability": "derived",
+    "exportName": "ApprovalRequestSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/approval-request.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.approval-request.json",
+      "negativeFixture": "fixtures/negative/approval-request.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.approval-request",
+    "migrationDescriptors": [],
+    "notes": "Pending approval request projection.",
+    "owner": "04 Policy Engine / 05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Current budget projection alias. Durable posture: derived. Extension posture: arbitrary metadata map."
+    },
+    "canonicalHash": "sha256:73594a2f049f7e1f26c1dbba5cc86fff80d33dcb616e1fba4954bde54113cffc",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/budget-state.positive.json",
+      "fixtures/negative/budget-state.negative.json"
+    ],
+    "durability": "derived",
+    "exportName": "BudgetStateSchema",
+    "extensionPoints": [
+      "arbitrary metadata map"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/budget-state.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.budget-state.json",
+      "negativeFixture": "fixtures/negative/budget-state.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.budget-state",
+    "migrationDescriptors": [],
+    "notes": "Current budget projection alias.",
+    "owner": "02 Run Store / 04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared constraint primitive for decision contracts. Durable posture: embedded. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:9202576fcb1d6a4b1929965ac5b1352060cabeb9dc85e3f6558bff9eea4febc4",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-constraint.positive.json",
+      "fixtures/negative/decision-constraint.negative.json"
+    ],
+    "durability": "embedded",
+    "exportName": "DecisionConstraintSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-constraint.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.decision-constraint.json",
+      "negativeFixture": "fixtures/negative/decision-constraint.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.decision-constraint",
+    "migrationDescriptors": [],
+    "notes": "Shared constraint primitive for decision contracts.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared obligation primitive for policy and gate contracts. Durable posture: embedded. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:a502606925cbc557488b8eb44797179b783b1ef25bc805d75d9e443ec9d94bbc",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-obligation.positive.json",
+      "fixtures/negative/decision-obligation.negative.json"
+    ],
+    "durability": "embedded",
+    "exportName": "DecisionObligationSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-obligation.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.decision-obligation.json",
+      "negativeFixture": "fixtures/negative/decision-obligation.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.decision-obligation",
+    "migrationDescriptors": [],
+    "notes": "Shared obligation primitive for policy and gate contracts.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate lifecycle instruction approval request contract. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:220cae036f39f2fc5f3c71ead4297d4b9da8c0af9b4e400fd366968fb9fd3d5b",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-approval-request.positive.json",
+      "fixtures/negative/gate-approval-request.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateApprovalRequestSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-approval-request.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.gate-approval-request.json",
+      "negativeFixture": "fixtures/negative/gate-approval-request.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.gate-approval-request",
+    "migrationDescriptors": [],
+    "notes": "Gate lifecycle instruction approval request contract.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate lifecycle instruction human question contract. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:d925a37c43e24cce3a7fd1abdaf8940ebb11177ca54a42eda80799bfe951fdaa",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-human-question.positive.json",
+      "fixtures/negative/gate-human-question.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateHumanQuestionSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-human-question.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.gate-human-question.json",
+      "negativeFixture": "fixtures/negative/gate-human-question.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.gate-human-question",
+    "migrationDescriptors": [],
+    "notes": "Gate lifecycle instruction human question contract.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Pending human clarification projection. Durable posture: derived. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:757d724d434e88a9672f20b832eebbedbf27e89861a7493d73b2160ea32bfef7",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/human-question.positive.json",
+      "fixtures/negative/human-question.negative.json"
+    ],
+    "durability": "derived",
+    "exportName": "HumanQuestionSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/human-question.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.human-question.json",
+      "negativeFixture": "fixtures/negative/human-question.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.human-question",
+    "migrationDescriptors": [],
+    "notes": "Pending human clarification projection.",
+    "owner": "05 Gate Engine / approvals",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Human review decision request/result contract. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:36345ab575c8b468c892f2c6d0acf86aadc545e0b33957124e9729c6faac6b9a",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/human-review.positive.json",
+      "fixtures/negative/human-review.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HumanReviewSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/human-review.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.human-review.json",
+      "negativeFixture": "fixtures/negative/human-review.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.human-review",
+    "migrationDescriptors": [],
+    "notes": "Human review decision request/result contract.",
+    "owner": "05 Gate Engine / approvals",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Declarative policy bundle. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:a5aeb1a3079329f81d0df84b6971f0a3bdd3b2dfc539deba4220bb1f5b685558",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-bundle.positive.json",
+      "fixtures/negative/policy-bundle.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyBundleSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-bundle.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-bundle.json",
+      "negativeFixture": "fixtures/negative/policy-bundle.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-bundle",
+    "migrationDescriptors": [],
+    "notes": "Declarative policy bundle.",
+    "owner": "04 Policy Engine / 03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Policy verdict constraint contract. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:6f6d85a8af4f70931e4a9750244cc56d4bcae3dfca74a7494d22bebf7e899d2e",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-constraint.positive.json",
+      "fixtures/negative/policy-constraint.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyConstraintSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-constraint.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-constraint.json",
+      "negativeFixture": "fixtures/negative/policy-constraint.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-constraint",
+    "migrationDescriptors": [],
+    "notes": "Policy verdict constraint contract.",
+    "owner": "04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Policy verdict obligation contract. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:aed3c61e01a2674d76bf74c1afc2451a1fc6360c9bdfc460c9bc908bbf93de09",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-obligation.positive.json",
+      "fixtures/negative/policy-obligation.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyObligationSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-obligation.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-obligation.json",
+      "negativeFixture": "fixtures/negative/policy-obligation.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-obligation",
+    "migrationDescriptors": [],
+    "notes": "Policy verdict obligation contract.",
+    "owner": "04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Policy rule effect enum. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:7518b40682e151fbd961258eba4f44baaf496d08bd02f46f10e78d555c1d587c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-rule-effect.positive.json",
+      "fixtures/negative/policy-rule-effect.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyRuleEffectSchema",
+    "extensionPoints": [],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-rule-effect.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-rule-effect.json",
+      "negativeFixture": "fixtures/negative/policy-rule-effect.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-rule-effect",
+    "migrationDescriptors": [],
+    "notes": "Policy rule effect enum.",
+    "owner": "04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Policy rule resolution layer enum. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:66bab50cce92bbea740f25fc79ced457ae3ef52de16afd3bff0509f158291a66",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-rule-layer.positive.json",
+      "fixtures/negative/policy-rule-layer.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyRuleLayerSchema",
+    "extensionPoints": [],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-rule-layer.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-rule-layer.json",
+      "negativeFixture": "fixtures/negative/policy-rule-layer.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-rule-layer",
+    "migrationDescriptors": [],
+    "notes": "Policy rule resolution layer enum.",
+    "owner": "04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Matched policy rule contract. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:831dbc7053ff2b53ee1b11aa7a8ad6c5583ed3bdcca6370923ad41f7565fd8bd",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-rule-match.positive.json",
+      "fixtures/negative/policy-rule-match.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyRuleMatchSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-rule-match.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-rule-match.json",
+      "negativeFixture": "fixtures/negative/policy-rule-match.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-rule-match",
+    "migrationDescriptors": [],
+    "notes": "Matched policy rule contract.",
+    "owner": "04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Deterministic policy verdict contract. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:d349b967999e83f38bbd7049e4c8ec01c8d2f498729e4ef162d6f5dd43c35e36",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-verdict.positive.json",
+      "fixtures/negative/policy-verdict.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyVerdictSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-verdict.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-verdict.json",
+      "negativeFixture": "fixtures/negative/policy-verdict.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-verdict",
+    "migrationDescriptors": [],
+    "notes": "Deterministic policy verdict contract.",
+    "owner": "04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "governance-contract-review",
+      "semantics": "Policy verdict status enum. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:9c4746320cf9387665019b30b4e7d30a31c6a2ba23df6cb7b8d9a4dd043b87e8",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-verdict-status.positive.json",
+      "fixtures/negative/policy-verdict-status.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyVerdictStatusSchema",
+    "extensionPoints": [],
+    "family": "governance",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-verdict-status.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.governance.policy-verdict-status.json",
+      "negativeFixture": "fixtures/negative/policy-verdict-status.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.governance.policy-verdict-status",
+    "migrationDescriptors": [],
+    "notes": "Policy verdict status enum.",
+    "owner": "04 Policy Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Declarative gate definition. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:1e491f51efa648bf010d17e58aca7573ba052190193ce8b298c321a7bf0a7425",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-definition.positive.json",
+      "fixtures/negative/gate-definition.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateDefinitionSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "harness",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-definition.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.harness.gate-definition.json",
+      "negativeFixture": "fixtures/negative/gate-definition.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.harness.gate-definition",
+    "migrationDescriptors": [],
+    "notes": "Declarative gate definition.",
+    "owner": "05 Gate Engine / 03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Harness package manifest. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:f1bf4c0f88b6186ff84fc7087656ad941f7860701284f2f33c328b4a92358120",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/harness-manifest.positive.json",
+      "fixtures/negative/harness-manifest.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HarnessManifestSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "harness",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/harness-manifest.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.harness.harness-manifest.json",
+      "negativeFixture": "fixtures/negative/harness-manifest.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.harness.harness-manifest",
+    "migrationDescriptors": [],
+    "notes": "Harness package manifest.",
+    "owner": "03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "compatibility",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Loaded harness snapshot with `specHash`. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:0d214ea5c9af582d5244356df0edeff49f78752801723986678d66ff96fe57d8",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/harness-snapshot.positive.json",
+      "fixtures/negative/harness-snapshot.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HarnessSnapshotSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "harness",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/harness-snapshot.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.harness.harness-snapshot.json",
+      "negativeFixture": "fixtures/negative/harness-snapshot.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.harness.harness-snapshot",
+    "migrationDescriptors": [],
+    "notes": "Loaded harness snapshot with `specHash`.",
+    "owner": "03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "compatibility",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Declarative phase definition. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:ce035330cb1c0a02d749968c9ce92b7d52a9dc4083ae0099ed3eec85eeb0340b",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/phase-definition.positive.json",
+      "fixtures/negative/phase-definition.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PhaseDefinitionSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "harness",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/phase-definition.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.harness.phase-definition.json",
+      "negativeFixture": "fixtures/negative/phase-definition.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.harness.phase-definition",
+    "migrationDescriptors": [],
+    "notes": "Declarative phase definition.",
+    "owner": "03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Prompt asset reference and content hash. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:1d74485cfb2f55c83b3aba0bec3150efe1bad7d14af791e923c3c0ce9a7b0bde",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/prompt-asset-ref.positive.json",
+      "fixtures/negative/prompt-asset-ref.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PromptAssetRefSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "harness",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/prompt-asset-ref.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.harness.prompt-asset-ref.json",
+      "negativeFixture": "fixtures/negative/prompt-asset-ref.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.harness.prompt-asset-ref",
+    "migrationDescriptors": [],
+    "notes": "Prompt asset reference and content hash.",
+    "owner": "03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "artifact",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Declarative role definition. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:3df5afe86e57627b4772fd342d4db4f10a4cc0a0588a006622ff6a4d61904691",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/role-definition.positive.json",
+      "fixtures/negative/role-definition.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RoleDefinitionSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "harness",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/role-definition.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.harness.role-definition.json",
+      "negativeFixture": "fixtures/negative/role-definition.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.harness.role-definition",
+    "migrationDescriptors": [],
+    "notes": "Declarative role definition.",
+    "owner": "03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "none",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "adapter-contract-review",
+      "semantics": "Attachment reference on run input. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:5acd499f46dd1c59f3f1ac966f6be2e37a685c6ad1b56f16e1592bea52b0d6f4",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/attachment-ref.positive.json",
+      "fixtures/negative/attachment-ref.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "AttachmentRefSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "identity",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/attachment-ref.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.identity.attachment-ref.json",
+      "negativeFixture": "fixtures/negative/attachment-ref.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.identity.attachment-ref",
+    "migrationDescriptors": [],
+    "notes": "Attachment reference on run input.",
+    "owner": "02 Run Store / 08 CLI Adapter",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "adapter",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Harness reference primitive. Durable posture: durable. Extension posture: object variant passthrough."
+    },
+    "canonicalHash": "sha256:80b8f36172a6b437c374641a8d4e9d9cdaaa3b20c92989d85084d19c267c43e6",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/harness-reference.positive.json",
+      "fixtures/negative/harness-reference.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "HarnessReferenceSchema",
+    "extensionPoints": [
+      "object variant passthrough"
+    ],
+    "family": "identity",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/harness-reference.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.identity.harness-reference.json",
+      "negativeFixture": "fixtures/negative/harness-reference.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.identity.harness-reference",
+    "migrationDescriptors": [],
+    "notes": "Harness reference primitive.",
+    "owner": "03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared advisory/blocking severity primitive. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:8aea7c2e12fbd0d2d91f9203311ea7bb9b3e4c9e2f1b7d3a0317882152c4b7b1",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-severity.positive.json",
+      "fixtures/negative/decision-severity.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "DecisionSeveritySchema",
+    "extensionPoints": [],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-severity.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.decision-severity.json",
+      "negativeFixture": "fixtures/negative/decision-severity.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.decision-severity",
+    "migrationDescriptors": [],
+    "notes": "Shared advisory/blocking severity primitive.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared lifecycle decision status enum across policy, gate, and eval contracts. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:293739d534ffa97950de90f1a98f8aa8dc73f8ffde1c882ed2d2a1835f8a0870",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-status.positive.json",
+      "fixtures/negative/decision-status.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "DecisionStatusSchema",
+    "extensionPoints": [],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-status.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.decision-status.json",
+      "negativeFixture": "fixtures/negative/decision-status.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.decision-status",
+    "migrationDescriptors": [],
+    "notes": "Shared lifecycle decision status enum across policy, gate, and eval contracts.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate lifecycle role. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:f3369ff62222b4f2f1fe9c97649650717e8e40ece4f8507f935e82c401ff73a6",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-kind.positive.json",
+      "fixtures/negative/gate-kind.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateKindSchema",
+    "extensionPoints": [],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-kind.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-kind.json",
+      "negativeFixture": "fixtures/negative/gate-kind.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-kind",
+    "migrationDescriptors": [],
+    "notes": "Gate lifecycle role.",
+    "owner": "05 Gate Engine / 03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate lifecycle instruction contract. Durable posture: durable. Extension posture: discriminated union, strict."
+    },
+    "canonicalHash": "sha256:c02108378fce5ff1f7cb71a61ca8d6e585c76bbfc271854136335a8e63e36e40",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-lifecycle-instruction.positive.json",
+      "fixtures/negative/gate-lifecycle-instruction.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateLifecycleInstructionSchema",
+    "extensionPoints": [
+      "discriminated union",
+      "strict"
+    ],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-lifecycle-instruction.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-lifecycle-instruction.json",
+      "negativeFixture": "fixtures/negative/gate-lifecycle-instruction.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-lifecycle-instruction",
+    "migrationDescriptors": [],
+    "notes": "Gate lifecycle instruction contract.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate verdict obligation contract. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:2d621d3785e43f88f04aa2d8728e66269bf70d5729d155f93be3ae9c55256cea",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-obligation.positive.json",
+      "fixtures/negative/gate-obligation.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateObligationSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-obligation.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-obligation.json",
+      "negativeFixture": "fixtures/negative/gate-obligation.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-obligation",
+    "migrationDescriptors": [],
+    "notes": "Gate verdict obligation contract.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate instruction repair task contract. Durable posture: durable. Extension posture: strict refinement."
+    },
+    "canonicalHash": "sha256:4ac3c2fde5807481cbb350437bb05193928d56fea414939c0692f97f1208ef9b",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-repair-task.positive.json",
+      "fixtures/negative/gate-repair-task.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateRepairTaskSchema",
+    "extensionPoints": [
+      "strict refinement"
+    ],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-repair-task.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-repair-task.json",
+      "negativeFixture": "fixtures/negative/gate-repair-task.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-repair-task",
+    "migrationDescriptors": [],
+    "notes": "Gate instruction repair task contract.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Required gate remediation action enum. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:706169c840ede141c2226a5e0ada6bdf1db15fd65ff73b138829113602a1b186",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-required-action.positive.json",
+      "fixtures/negative/gate-required-action.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateRequiredActionSchema",
+    "extensionPoints": [],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-required-action.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-required-action.json",
+      "negativeFixture": "fixtures/negative/gate-required-action.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-required-action",
+    "migrationDescriptors": [],
+    "notes": "Required gate remediation action enum.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": [
+        {
+          "class": "operator",
+          "path": "redactionPolicy"
+        },
+        {
+          "class": "operator",
+          "path": "redactionClass"
+        }
+      ]
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate verdict severity alias of `DecisionSeveritySchema`. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:e64c83d8d18787b75e60d81afc44b03c11879d90210b548441ee521ead7fc957",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-severity.positive.json",
+      "fixtures/negative/gate-severity.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateSeveritySchema",
+    "extensionPoints": [],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-severity.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-severity.json",
+      "negativeFixture": "fixtures/negative/gate-severity.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-severity",
+    "migrationDescriptors": [],
+    "notes": "Gate verdict severity alias of `DecisionSeveritySchema`.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate verdict contract. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:044aa4081ae7d3dc72af62360c716b5cb44b51a7de4a1ab8544b922361002eb7",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-verdict.positive.json",
+      "fixtures/negative/gate-verdict.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateVerdictSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-verdict.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-verdict.json",
+      "negativeFixture": "fixtures/negative/gate-verdict.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-verdict",
+    "migrationDescriptors": [],
+    "notes": "Gate verdict contract.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate verdict status enum. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:8578421450ae56f7c5489ab744d9608f1ca88336887603839b9d432fb2b57801",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-verdict-status.positive.json",
+      "fixtures/negative/gate-verdict-status.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateVerdictStatusSchema",
+    "extensionPoints": [],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-verdict-status.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.gate-verdict-status.json",
+      "negativeFixture": "fixtures/negative/gate-verdict-status.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.gate-verdict-status",
+    "migrationDescriptors": [],
+    "notes": "Gate verdict status enum.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Repair instruction contract. Durable posture: durable. Extension posture: constraints, strict."
+    },
+    "canonicalHash": "sha256:09fc303ae0668ebebf3bb22b1eefbbf4d5226ce8c3102e4aaf62242ac3b48e9f",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/repair-task.positive.json",
+      "fixtures/negative/repair-task.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RepairTaskSchema",
+    "extensionPoints": [
+      "constraints",
+      "strict"
+    ],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/repair-task.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.repair-task.json",
+      "negativeFixture": "fixtures/negative/repair-task.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.repair-task",
+    "migrationDescriptors": [],
+    "notes": "Repair instruction contract.",
+    "owner": "05 Gate Engine / 07 Eval Runner",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "verification",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Runtime run ingress contract. Durable posture: durable. Extension posture: metadata, constraints, strict."
+    },
+    "canonicalHash": "sha256:d87a5667838ea56eb09ec1ecdb87e7b927b024af4e52971378f8e74681e754f4",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/run-input.positive.json",
+      "fixtures/negative/run-input.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RunInputSchema",
+    "extensionPoints": [
+      "metadata",
+      "constraints",
+      "strict"
+    ],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/run-input.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.run-input.json",
+      "negativeFixture": "fixtures/negative/run-input.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.run-input",
+    "migrationDescriptors": [],
+    "notes": "Runtime run ingress contract.",
+    "owner": "02 Run Store / Runtime",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "adapter",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Rebuildable state projection. Durable posture: derived. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:532d6baee777d10718203e243a9987cc28e7f1f39f4f4a608cc5ff76f723c774",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/run-state.positive.json",
+      "fixtures/negative/run-state.negative.json"
+    ],
+    "durability": "derived",
+    "exportName": "RunStateSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/run-state.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.run-state.json",
+      "negativeFixture": "fixtures/negative/run-state.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.run-state",
+    "migrationDescriptors": [],
+    "notes": "Rebuildable state projection.",
+    "owner": "02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "event",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Run progression status. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:613627b0bdcd82a10e50e5d13f42384a7aeb916a19aa158d547c1c608d5280c6",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/run-status.positive.json",
+      "fixtures/negative/run-status.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RunStatusSchema",
+    "extensionPoints": [],
+    "family": "lifecycle",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/run-status.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.lifecycle.run-status.json",
+      "negativeFixture": "fixtures/negative/run-status.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.lifecycle.run-status",
+    "migrationDescriptors": [],
+    "notes": "Run progression status.",
+    "owner": "02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "none",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared deterministic/model-assisted/human producer reference. Durable posture: embedded. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:2f1c571921bcd89d91639f3bae46a595c4f15b65793fdc5709d3bfc127d34b95",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-produced-by.positive.json",
+      "fixtures/negative/decision-produced-by.negative.json"
+    ],
+    "durability": "embedded",
+    "exportName": "DecisionProducedBySchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "observability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-produced-by.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.observability.decision-produced-by.json",
+      "negativeFixture": "fixtures/negative/decision-produced-by.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.observability.decision-produced-by",
+    "migrationDescriptors": [],
+    "notes": "Shared deterministic/model-assisted/human producer reference.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared decision provenance mixin. Durable posture: embedded. Extension posture: strict optional fields."
+    },
+    "canonicalHash": "sha256:c5348e61e2d024fcd07fb2d3432c9db78f56a0feca1587a0ea6db34bb8c6637a",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-provenance.positive.json",
+      "fixtures/negative/decision-provenance.negative.json"
+    ],
+    "durability": "embedded",
+    "exportName": "DecisionProvenanceSchema",
+    "extensionPoints": [
+      "strict optional fields"
+    ],
+    "family": "observability",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-provenance.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.observability.decision-provenance.json",
+      "negativeFixture": "fixtures/negative/decision-provenance.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.observability.decision-provenance",
+    "migrationDescriptors": [],
+    "notes": "Shared decision provenance mixin.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Shared finding primitive for eval and gate contracts. Durable posture: embedded. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:786e723991a7b456c0b57ece017babb0970c80d73cca9e5a22bd4224f4b5b6e8",
+    "compatibilityClass": "patch-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/decision-finding.positive.json",
+      "fixtures/negative/decision-finding.negative.json"
+    ],
+    "durability": "embedded",
+    "exportName": "DecisionFindingSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/decision-finding.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.decision-finding.json",
+      "negativeFixture": "fixtures/negative/decision-finding.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.decision-finding",
+    "migrationDescriptors": [],
+    "notes": "Shared finding primitive for eval and gate contracts.",
+    "owner": "01 Shared Schemas",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Declarative eval definition. Durable posture: durable. Extension posture: metadata, passthrough."
+    },
+    "canonicalHash": "sha256:60d64efbc320fab001f2f7a057026f026d77564728d0186cc64e621ac892571c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-definition.positive.json",
+      "fixtures/negative/eval-definition.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalDefinitionSchema",
+    "extensionPoints": [
+      "metadata",
+      "passthrough"
+    ],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-definition.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.eval-definition.json",
+      "negativeFixture": "fixtures/negative/eval-definition.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.eval-definition",
+    "migrationDescriptors": [],
+    "notes": "Declarative eval definition.",
+    "owner": "07 Eval Runner / 03 Harness Loader",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Eval finding inside verdicts. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:86250eb6b1504580ae520796d9e194314e8a651b5be0cb319f2e47676c795f62",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-finding.positive.json",
+      "fixtures/negative/eval-finding.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalFindingSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-finding.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.eval-finding.json",
+      "negativeFixture": "fixtures/negative/eval-finding.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.eval-finding",
+    "migrationDescriptors": [],
+    "notes": "Eval finding inside verdicts.",
+    "owner": "07 Eval Runner",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Eval producer reference. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:802dcc42fe732274a5619c63a31dde4cd981ffad91cae319eb43f53f94f03447",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-produced-by.positive.json",
+      "fixtures/negative/eval-produced-by.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalProducedBySchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-produced-by.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.eval-produced-by.json",
+      "negativeFixture": "fixtures/negative/eval-produced-by.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.eval-produced-by",
+    "migrationDescriptors": [],
+    "notes": "Eval producer reference.",
+    "owner": "07 Eval Runner",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "observability",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Blocking/advisory eval severity. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:2af51295801a65d9298d4d6eea9208c28300d46f4b972f85c0e84b882e12583d",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-severity.positive.json",
+      "fixtures/negative/eval-severity.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalSeveritySchema",
+    "extensionPoints": [],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-severity.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.eval-severity.json",
+      "negativeFixture": "fixtures/negative/eval-severity.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.eval-severity",
+    "migrationDescriptors": [],
+    "notes": "Blocking/advisory eval severity.",
+    "owner": "07 Eval Runner / 05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Eval verdict and optional repair task. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:e8885d9a2a81293f28d17e8e6ad68a18a267ca472511346a66ae12c4defe5679",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-verdict.positive.json",
+      "fixtures/negative/eval-verdict.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalVerdictSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-verdict.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.eval-verdict.json",
+      "negativeFixture": "fixtures/negative/eval-verdict.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.eval-verdict",
+    "migrationDescriptors": [],
+    "notes": "Eval verdict and optional repair task.",
+    "owner": "07 Eval Runner",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Repaired-aware eval verdict contract validator. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:aded7a517f2bc1caff35cd7049f1609ae4aea1ecef84bf78c1fd940bcb06a04c",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-verdict-contract.positive.json",
+      "fixtures/negative/eval-verdict-contract.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalVerdictContractSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-verdict-contract.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.eval-verdict-contract.json",
+      "negativeFixture": "fixtures/negative/eval-verdict-contract.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.eval-verdict-contract",
+    "migrationDescriptors": [],
+    "notes": "Repaired-aware eval verdict contract validator.",
+    "owner": "07 Eval Runner",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Eval result status. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:be4dffa6bc11f271b8e77d5366f126d71039f483dd980be4454eb8c069cf9d27",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/eval-verdict-status.positive.json",
+      "fixtures/negative/eval-verdict-status.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "EvalVerdictStatusSchema",
+    "extensionPoints": [],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/eval-verdict-status.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.eval-verdict-status.json",
+      "negativeFixture": "fixtures/negative/eval-verdict-status.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.eval-verdict-status",
+    "migrationDescriptors": [],
+    "notes": "Eval result status.",
+    "owner": "07 Eval Runner",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate check classification. Durable posture: durable. Extension posture: ."
+    },
+    "canonicalHash": "sha256:40d9f57fb4357430cb73b40b1362cb3612f96d10b5def54e9e80675bdbc57d44",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-check-type.positive.json",
+      "fixtures/negative/gate-check-type.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateCheckTypeSchema",
+    "extensionPoints": [],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-check-type.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.gate-check-type.json",
+      "negativeFixture": "fixtures/negative/gate-check-type.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.gate-check-type",
+    "migrationDescriptors": [],
+    "notes": "Gate check classification.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "harness",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Gate verdict finding contract. Durable posture: durable. Extension posture: metadata, strict."
+    },
+    "canonicalHash": "sha256:be74944725a8f9ceca277f5b4063622ee01b5b75bc3caf4e3438ac75849272dc",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/gate-finding.positive.json",
+      "fixtures/negative/gate-finding.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "GateFindingSchema",
+    "extensionPoints": [
+      "metadata",
+      "strict"
+    ],
+    "family": "verification",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/gate-finding.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.verification.gate-finding.json",
+      "negativeFixture": "fixtures/negative/gate-finding.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.verification.gate-finding",
+    "migrationDescriptors": [],
+    "notes": "Gate verdict finding contract.",
+    "owner": "05 Gate Engine",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "evidence",
+    "status": "public",
+    "version": "1"
+  }
+]

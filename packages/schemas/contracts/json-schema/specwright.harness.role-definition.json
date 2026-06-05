@@ -1,0 +1,51 @@
+{
+  "$id": "specwright.harness.role-definition",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "prompts": {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "RoleDefinitionSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "harness",
+    "hash": "sha256:3df5afe86e57627b4772fd342d4db4f10a4cc0a0588a006622ff6a4d61904691",
+    "id": "specwright.harness.role-definition",
+    "status": "public",
+    "version": "1"
+  }
+}

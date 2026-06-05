@@ -1,0 +1,17 @@
+{
+  "$id": "specwright.capability.cache-status",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "hit",
+    "miss",
+    "bypass"
+  ],
+  "title": "CacheStatusSchema",
+  "x-specwright-contract": {
+    "family": "capability",
+    "hash": "sha256:2264ce85475c87bfd636b799f00eee917b7c2b486eb20b3c734b4ddb8e6599c5",
+    "id": "specwright.capability.cache-status",
+    "status": "public",
+    "version": "1"
+  }
+}

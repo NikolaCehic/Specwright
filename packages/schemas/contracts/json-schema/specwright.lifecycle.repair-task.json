@@ -1,0 +1,122 @@
+{
+  "$id": "specwright.lifecycle.repair-task",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptanceChecks": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "allowedRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "allowedTools": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "blockedTools": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "createdFromFindingIds": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "escalationRule": {
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "failedPhase": {
+      "type": "string"
+    },
+    "gateId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "problem": {
+      "type": "string"
+    },
+    "producedBy": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "deterministic",
+            "model_assisted",
+            "human"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "type": "object"
+    },
+    "repairId": {
+      "type": "string"
+    },
+    "requiredCorrection": {
+      "type": "string"
+    },
+    "requiredEvidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sourceFindingId": {
+      "type": "string"
+    },
+    "successEval": {
+      "type": "string"
+    },
+    "successGate": {
+      "type": "string"
+    },
+    "targetRef": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "title": "RepairTaskSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:09fc303ae0668ebebf3bb22b1eefbbf4d5226ce8c3102e4aaf62242ac3b48e9f",
+    "id": "specwright.lifecycle.repair-task",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

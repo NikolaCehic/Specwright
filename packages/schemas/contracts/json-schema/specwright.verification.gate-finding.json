@@ -1,0 +1,56 @@
+{
+  "$id": "specwright.verification.gate-finding",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "evidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "path": {
+      "type": "string"
+    },
+    "repairHint": {
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "advisory",
+        "blocking"
+      ]
+    },
+    "targetRef": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidenceRefs",
+    "id",
+    "message",
+    "severity"
+  ],
+  "title": "GateFindingSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:be74944725a8f9ceca277f5b4063622ee01b5b75bc3caf4e3438ac75849272dc",
+    "id": "specwright.verification.gate-finding",
+    "status": "public",
+    "version": "1"
+  }
+}

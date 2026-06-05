@@ -1,0 +1,88 @@
+{
+  "$id": "specwright.capability.tool-call-result",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "error": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "code",
+        "message",
+        "retryable"
+      ],
+      "type": "object"
+    },
+    "output": {},
+    "provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "argsHash": {
+          "type": "string"
+        },
+        "cacheStatus": {
+          "enum": [
+            "hit",
+            "miss",
+            "bypass"
+          ]
+        },
+        "resultHash": {
+          "type": "string"
+        },
+        "toolId": {
+          "type": "string"
+        },
+        "toolVersion": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "argsHash",
+        "cacheStatus",
+        "toolId",
+        "toolVersion",
+        "traceId"
+      ],
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "success",
+        "denied",
+        "approval_required",
+        "failed"
+      ]
+    },
+    "toolCallId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "provenance",
+    "status",
+    "toolCallId"
+  ],
+  "title": "ToolCallResultSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "capability",
+    "hash": "sha256:2697fd9e9958d42e3d6411fe616ee3a7f4b15eddfae34842fb9a37a84abf095c",
+    "id": "specwright.capability.tool-call-result",
+    "status": "public",
+    "version": "1"
+  }
+}

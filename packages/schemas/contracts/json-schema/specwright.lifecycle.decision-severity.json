@@ -1,0 +1,16 @@
+{
+  "$id": "specwright.lifecycle.decision-severity",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "advisory",
+    "blocking"
+  ],
+  "title": "DecisionSeveritySchema",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:8aea7c2e12fbd0d2d91f9203311ea7bb9b3e4c9e2f1b7d3a0317882152c4b7b1",
+    "id": "specwright.lifecycle.decision-severity",
+    "status": "public",
+    "version": "1"
+  }
+}

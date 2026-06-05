@@ -1,0 +1,29 @@
+{
+  "$id": "specwright.event.run.failed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "errorCode": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "reason"
+  ],
+  "title": "RunFailedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:798b78acec10d4ee5398ef0b16bdfc96fabe7877c8d547d84c2d0b3b9d99286e",
+    "id": "specwright.event.run.failed",
+    "status": "public",
+    "version": "1"
+  }
+}

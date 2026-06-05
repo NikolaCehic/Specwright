@@ -1,0 +1,48 @@
+{
+  "$id": "specwright.event.artifact.recorded",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "artifactId": {
+          "type": "string"
+        },
+        "artifactType": {
+          "type": "string"
+        },
+        "evidenceRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "artifactId",
+        "artifactType"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "artifact"
+  ],
+  "title": "ArtifactRecordedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:e0e38fe8121eb83916a32e9df5e579375be806976937844e4ade9f73d548a80e",
+    "id": "specwright.event.artifact.recorded",
+    "status": "public",
+    "version": "1"
+  }
+}

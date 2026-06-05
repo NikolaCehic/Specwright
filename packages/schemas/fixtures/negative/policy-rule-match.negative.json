@@ -1,0 +1,5 @@
+{
+  "layer": "runtime_invariant",
+  "reason": "fixture",
+  "ruleId": "fixture"
+}

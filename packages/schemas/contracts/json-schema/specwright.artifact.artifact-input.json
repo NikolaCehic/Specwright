@@ -1,0 +1,58 @@
+{
+  "$id": "specwright.artifact.artifact-input",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifactType": {
+      "type": "string"
+    },
+    "claimLevel": {
+      "enum": [
+        "source_fact",
+        "derived_fact",
+        "inference",
+        "assumption",
+        "human_decision",
+        "unknown"
+      ]
+    },
+    "content": {},
+    "evidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "producedBy": {
+      "additionalProperties": false,
+      "properties": {
+        "actionId": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionId",
+        "phase"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "artifactType",
+    "content",
+    "evidenceRefs",
+    "producedBy"
+  ],
+  "title": "ArtifactInputSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "artifact",
+    "hash": "sha256:ccaa4cc753224f3dbb35e8b709917aa1deec16f32e158537181d240b60e96cf8",
+    "id": "specwright.artifact.artifact-input",
+    "status": "public",
+    "version": "1"
+  }
+}
