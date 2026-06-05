@@ -42,13 +42,18 @@ export const RUN_STATE_CHECKPOINT_VERSION = 1;
 export const CHECKPOINT_INTERVAL = 128;
 
 export type RunStoreErrorCode =
+  | "approval_mismatch"
+  | "approval_required"
   | "corrupt_event"
+  | "corrupt_audit"
+  | "dual_control_violation"
   | "invalid_event"
   | "invalid_event_payload"
   | "integrity_broken"
   | "invalid_projection"
   | "invalid_run_id"
   | "invalid_sequence"
+  | "legal_hold_active"
   | "missing_events"
   | "raw_read_denied"
   | "run_exists"
@@ -1858,7 +1863,7 @@ async function createRunDirectory(paths: RunStorePaths) {
   }
 }
 
-async function appendJsonLine(path: string, value: unknown) {
+export async function appendJsonLine(path: string, value: unknown) {
   const file = await open(path, "a");
 
   try {
@@ -1873,7 +1878,7 @@ async function writeProjection(paths: RunStorePaths, state: RunState) {
   await writeJsonAtomic(paths.statePath, state);
 }
 
-async function writeJsonAtomic(path: string, value: unknown) {
+export async function writeJsonAtomic(path: string, value: unknown) {
   const tempPath = `${path}.${randomUUID()}.tmp`;
   await writeFile(tempPath, `${JSON.stringify(value, null, 2)}\n`, {
     flag: "wx"
@@ -1954,3 +1959,5 @@ function isNodeError(error: unknown): error is { code: string } {
 function hasPayloadIssue(error: { issues: readonly { path: readonly unknown[] }[] }) {
   return error.issues.some((issue) => issue.path[0] === "payload");
 }
+
+export * from "./administration";

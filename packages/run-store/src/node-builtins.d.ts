@@ -1,4 +1,9 @@
 declare module "node:crypto" {
+  export function createHash(algorithm: "sha256"): {
+    update(data: string): {
+      digest(encoding: "hex"): string;
+    };
+  };
   export function randomUUID(): string;
 }
 
@@ -16,6 +21,10 @@ declare module "node:fs/promises" {
   export function open(path: string, flags: string): Promise<FileHandle>;
   export function readFile(path: string, encoding: "utf8"): Promise<string>;
   export function rename(oldPath: string, newPath: string): Promise<void>;
+  export function rm(
+    path: string,
+    options?: { recursive?: boolean; force?: boolean }
+  ): Promise<void>;
   export function writeFile(
     path: string,
     data: string,

@@ -5,27 +5,40 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   CHECKPOINT_INTERVAL,
+  ADMINISTRATION_AUDIT_GENESIS_SEED,
+  ADMINISTRATION_OPERATIONS,
+  AdministrationRecordSchema,
   EVENT_INTEGRITY_ALGO,
   EVENT_INTEGRITY_GENESIS_SEED,
   RUN_STATE_CHECKPOINT_VERSION,
   appendEvent,
   canonicalizeEventContent,
   createRun,
+  exportAuditBundle,
+  getAdministrationPaths,
   getRunStorePaths,
+  hardDeleteRun,
   hashEventContent,
   materializeRunState,
   parseEventLog,
   projectRunState,
+  readAdministrationLog,
   readRunState,
   readCheckpoint,
   readEvents,
+  recordApproval,
   rebuildFromCheckpoint,
   redactForEgress,
   replayRunState,
   RunStoreError,
+  runScopeForRun,
+  verifyAdministrationLog,
   verifyRunIntegrity,
+  withDualControl,
   writeCheckpoint,
   type HarnessSnapshot,
+  type AdministrationOperation,
+  type AdministrationRunScope,
   type RedactionProfile,
   type RunStateCheckpoint
 } from "./index";
@@ -1060,7 +1073,541 @@ describe("run store", () => {
       expect((error as RunStoreError).code).toBe(testCase.code);
     }
   });
+
+  test("requires recorded approval for each administration operation before side effects", async () => {
+    const runScope = await createAdministrationRun("run-admin-denied");
+
+    for (const [index, operation] of ADMINISTRATION_OPERATIONS.entries()) {
+      let sideEffect = false;
+      const error = await captureError(async () =>
+        withDualControl({
+          rootDir,
+          operation,
+          actor: "operator-a",
+          runScope,
+          timestamp: adminTimestamp(index),
+          recordIds: {
+            preOperation: `${operation}-denied-pre`,
+            postOperation: `${operation}-denied-post`
+          },
+          execute: () => {
+            sideEffect = true;
+            return operation;
+          }
+        })
+      );
+
+      expectRunStoreError(error, "approval_required");
+      expect(sideEffect).toBe(false);
+    }
+
+    expect(await readAdministrationLog({ rootDir })).toEqual([]);
+  });
+
+  test("records all administration operations as schema-valid sequence-indexed hash-chain entries", async () => {
+    const runScope = await createAdministrationRun("run-admin-records");
+    const executed: AdministrationOperation[] = [];
+
+    for (const [index, operation] of ADMINISTRATION_OPERATIONS.entries()) {
+      const approvalId = `approval-${operation}`;
+      await approveAdministrationOperation({
+        approvalId,
+        operation,
+        runScope,
+        timestamp: adminTimestamp(index)
+      });
+
+      const result = await withDualControl({
+        rootDir,
+        operation,
+        actor: "operator-a",
+        approvalId,
+        runScope,
+        profileOrDescriptor: {
+          reason: `record ${operation}`
+        },
+        timestamps: {
+          preOperation: adminTimestamp(index, 10),
+          postOperation: adminTimestamp(index, 20)
+        },
+        recordIds: {
+          preOperation: `${operation}-pre`,
+          postOperation: `${operation}-post`
+        },
+        execute: () => {
+          executed.push(operation);
+          return operation;
+        }
+      });
+
+      expect(result.value).toBe(operation);
+      expect(result.records).toHaveLength(2);
+    }
+
+    const records = await readAdministrationLog({ rootDir });
+    const verification = await verifyAdministrationLog({ rootDir });
+    let previousHash = ADMINISTRATION_AUDIT_GENESIS_SEED;
+
+    expect(executed).toEqual([...ADMINISTRATION_OPERATIONS]);
+    expect(records).toHaveLength(ADMINISTRATION_OPERATIONS.length * 2);
+    expect(verification).toEqual({
+      status: "verified",
+      recordCount: records.length,
+      headHash: records.at(-1)?.auditIntegrity.hash
+    });
+
+    for (const [index, record] of records.entries()) {
+      expect(AdministrationRecordSchema.safeParse(record).success).toBe(true);
+      expect(record.sequence).toBe(index);
+      expect(record.actor).toBe("operator-a");
+      expect(record.approvalRef.approvalId).toBeTruthy();
+      expect(record.runScope).toEqual(runScope);
+      expect(record.integrityBefore?.runHeads[0]?.headHash).toBeTruthy();
+      expect(record.auditIntegrity.prevHash).toBe(previousHash);
+      expect(record.result.status).toBe("success");
+
+      if (record.recordKind === "post_operation") {
+        expect(record.integrityAfter?.runHeads[0]?.headHash).toBe(
+          record.integrityBefore?.runHeads[0]?.headHash
+        );
+      }
+
+      previousHash = record.auditIntegrity.hash;
+    }
+  });
+
+  test("hardDeleteRun deletes the run directory but leaves durable administration records", async () => {
+    const runId = "run-admin-hard-delete";
+    const runScope = await createAdministrationRun(runId);
+    const approvalId = "approval-hard-delete";
+    await approveAdministrationOperation({
+      approvalId,
+      operation: "hard_delete",
+      runScope
+    });
+
+    const deleted = await hardDeleteRun({
+      rootDir,
+      runId,
+      actor: "operator-a",
+      approvalId,
+      runScope,
+      timestamps: {
+        preOperation: adminTimestamp(0, 10),
+        postOperation: adminTimestamp(0, 20)
+      },
+      recordIds: {
+        preOperation: "hard-delete-pre",
+        postOperation: "hard-delete-post"
+      }
+    });
+    const readDeletedRun = await captureError(async () =>
+      readEvents({ rootDir, runId })
+    );
+    const records = await readAdministrationLog({ rootDir });
+
+    expect(deleted.value.deletedRunDir).toBe(
+      getRunStorePaths(rootDir, runId).runDir
+    );
+    expectRunStoreError(readDeletedRun, "missing_events");
+    expect(records).toHaveLength(2);
+    expect(records.map((record) => record.operation)).toEqual([
+      "hard_delete",
+      "hard_delete"
+    ]);
+    expect(records.every((record) => AdministrationRecordSchema.safeParse(record).success)).toBe(true);
+    expect(records[1]?.integrityAfter?.runHeads[0]).toMatchObject({
+      runId,
+      status: "broken",
+      code: "missing_events"
+    });
+  });
+
+  test("keeps administration logs append-only and isolated per tenant root", async () => {
+    const otherRoot = await mkdtemp(join(tmpdir(), "specwright-run-store-"));
+
+    try {
+      const runScopeA = await createAdministrationRun("run-admin-tenant-a");
+      const runScopeB = await createAdministrationRunInRoot(
+        otherRoot,
+        "run-admin-tenant-b"
+      );
+
+      await approveAndRunAdministrationOperation({
+        root: rootDir,
+        approvalId: "approval-tenant-a",
+        operation: "quarantine",
+        runScope: runScopeA,
+        recordPrefix: "tenant-a"
+      });
+      await approveAndRunAdministrationOperation({
+        root: otherRoot,
+        approvalId: "approval-tenant-b",
+        operation: "quarantine_release",
+        runScope: runScopeB,
+        recordPrefix: "tenant-b"
+      });
+
+      const pathsA = getAdministrationPaths(rootDir);
+      const pathsB = getAdministrationPaths(otherRoot);
+      const recordsA = await readAdministrationLog({ rootDir });
+      const recordsB = await readAdministrationLog({ rootDir: otherRoot });
+
+      expect(pathsA.auditPath).not.toContain(`/runs/${runScopeA.runIds[0]}`);
+      expect(pathsB.auditPath).not.toContain(`/runs/${runScopeB.runIds[0]}`);
+      expect(pathsA.auditPath).not.toBe(pathsB.auditPath);
+      expect(recordsA).toHaveLength(2);
+      expect(recordsB).toHaveLength(2);
+      expect(recordsA[0]?.tenantId).not.toBe(recordsB[0]?.tenantId);
+      expect(recordsA.map((record) => record.sequence)).toEqual([0, 1]);
+      expect(recordsB.map((record) => record.sequence)).toEqual([0, 1]);
+      expect(await verifyAdministrationLog({ rootDir })).toMatchObject({
+        status: "verified",
+        recordCount: 2
+      });
+      expect(await verifyAdministrationLog({ rootDir: otherRoot })).toMatchObject({
+        status: "verified",
+        recordCount: 2
+      });
+    } finally {
+      await rm(otherRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects same-actor approval, mismatched operation, and mismatched run scope", async () => {
+    const runScope = await createAdministrationRun("run-admin-dual-control");
+    const otherRunScope = await createAdministrationRun(
+      "run-admin-dual-control-other"
+    );
+
+    await approveAdministrationOperation({
+      approvalId: "approval-same-actor",
+      operation: "quarantine",
+      runScope,
+      approvedBy: "operator-a"
+    });
+    let sideEffect = false;
+    let error = await captureError(async () =>
+      withDualControl({
+        rootDir,
+        operation: "quarantine",
+        actor: "operator-a",
+        approvalId: "approval-same-actor",
+        runScope,
+        execute: () => {
+          sideEffect = true;
+        }
+      })
+    );
+    expectRunStoreError(error, "dual_control_violation");
+    expect(sideEffect).toBe(false);
+
+    await approveAdministrationOperation({
+      approvalId: "approval-wrong-operation",
+      operation: "archive",
+      runScope
+    });
+    error = await captureError(async () =>
+      withDualControl({
+        rootDir,
+        operation: "quarantine",
+        actor: "operator-a",
+        approvalId: "approval-wrong-operation",
+        runScope,
+        execute: () => {
+          sideEffect = true;
+        }
+      })
+    );
+    expectRunStoreError(error, "approval_mismatch");
+
+    await approveAdministrationOperation({
+      approvalId: "approval-wrong-scope",
+      operation: "quarantine",
+      runScope: otherRunScope
+    });
+    error = await captureError(async () =>
+      withDualControl({
+        rootDir,
+        operation: "quarantine",
+        actor: "operator-a",
+        approvalId: "approval-wrong-scope",
+        runScope,
+        execute: () => {
+          sideEffect = true;
+        }
+      })
+    );
+    expectRunStoreError(error, "approval_mismatch");
+    expect(sideEffect).toBe(false);
+    expect(await readAdministrationLog({ rootDir })).toEqual([]);
+  });
+
+  test("records legal-hold denials before hard delete or archive side effects", async () => {
+    const runId = "run-admin-legal-hold";
+    const runScope = await createAdministrationRun(runId);
+
+    await approveAdministrationOperation({
+      approvalId: "approval-held-delete",
+      operation: "hard_delete",
+      runScope
+    });
+    const deleteError = await captureError(async () =>
+      hardDeleteRun({
+        rootDir,
+        runId,
+        actor: "operator-a",
+        approvalId: "approval-held-delete",
+        runScope,
+        legalHold: {
+          active: true,
+          reason: "litigation hold"
+        },
+        recordIds: {
+          denial: "held-delete-denial"
+        },
+        timestamps: {
+          denial: adminTimestamp(0, 30)
+        }
+      })
+    );
+    expectRunStoreError(deleteError, "legal_hold_active");
+    expect(await readEvents({ rootDir, runId })).toHaveLength(1);
+
+    await approveAdministrationOperation({
+      approvalId: "approval-held-archive",
+      operation: "archive",
+      runScope
+    });
+    let archived = false;
+    const archiveError = await captureError(async () =>
+      withDualControl({
+        rootDir,
+        operation: "archive",
+        actor: "operator-a",
+        approvalId: "approval-held-archive",
+        runScope,
+        legalHold: {
+          active: true,
+          reason: "litigation hold"
+        },
+        recordIds: {
+          denial: "held-archive-denial"
+        },
+        timestamps: {
+          denial: adminTimestamp(0, 40)
+        },
+        execute: () => {
+          archived = true;
+        }
+      })
+    );
+    const records = await readAdministrationLog({ rootDir });
+
+    expectRunStoreError(archiveError, "legal_hold_active");
+    expect(archived).toBe(false);
+    expect(records).toHaveLength(2);
+    expect(records.map((record) => record.recordKind)).toEqual([
+      "denial",
+      "denial"
+    ]);
+    expect(records.map((record) => record.result.code)).toEqual([
+      "legal_hold_active",
+      "legal_hold_active"
+    ]);
+  });
+
+  test("reports tampered administration logs and fails trusted reads and gates closed", async () => {
+    const runScope = await createAdministrationRun("run-admin-tamper");
+    await approveAndRunAdministrationOperation({
+      approvalId: "approval-before-tamper",
+      operation: "projection_rebuild",
+      runScope,
+      recordPrefix: "before-tamper"
+    });
+
+    const paths = getAdministrationPaths(rootDir);
+    await writeFile(
+      paths.auditPath,
+      `${JSON.stringify({
+        recordId: "forged-admin-record",
+        tenantId: paths.tenantId,
+        sequence: 2
+      })}\n`,
+      { flag: "a" }
+    );
+
+    const verification = await verifyAdministrationLog({ rootDir });
+    const readError = await captureError(async () =>
+      readAdministrationLog({ rootDir })
+    );
+    await approveAdministrationOperation({
+      approvalId: "approval-after-tamper",
+      operation: "archive",
+      runScope
+    });
+    let sideEffect = false;
+    const gateError = await captureError(async () =>
+      withDualControl({
+        rootDir,
+        operation: "archive",
+        actor: "operator-a",
+        approvalId: "approval-after-tamper",
+        runScope,
+        execute: () => {
+          sideEffect = true;
+        }
+      })
+    );
+
+    expect(verification.status).toBe("broken-at-sequence-2");
+    expectRunStoreError(readError, "corrupt_audit");
+    expectRunStoreError(gateError, "corrupt_audit");
+    expect(sideEffect).toBe(false);
+  });
+
+  test("exports deterministic audit bundles and records the audit_export operation", async () => {
+    const tenantId = "tenant-export";
+    const runScope = await createAdministrationRun("run-admin-export");
+    await approveAndRunAdministrationOperation({
+      tenantId,
+      approvalId: "approval-export-primer",
+      operation: "redaction_sweep",
+      runScope,
+      recordPrefix: "export-primer"
+    });
+
+    const paths = getAdministrationPaths(rootDir, tenantId);
+    const auditBeforeExport = await readFile(paths.auditPath, "utf8");
+    await approveAdministrationOperation({
+      tenantId,
+      approvalId: "approval-export",
+      operation: "audit_export",
+      runScope
+    });
+
+    const exportOptions = {
+      rootDir,
+      tenantId,
+      runId: "run-admin-export",
+      actor: "operator-a",
+      approvalId: "approval-export",
+      runScope,
+      bundleId: "bundle-export-fixed",
+      exportedAt: "2026-05-29T02:00:00.000Z",
+      timestamps: {
+        preOperation: "2026-05-29T02:00:01.000Z",
+        postOperation: "2026-05-29T02:00:02.000Z"
+      },
+      recordIds: {
+        preOperation: "audit-export-pre",
+        postOperation: "audit-export-post"
+      }
+    } as const;
+    const first = await exportAuditBundle(exportOptions);
+
+    await writeFile(paths.auditPath, auditBeforeExport);
+    const second = await exportAuditBundle(exportOptions);
+    const finalRecords = await readAdministrationLog({ rootDir, tenantId });
+
+    expect(first.bytes).toBe(second.bytes);
+    expect(first.bundle.administrationRecords.some((record) =>
+      record.operation === "audit_export" &&
+      record.recordKind === "pre_operation" &&
+      record.recordId === "audit-export-pre"
+    )).toBe(true);
+    expect(first.bundle.administrationRecords.every((record) =>
+      record.runScope.runIds.includes("run-admin-export")
+    )).toBe(true);
+    expect(finalRecords.filter((record) => record.operation === "audit_export")).toHaveLength(2);
+  });
 });
+
+async function createAdministrationRun(runId: string) {
+  return createAdministrationRunInRoot(rootDir, runId);
+}
+
+async function createAdministrationRunInRoot(targetRoot: string, runId: string) {
+  await createRun({
+    rootDir: targetRoot,
+    runId,
+    traceId: `trace-${runId}`,
+    input: runInput,
+    harness,
+    timestamp: "2026-05-29T01:00:00.000Z"
+  });
+
+  return runScopeForRun({
+    rootDir: targetRoot,
+    runId
+  });
+}
+
+async function approveAdministrationOperation(options: {
+  root?: string;
+  tenantId?: string;
+  approvalId: string;
+  operation: AdministrationOperation;
+  runScope: AdministrationRunScope;
+  requestedBy?: string;
+  approvedBy?: string;
+  timestamp?: string;
+}) {
+  return recordApproval({
+    rootDir: options.root ?? rootDir,
+    ...(options.tenantId === undefined ? {} : { tenantId: options.tenantId }),
+    approvalId: options.approvalId,
+    operation: options.operation,
+    runScope: options.runScope,
+    requestedBy: options.requestedBy ?? "operator-a",
+    approvedBy: options.approvedBy ?? "operator-b",
+    timestamp: options.timestamp ?? "2026-05-29T01:00:01.000Z"
+  });
+}
+
+async function approveAndRunAdministrationOperation(options: {
+  root?: string;
+  tenantId?: string;
+  approvalId: string;
+  operation: AdministrationOperation;
+  runScope: AdministrationRunScope;
+  recordPrefix: string;
+}) {
+  await approveAdministrationOperation(options);
+
+  return withDualControl({
+    rootDir: options.root ?? rootDir,
+    ...(options.tenantId === undefined ? {} : { tenantId: options.tenantId }),
+    operation: options.operation,
+    actor: "operator-a",
+    approvalId: options.approvalId,
+    runScope: options.runScope,
+    timestamps: {
+      preOperation: "2026-05-29T01:00:10.000Z",
+      postOperation: "2026-05-29T01:00:20.000Z"
+    },
+    recordIds: {
+      preOperation: `${options.recordPrefix}-pre`,
+      postOperation: `${options.recordPrefix}-post`
+    },
+    execute: () => options.operation
+  });
+}
+
+function adminTimestamp(index: number, offset = 0) {
+  const totalSeconds = index * 10 + offset;
+  const minute = Math.floor(totalSeconds / 60);
+  const second = totalSeconds % 60;
+
+  return `2026-05-29T01:${String(minute).padStart(2, "0")}:${String(
+    second
+  ).padStart(2, "0")}.000Z`;
+}
+
+function expectRunStoreError(error: unknown, code: RunStoreError["code"]) {
+  expect(error).toBeInstanceOf(RunStoreError);
+  expect((error as RunStoreError).code).toBe(code);
+}
 
 async function captureError(operation: () => Promise<unknown>) {
   try {
