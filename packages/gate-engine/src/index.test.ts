@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import {
+  GateLifecycleInstructionSchema,
+  GateVerdictSchema
+} from "@specwright/schemas";
 import { evaluateGate } from "./index";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
@@ -23,6 +27,10 @@ describe("gate engine fixtures", () => {
 
       const result = evaluateGate(request);
 
+      expect(GateVerdictSchema.parse(result.verdict)).toEqual(result.verdict);
+      expect(GateLifecycleInstructionSchema.parse(result.instruction)).toEqual(
+        result.instruction
+      );
       expect(result).toEqual(expected);
       expect(evaluateGate(request)).toEqual(result);
     });

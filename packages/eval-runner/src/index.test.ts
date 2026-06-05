@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { EvalVerdictSchema } from "@specwright/schemas";
+import {
+  EvalVerdictSchema,
+  EvalVerdictStatusSchema
+} from "@specwright/schemas";
 import { runEval, type RunEvalRequest } from "./index";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
@@ -16,6 +19,10 @@ const fixtureCases = [
 ];
 
 describe("eval runner fixtures", () => {
+  test("uses the repaired-aware shared eval status contract", () => {
+    expect(EvalVerdictStatusSchema.options).toContain("repaired");
+  });
+
   for (const fixtureName of fixtureCases) {
     test(fixtureName, async () => {
       const fixtureDir = join(fixturesDir, fixtureName);

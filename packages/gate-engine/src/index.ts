@@ -1,12 +1,40 @@
-import type { EvalVerdict, GateDefinition, GateKind } from "@specwright/schemas";
+import {
+  GateLifecycleInstructionSchema,
+  GateVerdictSchema,
+  type EvalVerdict,
+  type GateApprovalRequest as ApprovalRequest,
+  type GateDefinition,
+  type GateFinding,
+  type GateHumanQuestion as HumanQuestion,
+  type GateKind,
+  type GateLifecycleInstruction,
+  type GateObligation,
+  type GateRepairTask as RepairTask,
+  type GateRequiredAction,
+  type GateSeverity,
+  type GateVerdict,
+  type GateVerdictStatus,
+  type PolicyVerdict,
+  type PolicyVerdictStatus
+} from "@specwright/schemas";
+
+export type {
+  GateApprovalRequest as ApprovalRequest,
+  GateFinding,
+  GateHumanQuestion as HumanQuestion,
+  GateLifecycleInstruction,
+  GateObligation,
+  GateRepairTask as RepairTask,
+  GateRequiredAction,
+  GateSeverity,
+  GateVerdict,
+  GateVerdictStatus,
+  PolicyVerdict,
+  PolicyVerdictStatus
+} from "@specwright/schemas";
 
 export const DEFAULT_EVALUATED_AT = "1970-01-01T00:00:00.000Z";
 export const DEFAULT_GATE_ENGINE_EVALUATOR = "specwright.gate-engine.v0";
-
-export type GateVerdictStatus = "pass" | "fail" | "needs_review";
-export type GateSeverity = "blocking" | "advisory";
-export type GateRequiredAction = "repair" | "clarify" | "approve" | "fail_run";
-export type PolicyVerdictStatus = "allow" | "deny" | "approval_required";
 
 export type GateLifecycleInstructionKind =
   | "continue"
@@ -15,104 +43,6 @@ export type GateLifecycleInstructionKind =
   | "request_approval"
   | "create_repair_task"
   | "fail_run";
-
-export type GateObligation = {
-  kind:
-    | "run_eval"
-    | "request_clarification"
-    | "create_repair_task"
-    | "promote_artifact"
-    | "attach_evidence"
-    | "mark_assumption";
-  params?: Record<string, unknown>;
-};
-
-export type GateFinding = {
-  id: string;
-  severity: GateSeverity;
-  message: string;
-  targetRef?: string;
-  evidenceRefs: string[];
-  repairHint?: string;
-};
-
-export type HumanQuestion = {
-  id: string;
-  gateId: string;
-  phase: string;
-  question: string;
-  requiredFor: string;
-  expectedAnswerSchema?: string;
-};
-
-export type ApprovalRequest = {
-  id: string;
-  gateId: string;
-  phase: string;
-  reason: string;
-  requiredFor: string;
-};
-
-export type RepairTask = {
-  id: string;
-  gateId: string;
-  failedPhase: string;
-  targetRef?: string;
-  problem: string;
-  requiredEvidenceRefs: string[];
-  allowedTools: string[];
-  blockedTools: string[];
-  successGate: string;
-  createdFromFindingIds: string[];
-};
-
-export type GateVerdict = {
-  gateId: string;
-  phase: string;
-  status: GateVerdictStatus;
-  severity: GateSeverity;
-  reasons: string[];
-  findings: GateFinding[];
-  evidenceRefs: string[];
-  requiredAction?: GateRequiredAction;
-  obligations: GateObligation[];
-  evaluatedAt: string;
-  evaluator: {
-    kind: "deterministic" | "model_assisted" | "human";
-    ref: string;
-  };
-};
-
-export type GateLifecycleInstruction =
-  | {
-      kind: "continue";
-      gateId: string;
-    }
-  | {
-      kind: "transition_phase";
-      gateId: string;
-      targetPhase: string;
-    }
-  | {
-      kind: "pause_for_human";
-      gateId: string;
-      question: HumanQuestion;
-    }
-  | {
-      kind: "request_approval";
-      gateId: string;
-      approvalRequest: ApprovalRequest;
-    }
-  | {
-      kind: "create_repair_task";
-      gateId: string;
-      repairTask: RepairTask;
-    }
-  | {
-      kind: "fail_run";
-      gateId: string;
-      reason: string;
-    };
 
 export type GateEvaluationResult = {
   verdict: GateVerdict;
@@ -140,16 +70,6 @@ export type GateEvidenceSnapshot =
       evidenceRefs?: string[];
     }
   | Record<string, unknown>;
-
-export type PolicyVerdict = {
-  status: PolicyVerdictStatus;
-  approvalId?: string;
-  reasons?: string[];
-  constraints?: unknown[];
-  obligations?: unknown[];
-  matchedRules?: unknown[];
-  decisionHash?: string;
-} & Record<string, unknown>;
 
 export type GatePolicyVerdict = PolicyVerdict & {
   id?: string;
@@ -411,7 +331,7 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
       }
     });
 
-    return {
+    return validatedGateResult({
       verdict,
       instruction: instructionForNeedsReview({
         definition,
@@ -419,7 +339,7 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
         verdict,
         requiredAction
       })
-    };
+    });
   }
 
   const passObligations = definition.onPass?.obligations ?? [];
@@ -439,10 +359,10 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
     }
   });
 
-  return {
+  return validatedGateResult({
     verdict,
     instruction: instructionForPass(definition, phase)
-  };
+  });
 }
 
 function evaluateCheck(
@@ -839,7 +759,7 @@ function buildFailingResult(input: {
     }
   });
 
-  return {
+  return validatedGateResult({
     verdict,
     instruction: instructionForFailure({
       definition: input.definition,
@@ -847,7 +767,7 @@ function buildFailingResult(input: {
       verdict,
       requiredAction
     })
-  };
+  });
 }
 
 function failClosed(input: {
@@ -883,13 +803,20 @@ function failClosed(input: {
     }
   });
 
-  return {
+  return validatedGateResult({
     verdict,
     instruction: {
       kind: "fail_run",
       gateId: input.gateId,
       reason: input.reason
     }
+  });
+}
+
+function validatedGateResult(input: GateEvaluationResult): GateEvaluationResult {
+  return {
+    verdict: GateVerdictSchema.parse(input.verdict),
+    instruction: GateLifecycleInstructionSchema.parse(input.instruction)
   };
 }
 
