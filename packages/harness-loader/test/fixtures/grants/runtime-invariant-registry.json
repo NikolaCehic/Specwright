@@ -1,0 +1,20 @@
+{
+  "registryId": "specwright.test.capability-grants.runtime-invariant",
+  "grants": [
+    {
+      "grantId": "grant.specwright.runtime-invariant.0.1.0",
+      "packageId": "specwright.runtime-invariant",
+      "versionPins": ["0.1.0"],
+      "allowedTools": ["fs.read"],
+      "allowedRequireApproval": [],
+      "allowedToolDefinitions": ["fs.read"],
+      "allowedPolicyEffects": ["deny"],
+      "allowedPolicyLayers": ["runtime_invariant"],
+      "allowedRuntimeInvariantToolIds": ["shell.exec"],
+      "issuer": {
+        "registryId": "specwright.test.capability-grants.runtime-invariant",
+        "authorityId": "specwright.registry.operator"
+      }
+    }
+  ]
+}

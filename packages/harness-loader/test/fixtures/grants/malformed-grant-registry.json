@@ -1,0 +1,18 @@
+{
+  "registryId": "specwright.test.capability-grants.malformed",
+  "grants": [
+    {
+      "grantId": "grant.specwright.malformed.0.1.0",
+      "packageId": "specwright.malformed",
+      "versionPins": ["0.1.0"],
+      "allowedRequireApproval": [],
+      "allowedPolicyEffects": [],
+      "allowedPolicyLayers": [],
+      "allowedRuntimeInvariantToolIds": [],
+      "issuer": {
+        "registryId": "specwright.test.capability-grants.malformed",
+        "authorityId": "specwright.registry.operator"
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "registryId": "specwright.test.capability-grants.default",
+  "grants": [
+    {
+      "grantId": "grant.specwright.default.0.1.0",
+      "packageId": "specwright.default",
+      "versionPins": ["0.1.0"],
+      "allowedTools": ["eval.run", "fs.list", "fs.read"],
+      "allowedRequireApproval": [],
+      "allowedToolDefinitions": ["eval.run", "fs.list", "fs.read"],
+      "allowedPolicyEffects": ["deny"],
+      "allowedPolicyLayers": ["runtime_invariant"],
+      "allowedRuntimeInvariantToolIds": [
+        "fs.write",
+        "git.branch",
+        "git.commit",
+        "git.push",
+        "network.request",
+        "network.write",
+        "shell.exec"
+      ],
+      "issuer": {
+        "registryId": "specwright.test.capability-grants.default",
+        "authorityId": "specwright.registry.operator"
+      }
+    }
+  ]
+}
