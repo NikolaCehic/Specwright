@@ -1,0 +1,79 @@
+{
+  "$id": "specwright.governance.gate-human-question",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allowedDecisionValues": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "causationIds": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "comments": {
+      "type": "string"
+    },
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "expectedAnswerSchema": {
+      "type": "string"
+    },
+    "gateId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "phase": {
+      "type": "string"
+    },
+    "question": {
+      "type": "string"
+    },
+    "requiredExpertise": {
+      "type": "string"
+    },
+    "requiredFor": {
+      "type": "string"
+    },
+    "reviewResult": {
+      "type": "string"
+    },
+    "subjectRef": {
+      "type": "string"
+    },
+    "unresolvedQuestions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "gateId",
+    "id",
+    "phase",
+    "question",
+    "requiredFor"
+  ],
+  "title": "GateHumanQuestionSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:d925a37c43e24cce3a7fd1abdaf8940ebb11177ca54a42eda80799bfe951fdaa",
+    "id": "specwright.governance.gate-human-question",
+    "status": "public",
+    "version": "1"
+  }
+}

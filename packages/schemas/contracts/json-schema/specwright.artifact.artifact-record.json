@@ -1,0 +1,235 @@
+{
+  "$id": "specwright.artifact.artifact-record",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifactId": {
+      "type": "string"
+    },
+    "artifactType": {
+      "enum": [
+        "run-input",
+        "source-inventory",
+        "evidence-graph",
+        "plan",
+        "eval-report",
+        "summary"
+      ]
+    },
+    "claimLevel": {
+      "enum": [
+        "source_fact",
+        "derived_fact",
+        "inference",
+        "assumption",
+        "human_decision",
+        "unknown"
+      ]
+    },
+    "content": {},
+    "evidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "fileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "contentHash": {
+          "type": "string"
+        },
+        "contentType": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "path": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "uri"
+      ],
+      "type": "object"
+    },
+    "importantClaims": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "authority": {
+            "enum": [
+              "user",
+              "repo",
+              "design",
+              "external",
+              "model",
+              "generated"
+            ]
+          },
+          "claim": {
+            "type": "string"
+          },
+          "claimLevel": {
+            "enum": [
+              "source_fact",
+              "derived_fact",
+              "inference",
+              "assumption",
+              "human_decision",
+              "unknown"
+            ]
+          },
+          "confidence": {
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          },
+          "evidenceRefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "fieldPath": {
+            "type": "string"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "owningArtifactId": {
+            "type": "string"
+          },
+          "owningSection": {
+            "type": "string"
+          },
+          "redactionPolicy": {
+            "anyOf": [
+              {
+                "enum": [
+                  "model",
+                  "adapter",
+                  "operator",
+                  "audit",
+                  "restricted",
+                  "secret"
+                ]
+              },
+              {
+                "additionalProperties": {
+                  "enum": [
+                    "model",
+                    "adapter",
+                    "operator",
+                    "audit",
+                    "restricted",
+                    "secret"
+                  ]
+                },
+                "type": "object"
+              }
+            ]
+          },
+          "verificationStatus": {
+            "enum": [
+              "unverified",
+              "supported",
+              "unsupported",
+              "conflicted",
+              "unknown"
+            ]
+          }
+        },
+        "required": [
+          "authority",
+          "claim",
+          "claimLevel",
+          "confidence",
+          "evidenceRefs",
+          "owningArtifactId",
+          "redactionPolicy",
+          "verificationStatus"
+        ],
+        "type": "object",
+        "x-zod-effect": "refinement"
+      },
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "producedBy": {
+      "additionalProperties": false,
+      "properties": {
+        "actionId": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "toolCallId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionId",
+        "phase"
+      ],
+      "type": "object"
+    },
+    "redactionPolicy": {
+      "anyOf": [
+        {
+          "enum": [
+            "model",
+            "adapter",
+            "operator",
+            "audit",
+            "restricted",
+            "secret"
+          ]
+        },
+        {
+          "additionalProperties": {
+            "enum": [
+              "model",
+              "adapter",
+              "operator",
+              "audit",
+              "restricted",
+              "secret"
+            ]
+          },
+          "type": "object"
+        }
+      ]
+    }
+  },
+  "required": [
+    "artifactId",
+    "artifactType",
+    "evidenceRefs",
+    "metadata",
+    "producedBy",
+    "redactionPolicy"
+  ],
+  "title": "ArtifactRecordSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "artifact",
+    "hash": "sha256:db022770fd4d2e3e7483026166feebe1673ae0b5f384b0326e7f2f71b964b412",
+    "id": "specwright.artifact.artifact-record",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

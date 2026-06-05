@@ -1,0 +1,223 @@
+{
+  "$id": "specwright.event.evidence.recorded",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "evidence": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "enum": [
+            "user",
+            "repo",
+            "design",
+            "external",
+            "model",
+            "generated"
+          ]
+        },
+        "claim": {
+          "type": "string"
+        },
+        "class": {
+          "enum": [
+            "source_fact",
+            "derived_fact",
+            "inference",
+            "assumption",
+            "human_decision",
+            "unknown",
+            "conflict"
+          ]
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "conflictGroup": {
+          "type": "string"
+        },
+        "createdBy": {
+          "additionalProperties": false,
+          "properties": {
+            "actionId": {
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "toolCallId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "actionId",
+            "phase"
+          ],
+          "type": "object"
+        },
+        "extractionMethod": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "redactionPolicy": {
+          "anyOf": [
+            {
+              "enum": [
+                "model",
+                "adapter",
+                "operator",
+                "audit",
+                "restricted",
+                "secret"
+              ]
+            },
+            {
+              "additionalProperties": {
+                "enum": [
+                  "model",
+                  "adapter",
+                  "operator",
+                  "audit",
+                  "restricted",
+                  "secret"
+                ]
+              },
+              "type": "object"
+            }
+          ]
+        },
+        "referencedArtifactRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "referencedToolCallIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sourceRefs": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": false,
+                "properties": {
+                  "authority": {
+                    "enum": [
+                      "user",
+                      "repo",
+                      "design",
+                      "external",
+                      "model",
+                      "generated"
+                    ]
+                  },
+                  "captureToolCallId": {
+                    "type": "string"
+                  },
+                  "contentHash": {
+                    "type": "string"
+                  },
+                  "externalTrustPolicy": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "locator": {
+                    "type": "string"
+                  },
+                  "metadata": {
+                    "additionalProperties": {},
+                    "type": "object"
+                  },
+                  "path": {
+                    "type": "string"
+                  },
+                  "redactionClass": {
+                    "enum": [
+                      "model",
+                      "adapter",
+                      "operator",
+                      "audit",
+                      "restricted",
+                      "secret"
+                    ]
+                  },
+                  "snapshotTimestamp": {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  "uri": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "authority",
+                  "redactionClass"
+                ],
+                "type": "object",
+                "x-zod-effect": "refinement"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "supersededByEvidenceId": {
+          "type": "string"
+        },
+        "supersedesEvidenceId": {
+          "type": "string"
+        },
+        "supersessionReason": {
+          "type": "string"
+        },
+        "unknownReason": {
+          "type": "string"
+        },
+        "validationStatus": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority",
+        "claim",
+        "class",
+        "confidence",
+        "createdBy",
+        "id",
+        "redactionPolicy",
+        "sourceRefs"
+      ],
+      "type": "object",
+      "x-zod-effect": "refinement"
+    }
+  },
+  "required": [
+    "evidence"
+  ],
+  "title": "EvidenceRecordedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:ebc6e8da5fc7e8996ccb7db3000e3d6c563ff0579bf2d4b25b31a67e0605444c",
+    "id": "specwright.event.evidence.recorded",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "$id": "specwright.governance.policy-obligation",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "enum": [
+        "record_event",
+        "redact",
+        "stage_write",
+        "run_eval",
+        "require_evidence",
+        "attach_trace",
+        "mark_external_source",
+        "request_human_review"
+      ]
+    },
+    "params": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "sourceRuleId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "sourceRuleId"
+  ],
+  "title": "PolicyObligationSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:aed3c61e01a2674d76bf74c1afc2451a1fc6360c9bdfc460c9bc908bbf93de09",
+    "id": "specwright.governance.policy-obligation",
+    "status": "public",
+    "version": "1"
+  }
+}

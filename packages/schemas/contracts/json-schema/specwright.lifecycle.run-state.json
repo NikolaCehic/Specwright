@@ -1,0 +1,180 @@
+{
+  "$id": "specwright.lifecycle.run-state",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "artifacts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "artifactId": {
+            "type": "string"
+          },
+          "artifactType": {
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "uri": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "artifactId",
+          "artifactType"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "budgets": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "harness": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "specHash": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "specHash",
+        "version"
+      ],
+      "type": "object"
+    },
+    "lastEventId": {
+      "type": "string"
+    },
+    "pendingApprovals": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "approvalId": {
+            "type": "string"
+          },
+          "constraints": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "policyVerdictRef": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "requestedAction": {
+            "type": "string"
+          },
+          "requiredFor": {
+            "type": "string"
+          },
+          "riskSummary": {
+            "type": "string"
+          },
+          "subjectRef": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "approvalId"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "pendingQuestions": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "allowedDecisionValues": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "metadata": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "questionId": {
+            "type": "string"
+          },
+          "requiredExpertise": {
+            "type": "string"
+          },
+          "requiredFor": {
+            "type": "string"
+          },
+          "subjectRef": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "prompt",
+          "questionId"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "phase": {
+      "type": "string"
+    },
+    "runId": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "running",
+        "paused",
+        "blocked",
+        "completed",
+        "failed"
+      ]
+    }
+  },
+  "required": [
+    "artifacts",
+    "budgets",
+    "harness",
+    "lastEventId",
+    "pendingApprovals",
+    "pendingQuestions",
+    "phase",
+    "runId",
+    "status"
+  ],
+  "title": "RunStateSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:532d6baee777d10718203e243a9987cc28e7f1f39f4f4a608cc5ff76f723c774",
+    "id": "specwright.lifecycle.run-state",
+    "status": "public",
+    "version": "1"
+  }
+}

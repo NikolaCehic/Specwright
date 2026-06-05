@@ -1,0 +1,53 @@
+{
+  "$id": "specwright.verification.eval-finding",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "evidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "path": {
+      "type": "string"
+    },
+    "repairHint": {
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "advisory",
+        "blocking"
+      ]
+    },
+    "targetRef": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "message"
+  ],
+  "title": "EvalFindingSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:86250eb6b1504580ae520796d9e194314e8a651b5be0cb319f2e47676c795f62",
+    "id": "specwright.verification.eval-finding",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "approvalRequest": {
+    "approvalId": "approval:contract-registry",
+    "reason": "Contract changes require review."
+  }
+}

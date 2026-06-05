@@ -1,0 +1,39 @@
+{
+  "$id": "specwright.observability.decision-provenance",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "causationIds": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "decisionHash": {
+      "type": "string"
+    },
+    "evaluatedAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "phase": {
+      "type": "string"
+    },
+    "runId": {
+      "type": "string"
+    },
+    "traceId": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "title": "DecisionProvenanceSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "observability",
+    "hash": "sha256:c5348e61e2d024fcd07fb2d3432c9db78f56a0feca1587a0ea6db34bb8c6637a",
+    "id": "specwright.observability.decision-provenance",
+    "status": "public",
+    "version": "1"
+  }
+}

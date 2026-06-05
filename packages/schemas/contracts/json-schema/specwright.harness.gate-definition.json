@@ -1,0 +1,57 @@
+{
+  "$id": "specwright.harness.gate-definition",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "checks": {
+      "items": {
+        "additionalProperties": {},
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "description": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "inputs": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "kind": {
+      "enum": [
+        "entry",
+        "exit",
+        "action",
+        "artifact",
+        "eval",
+        "repair"
+      ]
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "onFail": {},
+    "phase": {
+      "type": "string"
+    },
+    "required": {
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "GateDefinitionSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "harness",
+    "hash": "sha256:1e491f51efa648bf010d17e58aca7573ba052190193ce8b298c321a7bf0a7425",
+    "id": "specwright.harness.gate-definition",
+    "status": "public",
+    "version": "1"
+  }
+}

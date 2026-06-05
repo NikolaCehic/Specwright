@@ -1,0 +1,49 @@
+{
+  "$id": "specwright.governance.gate-approval-request",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "gateId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "phase": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "requiredFor": {
+      "type": "string"
+    },
+    "riskSummary": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "gateId",
+    "id",
+    "phase",
+    "reason",
+    "requiredFor"
+  ],
+  "title": "GateApprovalRequestSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:220cae036f39f2fc5f3c71ead4297d4b9da8c0af9b4e400fd366968fb9fd3d5b",
+    "id": "specwright.governance.gate-approval-request",
+    "status": "public",
+    "version": "1"
+  }
+}

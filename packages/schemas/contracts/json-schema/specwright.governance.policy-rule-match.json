@@ -1,0 +1,49 @@
+{
+  "$id": "specwright.governance.policy-rule-match",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "effect": {
+      "enum": [
+        "allow",
+        "deny",
+        "approval_required",
+        "constrain",
+        "obligate"
+      ]
+    },
+    "layer": {
+      "enum": [
+        "runtime_invariant",
+        "host",
+        "workspace",
+        "harness",
+        "phase",
+        "capability",
+        "run_mode",
+        "approval"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "ruleId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "effect",
+    "layer",
+    "reason",
+    "ruleId"
+  ],
+  "title": "PolicyRuleMatchSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:831dbc7053ff2b53ee1b11aa7a8ad6c5583ed3bdcca6370923ad41f7565fd8bd",
+    "id": "specwright.governance.policy-rule-match",
+    "status": "public",
+    "version": "1"
+  }
+}

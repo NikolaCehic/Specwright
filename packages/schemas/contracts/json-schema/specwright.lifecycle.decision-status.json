@@ -1,0 +1,22 @@
+{
+  "$id": "specwright.lifecycle.decision-status",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "allow",
+    "deny",
+    "approval_required",
+    "pass",
+    "fail",
+    "needs_review",
+    "skipped",
+    "repaired"
+  ],
+  "title": "DecisionStatusSchema",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:293739d534ffa97950de90f1a98f8aa8dc73f8ffde1c882ed2d2a1835f8a0870",
+    "id": "specwright.lifecycle.decision-status",
+    "status": "public",
+    "version": "1"
+  }
+}

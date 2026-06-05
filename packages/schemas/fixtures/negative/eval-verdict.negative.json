@@ -1,0 +1,13 @@
+{
+  "evidenceRefs": [
+    "evidence:contract-registry"
+  ],
+  "findings": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.schemas.generator"
+  },
+  "severity": "blocking",
+  "status": "pass",
+  "targetRef": "contract:registry"
+}

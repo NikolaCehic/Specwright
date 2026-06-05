@@ -1,0 +1,17 @@
+{
+  "$id": "specwright.governance.policy-verdict-status",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "allow",
+    "deny",
+    "approval_required"
+  ],
+  "title": "PolicyVerdictStatusSchema",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:9c4746320cf9387665019b30b4e7d30a31c6a2ba23df6cb7b8d9a4dd043b87e8",
+    "id": "specwright.governance.policy-verdict-status",
+    "status": "public",
+    "version": "1"
+  }
+}

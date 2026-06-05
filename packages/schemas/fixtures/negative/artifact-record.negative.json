@@ -1,0 +1,31 @@
+{
+  "artifactId": "artifact:contract-registry-record",
+  "artifactType": "plan",
+  "claimLevel": "derived_fact",
+  "evidenceRefs": [
+    "evidence:contract-registry"
+  ],
+  "importantClaims": [
+    {
+      "authority": "repo",
+      "claim": "The generated registry is deterministic.",
+      "claimLevel": "source_fact",
+      "confidence": "high",
+      "evidenceRefs": [
+        "evidence:contract-registry"
+      ],
+      "owningArtifactId": "artifact:contract-registry-record",
+      "owningSection": "registry",
+      "redactionPolicy": "operator",
+      "verificationStatus": "supported"
+    }
+  ],
+  "metadata": {
+    "registryVersion": "scope-01.packet-05"
+  },
+  "producedBy": {
+    "actionId": "generate-contract-registry",
+    "phase": "contract-generation"
+  },
+  "redactionPolicy": "operator"
+}

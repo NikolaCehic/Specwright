@@ -1,0 +1,60 @@
+{
+  "$id": "specwright.governance.approval-decision",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approvalId": {
+      "type": "string"
+    },
+    "causationIds": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "decidedAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "approved",
+        "rejected",
+        "approved_with_changes"
+      ]
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "humanMessage": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "resultingConstraints": {
+      "additionalProperties": {},
+      "type": "object"
+    }
+  },
+  "required": [
+    "approvalId",
+    "decision"
+  ],
+  "title": "ApprovalDecisionSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:ea3fb5db2e4800b956b957617a0fdfd352dc2385558e132260a351012f8c8e43",
+    "id": "specwright.governance.approval-decision",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

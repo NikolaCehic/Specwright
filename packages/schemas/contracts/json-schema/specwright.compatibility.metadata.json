@@ -1,0 +1,14 @@
+{
+  "$id": "specwright.compatibility.metadata",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": {},
+  "title": "MetadataSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "compatibility",
+    "hash": "sha256:4b9c96c2a544fabc483ecc9b4a4d5bac424e9eea7c7a55feb687d63909aa15de",
+    "id": "specwright.compatibility.metadata",
+    "status": "public",
+    "version": "1"
+  }
+}

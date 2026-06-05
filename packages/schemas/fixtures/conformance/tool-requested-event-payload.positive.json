@@ -1,0 +1,13 @@
+{
+  "request": {
+    "args": {
+      "path": "packages/schemas/CONTRACTS.md"
+    },
+    "idempotencyKey": "tool:registry-read",
+    "reason": "Read contract inventory.",
+    "requestedBy": {
+      "phase": "shared-schemas"
+    },
+    "toolId": "fs.read"
+  }
+}

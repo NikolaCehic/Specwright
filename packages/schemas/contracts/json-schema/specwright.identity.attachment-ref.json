@@ -1,0 +1,36 @@
+{
+  "$id": "specwright.identity.attachment-ref",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "path": {
+      "type": "string"
+    },
+    "uri": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "kind"
+  ],
+  "title": "AttachmentRefSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "identity",
+    "hash": "sha256:5acd499f46dd1c59f3f1ac966f6be2e37a685c6ad1b56f16e1592bea52b0d6f4",
+    "id": "specwright.identity.attachment-ref",
+    "status": "public",
+    "version": "1"
+  }
+}

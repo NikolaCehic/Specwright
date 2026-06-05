@@ -1,0 +1,7 @@
+{
+  "output": {
+    "path": "packages/schemas/CONTRACTS.md"
+  },
+  "status": "success",
+  "toolCallId": "tool:registry-read"
+}

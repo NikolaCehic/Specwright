@@ -1,0 +1,88 @@
+{
+  "$id": "specwright.event.human.input_requested",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "humanQuestion": {
+      "additionalProperties": false,
+      "properties": {
+        "allowedDecisionValues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "questionId": {
+          "type": "string"
+        },
+        "requiredExpertise": {
+          "type": "string"
+        },
+        "requiredFor": {
+          "type": "string"
+        },
+        "subjectRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt",
+        "questionId"
+      ],
+      "type": "object"
+    },
+    "question": {
+      "additionalProperties": false,
+      "properties": {
+        "allowedDecisionValues": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "questionId": {
+          "type": "string"
+        },
+        "requiredExpertise": {
+          "type": "string"
+        },
+        "requiredFor": {
+          "type": "string"
+        },
+        "subjectRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "prompt",
+        "questionId"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [],
+  "title": "HumanInputRequestedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:20685e5ee3198602afcce33cf0b0eae911b8b6203d8e47eee0d1acf5dc6b7ab1",
+    "id": "specwright.event.human.input_requested",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

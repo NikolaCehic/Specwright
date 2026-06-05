@@ -1,0 +1,19 @@
+{
+  "$id": "specwright.governance.policy-rule-effect",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "allow",
+    "deny",
+    "approval_required",
+    "constrain",
+    "obligate"
+  ],
+  "title": "PolicyRuleEffectSchema",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:7518b40682e151fbd961258eba4f44baaf496d08bd02f46f10e78d555c1d587c",
+    "id": "specwright.governance.policy-rule-effect",
+    "status": "public",
+    "version": "1"
+  }
+}

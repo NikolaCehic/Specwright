@@ -1,0 +1,55 @@
+{
+  "$id": "specwright.capability.harness-manifest-tools",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "items": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "additionalProperties": true,
+            "properties": {
+              "id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id"
+            ],
+            "type": "object"
+          }
+        ]
+      },
+      "type": "array"
+    },
+    {
+      "additionalProperties": true,
+      "properties": {
+        "allow": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requireApproval": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [],
+      "type": "object"
+    }
+  ],
+  "title": "HarnessManifestToolsSchema",
+  "x-specwright-contract": {
+    "family": "capability",
+    "hash": "sha256:982eb2c83abda40b63cca7dcc4566db67fef5df9264f20c74469c2872f1cac33",
+    "id": "specwright.capability.harness-manifest-tools",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$id": "specwright.governance.budget-state",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": {},
+  "title": "BudgetStateSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:73594a2f049f7e1f26c1dbba5cc86fff80d33dcb616e1fba4954bde54113cffc",
+    "id": "specwright.governance.budget-state",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$id": "specwright.identity.harness-reference",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "string"
+    },
+    {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "id"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "HarnessReferenceSchema",
+  "x-specwright-contract": {
+    "family": "identity",
+    "hash": "sha256:80b8f36172a6b437c374641a8d4e9d9cdaaa3b20c92989d85084d19c267c43e6",
+    "id": "specwright.identity.harness-reference",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "authority": "repo",
+  "claim": "The generated registry is deterministic.",
+  "claimLevel": "source_fact",
+  "confidence": "high",
+  "evidenceRefs": [
+    "evidence:contract-registry"
+  ],
+  "owningArtifactId": "artifact:contract-registry-record",
+  "owningSection": "registry",
+  "redactionPolicy": "operator",
+  "verificationStatus": "supported"
+}

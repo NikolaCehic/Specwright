@@ -1,0 +1,19 @@
+{
+  "allowedTools": [
+    "fs.read"
+  ],
+  "blockedTools": [
+    "shell.exec"
+  ],
+  "createdFromFindingIds": [
+    "finding:contract-registry"
+  ],
+  "failedPhase": "shared-schemas",
+  "gateId": "contract.registry",
+  "id": "repair:contract-registry",
+  "problem": "Generated registry drifted.",
+  "requiredEvidenceRefs": [
+    "evidence:contract-registry"
+  ],
+  "successGate": "contract.registry"
+}

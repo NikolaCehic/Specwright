@@ -1,0 +1,16 @@
+{
+  "$id": "specwright.verification.eval-severity",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "advisory",
+    "blocking"
+  ],
+  "title": "EvalSeveritySchema",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:2af51295801a65d9298d4d6eea9208c28300d46f4b972f85c0e84b882e12583d",
+    "id": "specwright.verification.eval-severity",
+    "status": "public",
+    "version": "1"
+  }
+}

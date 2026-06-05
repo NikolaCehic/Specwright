@@ -1,0 +1,17 @@
+{
+  "approvalRequest": {
+    "approvalId": "approval:contract-registry",
+    "reason": "Contract changes require review."
+  },
+  "verdict": {
+    "approvalId": "approval:contract-registry",
+    "constraints": [],
+    "decisionHash": "sha256:policy-fixture",
+    "matchedRules": [],
+    "obligations": [],
+    "reasons": [
+      "Contract changes require compatibility review."
+    ],
+    "status": "approval_required"
+  }
+}

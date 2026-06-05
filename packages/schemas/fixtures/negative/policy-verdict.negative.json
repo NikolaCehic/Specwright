@@ -1,0 +1,10 @@
+{
+  "approvalId": "approval:contract-registry",
+  "decisionHash": "sha256:policy-fixture",
+  "matchedRules": [],
+  "obligations": [],
+  "reasons": [
+    "Contract changes require compatibility review."
+  ],
+  "status": "approval_required"
+}

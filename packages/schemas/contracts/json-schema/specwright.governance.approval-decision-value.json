@@ -1,0 +1,17 @@
+{
+  "$id": "specwright.governance.approval-decision-value",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "approved",
+    "rejected",
+    "approved_with_changes"
+  ],
+  "title": "ApprovalDecisionValueSchema",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:330639db8874b695ef9784ad765fcf6c8d38e347772e157d121e23198f2bb99c",
+    "id": "specwright.governance.approval-decision-value",
+    "status": "public",
+    "version": "1"
+  }
+}

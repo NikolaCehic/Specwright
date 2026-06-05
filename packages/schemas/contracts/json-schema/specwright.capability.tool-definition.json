@@ -1,0 +1,34 @@
+{
+  "$id": "specwright.capability.tool-definition",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "description": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "inputSchema": {},
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "outputSchema": {},
+    "version": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "title": "ToolDefinitionSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "capability",
+    "hash": "sha256:5aea8605e9b3a906b77e5d55620217bf086ac4093dcd36b28ced1e4f7e354687",
+    "id": "specwright.capability.tool-definition",
+    "status": "public",
+    "version": "1"
+  }
+}

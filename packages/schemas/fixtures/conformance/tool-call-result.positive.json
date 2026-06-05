@@ -1,0 +1,15 @@
+{
+  "output": {
+    "path": "packages/schemas/CONTRACTS.md"
+  },
+  "provenance": {
+    "argsHash": "sha256:args-fixture",
+    "cacheStatus": "miss",
+    "resultHash": "sha256:result-fixture",
+    "toolId": "fs.read",
+    "toolVersion": "1.0.0",
+    "traceId": "trace:contract-registry"
+  },
+  "status": "success",
+  "toolCallId": "tool:registry-read"
+}

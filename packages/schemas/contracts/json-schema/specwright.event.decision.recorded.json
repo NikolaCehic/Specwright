@@ -1,0 +1,82 @@
+{
+  "$id": "specwright.event.decision.recorded",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approvalId": {
+      "type": "string"
+    },
+    "decision": {
+      "additionalProperties": false,
+      "properties": {
+        "approvalId": {
+          "type": "string"
+        },
+        "causationIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "decidedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "decision": {
+          "enum": [
+            "approved",
+            "rejected",
+            "approved_with_changes"
+          ]
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "humanMessage": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "resultingConstraints": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "approvalId",
+        "decision"
+      ],
+      "type": "object",
+      "x-zod-effect": "refinement"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "subject": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "approvalId"
+  ],
+  "title": "DecisionRecordedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:a0634a6a7d9cde9eaf70b34abd90b1a7970bea8f4fe224d17f9c9ccb72d2c317",
+    "id": "specwright.event.decision.recorded",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "$id": "specwright.governance.human-question",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allowedDecisionValues": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "prompt": {
+      "type": "string"
+    },
+    "questionId": {
+      "type": "string"
+    },
+    "requiredExpertise": {
+      "type": "string"
+    },
+    "requiredFor": {
+      "type": "string"
+    },
+    "subjectRef": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "prompt",
+    "questionId"
+  ],
+  "title": "HumanQuestionSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:757d724d434e88a9672f20b832eebbedbf27e89861a7493d73b2160ea32bfef7",
+    "id": "specwright.governance.human-question",
+    "status": "public",
+    "version": "1"
+  }
+}

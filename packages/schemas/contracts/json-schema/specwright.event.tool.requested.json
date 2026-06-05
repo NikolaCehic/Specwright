@@ -1,0 +1,63 @@
+{
+  "$id": "specwright.event.tool.requested",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {},
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestedBy": {
+          "additionalProperties": false,
+          "properties": {
+            "evalId": {
+              "type": "string"
+            },
+            "gateId": {
+              "type": "string"
+            },
+            "modelCallId": {
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "phase"
+          ],
+          "type": "object"
+        },
+        "toolId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "args",
+        "idempotencyKey",
+        "reason",
+        "requestedBy",
+        "toolId"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "request"
+  ],
+  "title": "ToolRequestedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:88687b2da2fa70ad290d920ab1b83e65f1523e29fd86df3b00fa40f0441ad7d0",
+    "id": "specwright.event.tool.requested",
+    "status": "public",
+    "version": "1"
+  }
+}

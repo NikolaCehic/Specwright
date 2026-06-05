@@ -1,0 +1,139 @@
+{
+  "$id": "specwright.event.tool.completed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "request": {
+      "additionalProperties": false,
+      "properties": {
+        "args": {},
+        "idempotencyKey": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestedBy": {
+          "additionalProperties": false,
+          "properties": {
+            "evalId": {
+              "type": "string"
+            },
+            "gateId": {
+              "type": "string"
+            },
+            "modelCallId": {
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "phase"
+          ],
+          "type": "object"
+        },
+        "toolId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "requestedBy",
+        "toolId"
+      ],
+      "type": "object"
+    },
+    "result": {
+      "additionalProperties": false,
+      "properties": {
+        "error": {
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "type": "object"
+        },
+        "output": {},
+        "provenance": {
+          "additionalProperties": false,
+          "properties": {
+            "argsHash": {
+              "type": "string"
+            },
+            "cacheStatus": {
+              "enum": [
+                "hit",
+                "miss",
+                "bypass"
+              ]
+            },
+            "resultHash": {
+              "type": "string"
+            },
+            "toolId": {
+              "type": "string"
+            },
+            "toolVersion": {
+              "type": "string"
+            },
+            "traceId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "argsHash",
+            "cacheStatus",
+            "toolId",
+            "toolVersion",
+            "traceId"
+          ],
+          "type": "object"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "denied",
+            "approval_required",
+            "failed"
+          ]
+        },
+        "toolCallId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "provenance",
+        "status",
+        "toolCallId"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "request",
+    "result"
+  ],
+  "title": "ToolCompletedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:4f968d003f7352138f68b03ef2aba6179a64386adcd924d915b39403a960b85d",
+    "id": "specwright.event.tool.completed",
+    "status": "public",
+    "version": "1"
+  }
+}

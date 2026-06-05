@@ -1,0 +1,35 @@
+{
+  "$id": "specwright.artifact.artifact-file-ref",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contentHash": {
+      "type": "string"
+    },
+    "contentType": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "path": {
+      "type": "string"
+    },
+    "uri": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "uri"
+  ],
+  "title": "ArtifactFileRefSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "artifact",
+    "hash": "sha256:c1f104264211ee1045084ec1aad88f6c5a4f85463ed3c8d328fda90246548905",
+    "id": "specwright.artifact.artifact-file-ref",
+    "status": "public",
+    "version": "1"
+  }
+}

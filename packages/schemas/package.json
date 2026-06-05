@@ -9,13 +9,47 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./validators": {
+      "types": "./dist/validators.d.ts",
+      "import": "./dist/validators.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    },
+    "./registry": {
+      "types": "./dist/registry.d.ts",
+      "import": "./dist/registry.js"
+    },
+    "./hashes": {
+      "types": "./dist/hashes.d.ts",
+      "import": "./dist/hashes.js"
+    },
+    "./fixtures": {
+      "types": "./dist/fixtures.d.ts",
+      "import": "./dist/fixtures.js"
+    },
+    "./migrations": {
+      "types": "./dist/migrations.d.ts",
+      "import": "./dist/migrations.js"
+    },
+    "./redaction": {
+      "types": "./dist/redaction.d.ts",
+      "import": "./dist/redaction.js"
+    },
+    "./event-union": {
+      "types": "./dist/event-union.d.ts",
+      "import": "./dist/event-union.js"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json --pretty false",
+    "generate": "bun scripts/generate.ts",
+    "compat:report": "bun scripts/compat-report.ts",
+    "build": "bun run generate && tsc -p tsconfig.build.json --pretty false",
     "typecheck": "tsc --noEmit -p tsconfig.json --pretty false",
     "test": "bun test"
   },

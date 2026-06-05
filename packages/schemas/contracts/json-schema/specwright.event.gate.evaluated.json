@@ -1,0 +1,543 @@
+{
+  "$id": "specwright.event.gate.evaluated",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "gateId": {
+      "type": "string"
+    },
+    "instruction": {
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "gateId": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "continue"
+            }
+          },
+          "required": [
+            "gateId",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "gateId": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "transition_phase"
+            },
+            "targetPhase": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "gateId",
+            "kind",
+            "targetPhase"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "gateId": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "pause_for_human"
+            },
+            "question": {
+              "additionalProperties": false,
+              "properties": {
+                "allowedDecisionValues": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "causationIds": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "comments": {
+                  "type": "string"
+                },
+                "constraints": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "expectedAnswerSchema": {
+                  "type": "string"
+                },
+                "gateId": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "phase": {
+                  "type": "string"
+                },
+                "question": {
+                  "type": "string"
+                },
+                "requiredExpertise": {
+                  "type": "string"
+                },
+                "requiredFor": {
+                  "type": "string"
+                },
+                "reviewResult": {
+                  "type": "string"
+                },
+                "subjectRef": {
+                  "type": "string"
+                },
+                "unresolvedQuestions": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "gateId",
+                "id",
+                "phase",
+                "question",
+                "requiredFor"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "gateId",
+            "kind",
+            "question"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "approvalRequest": {
+              "additionalProperties": false,
+              "properties": {
+                "constraints": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "gateId": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "phase": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requiredFor": {
+                  "type": "string"
+                },
+                "riskSummary": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "gateId",
+                "id",
+                "phase",
+                "reason",
+                "requiredFor"
+              ],
+              "type": "object"
+            },
+            "gateId": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "request_approval"
+            }
+          },
+          "required": [
+            "approvalRequest",
+            "gateId",
+            "kind"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "gateId": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "create_repair_task"
+            },
+            "repairTask": {
+              "additionalProperties": false,
+              "properties": {
+                "acceptanceChecks": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "allowedRefs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "allowedTools": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "blockedTools": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "constraints": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "createdFromFindingIds": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "escalationRule": {
+                  "type": "string"
+                },
+                "expiresAt": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "failedPhase": {
+                  "type": "string"
+                },
+                "gateId": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "problem": {
+                  "type": "string"
+                },
+                "producedBy": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "deterministic",
+                        "model_assisted",
+                        "human"
+                      ]
+                    },
+                    "ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "ref"
+                  ],
+                  "type": "object"
+                },
+                "repairId": {
+                  "type": "string"
+                },
+                "requiredCorrection": {
+                  "type": "string"
+                },
+                "requiredEvidenceRefs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "sourceFindingId": {
+                  "type": "string"
+                },
+                "successEval": {
+                  "type": "string"
+                },
+                "successGate": {
+                  "type": "string"
+                },
+                "targetRef": {
+                  "type": "string"
+                },
+                "task": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object",
+              "x-zod-effect": "refinement"
+            }
+          },
+          "required": [
+            "gateId",
+            "kind",
+            "repairTask"
+          ],
+          "type": "object"
+        },
+        {
+          "additionalProperties": false,
+          "properties": {
+            "gateId": {
+              "type": "string"
+            },
+            "kind": {
+              "const": "fail_run"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "gateId",
+            "kind",
+            "reason"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "verdict": {
+      "additionalProperties": false,
+      "properties": {
+        "evaluatedAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "evaluator": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "deterministic",
+                "model_assisted",
+                "human"
+              ]
+            },
+            "ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "type": "object"
+        },
+        "evidenceRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "findings": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "evidenceRefs": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "id": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "metadata": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "path": {
+                "type": "string"
+              },
+              "repairHint": {
+                "type": "string"
+              },
+              "severity": {
+                "enum": [
+                  "advisory",
+                  "blocking"
+                ]
+              },
+              "targetRef": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "evidenceRefs",
+              "id",
+              "message",
+              "severity"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "gateId": {
+          "type": "string"
+        },
+        "obligations": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "run_eval",
+                  "request_clarification",
+                  "create_repair_task",
+                  "promote_artifact",
+                  "attach_evidence",
+                  "mark_assumption"
+                ]
+              },
+              "params": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "sourceRuleId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "provenance": {
+          "additionalProperties": false,
+          "properties": {
+            "causationIds": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "decisionHash": {
+              "type": "string"
+            },
+            "evaluatedAt": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "runId": {
+              "type": "string"
+            },
+            "traceId": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requiredAction": {
+          "enum": [
+            "repair",
+            "clarify",
+            "approve",
+            "fail_run"
+          ]
+        },
+        "severity": {
+          "enum": [
+            "advisory",
+            "blocking"
+          ]
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "needs_review"
+          ]
+        }
+      },
+      "required": [
+        "evaluatedAt",
+        "evaluator",
+        "evidenceRefs",
+        "findings",
+        "gateId",
+        "obligations",
+        "phase",
+        "reasons",
+        "severity",
+        "status"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "gateId",
+    "instruction",
+    "verdict"
+  ],
+  "title": "GateEvaluatedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c",
+    "id": "specwright.event.gate.evaluated",
+    "status": "public",
+    "version": "1"
+  }
+}

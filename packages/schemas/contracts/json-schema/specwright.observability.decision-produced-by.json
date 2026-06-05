@@ -1,0 +1,30 @@
+{
+  "$id": "specwright.observability.decision-produced-by",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "kind": {
+      "enum": [
+        "deterministic",
+        "model_assisted",
+        "human"
+      ]
+    },
+    "ref": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "kind",
+    "ref"
+  ],
+  "title": "DecisionProducedBySchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "observability",
+    "hash": "sha256:2f1c571921bcd89d91639f3bae46a595c4f15b65793fdc5709d3bfc127d34b95",
+    "id": "specwright.observability.decision-produced-by",
+    "status": "public",
+    "version": "1"
+  }
+}

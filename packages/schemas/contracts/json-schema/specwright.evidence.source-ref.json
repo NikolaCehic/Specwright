@@ -1,0 +1,77 @@
+{
+  "$id": "specwright.evidence.source-ref",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "anyOf": [
+    {
+      "type": "string"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "enum": [
+            "user",
+            "repo",
+            "design",
+            "external",
+            "model",
+            "generated"
+          ]
+        },
+        "captureToolCallId": {
+          "type": "string"
+        },
+        "contentHash": {
+          "type": "string"
+        },
+        "externalTrustPolicy": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "locator": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "path": {
+          "type": "string"
+        },
+        "redactionClass": {
+          "enum": [
+            "model",
+            "adapter",
+            "operator",
+            "audit",
+            "restricted",
+            "secret"
+          ]
+        },
+        "snapshotTimestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authority",
+        "redactionClass"
+      ],
+      "type": "object",
+      "x-zod-effect": "refinement"
+    }
+  ],
+  "title": "SourceRefSchema",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:e2978ba774517416da912649c961fd22518df164add58bc60dc9c0e2a17bbb3f",
+    "id": "specwright.evidence.source-ref",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "$id": "specwright.event.human.answer_recorded",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "answer": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      ]
+    },
+    "answeredBy": {
+      "type": "string"
+    },
+    "humanQuestionId": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "questionId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "answer"
+  ],
+  "title": "HumanAnswerRecordedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:52471ec3cd37a589108ad5801588dbe00f1982ba22714388306e7ab2c9accdce",
+    "id": "specwright.event.human.answer_recorded",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

@@ -1,0 +1,340 @@
+{
+  "$id": "specwright.event.policy.evaluated",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approval": {
+      "additionalProperties": false,
+      "properties": {
+        "approvalId": {
+          "type": "string"
+        },
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "policyVerdictRef": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestedAction": {
+          "type": "string"
+        },
+        "requiredFor": {
+          "type": "string"
+        },
+        "riskSummary": {
+          "type": "string"
+        },
+        "subjectRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approvalId"
+      ],
+      "type": "object"
+    },
+    "approvalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "approvalId": {
+          "type": "string"
+        },
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "policyVerdictRef": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestedAction": {
+          "type": "string"
+        },
+        "requiredFor": {
+          "type": "string"
+        },
+        "riskSummary": {
+          "type": "string"
+        },
+        "subjectRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approvalId"
+      ],
+      "type": "object"
+    },
+    "request": {
+      "additionalProperties": false,
+      "properties": {
+        "action": {
+          "additionalProperties": false,
+          "properties": {
+            "args": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "budgetCosts": {
+              "additionalProperties": {
+                "type": "number"
+              },
+              "type": "object"
+            },
+            "kind": {
+              "type": "string"
+            },
+            "requestedScopes": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "risk": {
+              "enum": [
+                "low",
+                "medium",
+                "high",
+                "critical"
+              ]
+            },
+            "toolId": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind"
+          ],
+          "type": "object"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "runMode": {
+          "type": "string"
+        },
+        "snapshots": {
+          "additionalProperties": {},
+          "type": "object"
+        }
+      },
+      "required": [
+        "action",
+        "phase",
+        "requestId",
+        "runId"
+      ],
+      "type": "object"
+    },
+    "verdict": {
+      "additionalProperties": false,
+      "properties": {
+        "approvalId": {
+          "type": "string"
+        },
+        "constraints": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "sourceRuleId": {
+                "type": "string"
+              },
+              "value": {}
+            },
+            "required": [
+              "kind",
+              "sourceRuleId",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "decisionHash": {
+          "type": "string"
+        },
+        "matchedRules": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "effect": {
+                "enum": [
+                  "allow",
+                  "deny",
+                  "approval_required",
+                  "constrain",
+                  "obligate"
+                ]
+              },
+              "layer": {
+                "enum": [
+                  "runtime_invariant",
+                  "host",
+                  "workspace",
+                  "harness",
+                  "phase",
+                  "capability",
+                  "run_mode",
+                  "approval"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "ruleId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect",
+              "layer",
+              "reason",
+              "ruleId"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "obligations": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "record_event",
+                  "redact",
+                  "stage_write",
+                  "run_eval",
+                  "require_evidence",
+                  "attach_trace",
+                  "mark_external_source",
+                  "request_human_review"
+                ]
+              },
+              "params": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "sourceRuleId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "sourceRuleId"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "policyBundleHash": {
+          "type": "string"
+        },
+        "provenance": {
+          "additionalProperties": false,
+          "properties": {
+            "causationIds": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "decisionHash": {
+              "type": "string"
+            },
+            "evaluatedAt": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "runId": {
+              "type": "string"
+            },
+            "traceId": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requestHash": {
+          "type": "string"
+        },
+        "resolutionLayerOrder": {
+          "items": {
+            "enum": [
+              "runtime_invariant",
+              "host",
+              "workspace",
+              "harness",
+              "phase",
+              "capability",
+              "run_mode",
+              "approval"
+            ]
+          },
+          "type": "array"
+        },
+        "status": {
+          "enum": [
+            "allow",
+            "deny",
+            "approval_required"
+          ]
+        }
+      },
+      "required": [
+        "constraints",
+        "decisionHash",
+        "matchedRules",
+        "obligations",
+        "reasons",
+        "status"
+      ],
+      "type": "object"
+    }
+  },
+  "required": [
+    "verdict"
+  ],
+  "title": "PolicyEvaluatedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:e6019e6428a7efa2241353501b44ef8837508a4e3a27b0d5947e55dbae57834a",
+    "id": "specwright.event.policy.evaluated",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,341 @@
+{
+  "$id": "specwright.lifecycle.gate-lifecycle-instruction",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "gateId": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "continue"
+        }
+      },
+      "required": [
+        "gateId",
+        "kind"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "gateId": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "transition_phase"
+        },
+        "targetPhase": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "gateId",
+        "kind",
+        "targetPhase"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "gateId": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "pause_for_human"
+        },
+        "question": {
+          "additionalProperties": false,
+          "properties": {
+            "allowedDecisionValues": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "causationIds": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "comments": {
+              "type": "string"
+            },
+            "constraints": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "expectedAnswerSchema": {
+              "type": "string"
+            },
+            "gateId": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "metadata": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "question": {
+              "type": "string"
+            },
+            "requiredExpertise": {
+              "type": "string"
+            },
+            "requiredFor": {
+              "type": "string"
+            },
+            "reviewResult": {
+              "type": "string"
+            },
+            "subjectRef": {
+              "type": "string"
+            },
+            "unresolvedQuestions": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "gateId",
+            "id",
+            "phase",
+            "question",
+            "requiredFor"
+          ],
+          "type": "object"
+        }
+      },
+      "required": [
+        "gateId",
+        "kind",
+        "question"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "approvalRequest": {
+          "additionalProperties": false,
+          "properties": {
+            "constraints": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "gateId": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "metadata": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "phase": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            },
+            "requiredFor": {
+              "type": "string"
+            },
+            "riskSummary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "gateId",
+            "id",
+            "phase",
+            "reason",
+            "requiredFor"
+          ],
+          "type": "object"
+        },
+        "gateId": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "request_approval"
+        }
+      },
+      "required": [
+        "approvalRequest",
+        "gateId",
+        "kind"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "gateId": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "create_repair_task"
+        },
+        "repairTask": {
+          "additionalProperties": false,
+          "properties": {
+            "acceptanceChecks": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "allowedRefs": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "allowedTools": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "blockedTools": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "constraints": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "createdFromFindingIds": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "escalationRule": {
+              "type": "string"
+            },
+            "expiresAt": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "failedPhase": {
+              "type": "string"
+            },
+            "gateId": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
+            "metadata": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "problem": {
+              "type": "string"
+            },
+            "producedBy": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "deterministic",
+                    "model_assisted",
+                    "human"
+                  ]
+                },
+                "ref": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind",
+                "ref"
+              ],
+              "type": "object"
+            },
+            "repairId": {
+              "type": "string"
+            },
+            "requiredCorrection": {
+              "type": "string"
+            },
+            "requiredEvidenceRefs": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "sourceFindingId": {
+              "type": "string"
+            },
+            "successEval": {
+              "type": "string"
+            },
+            "successGate": {
+              "type": "string"
+            },
+            "targetRef": {
+              "type": "string"
+            },
+            "task": {
+              "type": "string"
+            }
+          },
+          "required": [],
+          "type": "object",
+          "x-zod-effect": "refinement"
+        }
+      },
+      "required": [
+        "gateId",
+        "kind",
+        "repairTask"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "gateId": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "fail_run"
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "gateId",
+        "kind",
+        "reason"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "GateLifecycleInstructionSchema",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:c02108378fce5ff1f7cb71a61ca8d6e585c76bbfc271854136335a8e63e36e40",
+    "id": "specwright.lifecycle.gate-lifecycle-instruction",
+    "status": "public",
+    "version": "1"
+  }
+}

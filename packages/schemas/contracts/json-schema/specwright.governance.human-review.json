@@ -1,0 +1,77 @@
+{
+  "$id": "specwright.governance.human-review",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allowedDecisionValues": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "causationIds": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "comments": {
+      "type": "string"
+    },
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "expectedAnswerSchema": {
+      "type": "string"
+    },
+    "gateId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "phase": {
+      "type": "string"
+    },
+    "question": {
+      "type": "string"
+    },
+    "requiredExpertise": {
+      "type": "string"
+    },
+    "requiredFor": {
+      "type": "string"
+    },
+    "reviewResult": {
+      "type": "string"
+    },
+    "subjectRef": {
+      "type": "string"
+    },
+    "unresolvedQuestions": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "question",
+    "requiredFor"
+  ],
+  "title": "HumanReviewSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "governance",
+    "hash": "sha256:36345ab575c8b468c892f2c6d0acf86aadc545e0b33957124e9729c6faac6b9a",
+    "id": "specwright.governance.human-review",
+    "status": "public",
+    "version": "1"
+  }
+}

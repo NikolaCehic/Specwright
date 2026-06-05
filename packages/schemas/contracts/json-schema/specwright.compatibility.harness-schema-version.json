@@ -1,0 +1,13 @@
+{
+  "$id": "specwright.compatibility.harness-schema-version",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "const": "specwright.harness.v0",
+  "title": "HarnessSchemaVersionSchema",
+  "x-specwright-contract": {
+    "family": "compatibility",
+    "hash": "sha256:e9c576bf33c829c70d6f5dd19400ba4f2d1283396bcc0fbde1123ae3103e9721",
+    "id": "specwright.compatibility.harness-schema-version",
+    "status": "public",
+    "version": "1"
+  }
+}

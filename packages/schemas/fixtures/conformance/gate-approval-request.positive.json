@@ -1,0 +1,7 @@
+{
+  "gateId": "contract.registry",
+  "id": "approval:contract-registry",
+  "phase": "shared-schemas",
+  "reason": "Generated registry change needs review.",
+  "requiredFor": "gate:contract.registry"
+}

@@ -1,0 +1,7 @@
+{
+  "harnessId": "default",
+  "host": {
+    "kind": "cli"
+  },
+  "task": "Generate the authoritative contract registry."
+}

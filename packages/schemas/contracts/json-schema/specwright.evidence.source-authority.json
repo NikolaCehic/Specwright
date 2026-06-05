@@ -1,0 +1,20 @@
+{
+  "$id": "specwright.evidence.source-authority",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "user",
+    "repo",
+    "design",
+    "external",
+    "model",
+    "generated"
+  ],
+  "title": "SourceAuthoritySchema",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:094635c5632a6fc92da5894a469e092482299f22c7c68d1a2dcf18c1a765601d",
+    "id": "specwright.evidence.source-authority",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "$id": "specwright.lifecycle.gate-severity",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "advisory",
+    "blocking"
+  ],
+  "title": "GateSeveritySchema",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:e64c83d8d18787b75e60d81afc44b03c11879d90210b548441ee521ead7fc957",
+    "id": "specwright.lifecycle.gate-severity",
+    "status": "public",
+    "version": "1"
+  }
+}

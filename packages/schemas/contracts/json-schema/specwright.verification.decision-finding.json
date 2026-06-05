@@ -1,0 +1,53 @@
+{
+  "$id": "specwright.verification.decision-finding",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "code": {
+      "type": "string"
+    },
+    "evidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "id": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "path": {
+      "type": "string"
+    },
+    "repairHint": {
+      "type": "string"
+    },
+    "severity": {
+      "enum": [
+        "advisory",
+        "blocking"
+      ]
+    },
+    "targetRef": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "message"
+  ],
+  "title": "DecisionFindingSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "verification",
+    "hash": "sha256:786e723991a7b456c0b57ece017babb0970c80d73cca9e5a22bd4224f4b5b6e8",
+    "id": "specwright.verification.decision-finding",
+    "status": "public",
+    "version": "1"
+  }
+}

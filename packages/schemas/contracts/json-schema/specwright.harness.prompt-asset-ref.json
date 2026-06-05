@@ -1,0 +1,41 @@
+{
+  "$id": "specwright.harness.prompt-asset-ref",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": true,
+  "properties": {
+    "content": {
+      "type": "string"
+    },
+    "contentHash": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "path": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "content",
+    "contentHash",
+    "id",
+    "path"
+  ],
+  "title": "PromptAssetRefSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "harness",
+    "hash": "sha256:1d74485cfb2f55c83b3aba0bec3150efe1bad7d14af791e923c3c0ce9a7b0bde",
+    "id": "specwright.harness.prompt-asset-ref",
+    "status": "public",
+    "version": "1"
+  }
+}

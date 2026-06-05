@@ -1,0 +1,16 @@
+{
+  "$id": "specwright.evidence.decision-evidence-refs",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "items": {
+    "type": "string"
+  },
+  "title": "DecisionEvidenceRefsSchema",
+  "type": "array",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:982b01ad2e96d3d6b5bee38034f57ee7dc129ba5c05c08fbc6f325226db0f7f7",
+    "id": "specwright.evidence.decision-evidence-refs",
+    "status": "public",
+    "version": "1"
+  }
+}

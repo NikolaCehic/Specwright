@@ -1,0 +1,29 @@
+{
+  "$id": "specwright.evidence.created-by",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "actionId": {
+      "type": "string"
+    },
+    "phase": {
+      "type": "string"
+    },
+    "toolCallId": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "actionId",
+    "phase"
+  ],
+  "title": "CreatedBySchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "evidence",
+    "hash": "sha256:bce7db9838d5642cde34c9076cced41a7cd720bb8a74514642cfa97975baee03",
+    "id": "specwright.evidence.created-by",
+    "status": "public",
+    "version": "1"
+  }
+}

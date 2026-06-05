@@ -1,0 +1,112 @@
+{
+  "$id": "specwright.artifact.artifact-claim",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "authority": {
+      "enum": [
+        "user",
+        "repo",
+        "design",
+        "external",
+        "model",
+        "generated"
+      ]
+    },
+    "claim": {
+      "type": "string"
+    },
+    "claimLevel": {
+      "enum": [
+        "source_fact",
+        "derived_fact",
+        "inference",
+        "assumption",
+        "human_decision",
+        "unknown"
+      ]
+    },
+    "confidence": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ]
+    },
+    "evidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "fieldPath": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "owningArtifactId": {
+      "type": "string"
+    },
+    "owningSection": {
+      "type": "string"
+    },
+    "redactionPolicy": {
+      "anyOf": [
+        {
+          "enum": [
+            "model",
+            "adapter",
+            "operator",
+            "audit",
+            "restricted",
+            "secret"
+          ]
+        },
+        {
+          "additionalProperties": {
+            "enum": [
+              "model",
+              "adapter",
+              "operator",
+              "audit",
+              "restricted",
+              "secret"
+            ]
+          },
+          "type": "object"
+        }
+      ]
+    },
+    "verificationStatus": {
+      "enum": [
+        "unverified",
+        "supported",
+        "unsupported",
+        "conflicted",
+        "unknown"
+      ]
+    }
+  },
+  "required": [
+    "authority",
+    "claim",
+    "claimLevel",
+    "confidence",
+    "evidenceRefs",
+    "owningArtifactId",
+    "redactionPolicy",
+    "verificationStatus"
+  ],
+  "title": "ArtifactClaimSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "artifact",
+    "hash": "sha256:0a77b1d767d44fb2ca00e259e81addd78748760e347545311d9a6b790dea22bf",
+    "id": "specwright.artifact.artifact-claim",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

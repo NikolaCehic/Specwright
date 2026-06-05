@@ -1,0 +1,36 @@
+{
+  "$id": "specwright.event.phase.transitioned",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "from": {
+      "type": "string"
+    },
+    "fromPhase": {
+      "type": "string"
+    },
+    "phase": {
+      "type": "string"
+    },
+    "reason": {
+      "type": "string"
+    },
+    "to": {
+      "type": "string"
+    },
+    "toPhase": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "title": "PhaseTransitionedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:f7b74f423e3ac779da8b71fbf6c6634057205d7955f7667a4438fadb611e5267",
+    "id": "specwright.event.phase.transitioned",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}

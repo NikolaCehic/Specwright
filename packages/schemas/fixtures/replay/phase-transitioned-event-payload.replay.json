@@ -1,0 +1,5 @@
+{
+  "fromPhase": "inventory",
+  "reason": "registry generation",
+  "toPhase": "registry"
+}

@@ -1,0 +1,18 @@
+{
+  "$id": "specwright.capability.tool-call-status",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "enum": [
+    "success",
+    "denied",
+    "approval_required",
+    "failed"
+  ],
+  "title": "ToolCallStatusSchema",
+  "x-specwright-contract": {
+    "family": "capability",
+    "hash": "sha256:4d2c4e7d39ad729d7819fc6b77601cc54a2093eed101c288e1788b15589fbabc",
+    "id": "specwright.capability.tool-call-status",
+    "status": "public",
+    "version": "1"
+  }
+}

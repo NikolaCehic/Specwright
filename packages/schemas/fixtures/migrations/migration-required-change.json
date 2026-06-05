@@ -1,0 +1,13 @@
+{
+  "baseline": {
+    "hash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+    "id": "specwright.lifecycle.run-input",
+    "version": "1"
+  },
+  "current": {
+    "hash": "sha256:d87a5667838ea56eb09ec1ecdb87e7b927b024af4e52971378f8e74681e754f4",
+    "id": "specwright.lifecycle.run-input",
+    "version": "1"
+  },
+  "expectedClassification": "migration-required"
+}

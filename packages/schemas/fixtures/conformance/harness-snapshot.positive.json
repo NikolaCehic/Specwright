@@ -1,0 +1,15 @@
+{
+  "artifacts": [],
+  "evals": [],
+  "gates": [],
+  "id": "default",
+  "loadedAt": "2026-06-05T00:00:00.000Z",
+  "phases": [],
+  "policies": [],
+  "prompts": [],
+  "roles": [],
+  "schemaVersion": "specwright.harness.v0",
+  "specHash": "sha256:harness-fixture",
+  "tools": [],
+  "version": "1.0.0"
+}

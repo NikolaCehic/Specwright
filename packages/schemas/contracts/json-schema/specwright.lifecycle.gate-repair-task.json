@@ -1,0 +1,122 @@
+{
+  "$id": "specwright.lifecycle.gate-repair-task",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "acceptanceChecks": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "allowedRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "allowedTools": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "blockedTools": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "constraints": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "createdFromFindingIds": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "escalationRule": {
+      "type": "string"
+    },
+    "expiresAt": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "failedPhase": {
+      "type": "string"
+    },
+    "gateId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "problem": {
+      "type": "string"
+    },
+    "producedBy": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "deterministic",
+            "model_assisted",
+            "human"
+          ]
+        },
+        "ref": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "ref"
+      ],
+      "type": "object"
+    },
+    "repairId": {
+      "type": "string"
+    },
+    "requiredCorrection": {
+      "type": "string"
+    },
+    "requiredEvidenceRefs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sourceFindingId": {
+      "type": "string"
+    },
+    "successEval": {
+      "type": "string"
+    },
+    "successGate": {
+      "type": "string"
+    },
+    "targetRef": {
+      "type": "string"
+    },
+    "task": {
+      "type": "string"
+    }
+  },
+  "required": [],
+  "title": "GateRepairTaskSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "lifecycle",
+    "hash": "sha256:4ac3c2fde5807481cbb350437bb05193928d56fea414939c0692f97f1208ef9b",
+    "id": "specwright.lifecycle.gate-repair-task",
+    "status": "public",
+    "version": "1"
+  },
+  "x-zod-effect": "refinement"
+}
