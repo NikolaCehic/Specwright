@@ -1,13 +1,20 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import { generateKeyPairSync, sign } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   buildGrantEvaluatedEvent,
+  canonicalizeMigrationDescriptor,
+  classifyTransition,
+  computeSpecHash,
+  detectCapabilitySurfaceWidening,
   evaluateGrant,
   HarnessLoaderError,
+  InMemoryTrustStore,
   loadCapabilityGrantRegistryFromFile,
+  loadCompatibilityMatrixFromFile,
   loadDependencyRegistryFromFile,
   loadHarnessPackage,
   loadHarnessPackageWithRecord,
@@ -17,7 +24,9 @@ import {
 import type {
   CapabilityGrant,
   HarnessDependencyEvent,
-  HarnessGrantEvent
+  HarnessGrantEvent,
+  MigrationDescriptor,
+  MigrationDescriptorBody
 } from "./index";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -617,6 +626,237 @@ phases:
     });
   });
 
+  test("classifies representative compatibility transitions exactly once", () => {
+    expect(
+      classifyTransition({
+        declaredSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersion: "0.1.0",
+        runtimeVersion: "current",
+        normalizedContentEqual: true
+      })
+    ).toBe("content-stable");
+    expect(
+      classifyTransition({
+        declaredSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersion: "0.1.1",
+        runtimeVersion: "current",
+        metadataOnly: true
+      })
+    ).toBe("patch-compatible");
+    expect(
+      classifyTransition({
+        declaredSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersion: "0.2.0",
+        runtimeVersion: "current",
+        additiveOnly: true
+      })
+    ).toBe("additive-compatible");
+    expect(
+      classifyTransition({
+        declaredSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersion: "0.1.0",
+        runtimeVersion: "historical",
+        replayVerified: true
+      })
+    ).toBe("replay-compatible");
+    expect(
+      classifyTransition({
+        declaredSchemaVersion: "specwright.harness.v0alpha",
+        targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersion: "0.1.0",
+        runtimeVersion: "current",
+        schemaVersionChanged: true
+      })
+    ).toBe("migration-required");
+    expect(
+      classifyTransition({
+        declaredSchemaVersion: "specwright.harness.v999",
+        targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersion: "0.1.0",
+        runtimeVersion: "current",
+        interpretable: false
+      })
+    ).toBe("breaking");
+  });
+
+  test("flags capability-surface widening as migration-required", () => {
+    const widening = detectCapabilitySurfaceWidening(
+      {
+        tools: ["fs.read"],
+        requireApproval: [],
+        runtimeAuthority: {
+          strict: true,
+          failClosed: true,
+          modelOutputAuthority: "proposal"
+        }
+      },
+      {
+        tools: ["fs.read", "network.request"],
+        requireApproval: ["shell.exec"],
+        runtimeAuthority: {
+          strict: false,
+          failClosed: true,
+          modelOutputAuthority: "proposal"
+        }
+      }
+    );
+
+    expect(widening).toEqual({
+      widened: true,
+      addedTools: ["network.request"],
+      addedRequireApproval: ["shell.exec"],
+      widenedRuntimeAuthority: ["strict"]
+    });
+    expect(
+      classifyTransition({
+        declaredSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersion: "0.2.0",
+        runtimeVersion: "current",
+        additiveOnly: true,
+        sourceCapabilitySurface: {
+          tools: ["fs.read"],
+          requireApproval: [],
+          runtimeAuthority: {
+            strict: true
+          }
+        },
+        targetCapabilitySurface: {
+          tools: ["fs.read", "network.request"],
+          requireApproval: [],
+          runtimeAuthority: {
+            strict: true
+          }
+        }
+      })
+    ).toBe("migration-required");
+  });
+
+  test("loads a governed compatibility matrix fixture", async () => {
+    const matrix = await compatibilityMatrixFromFixture();
+
+    expect(matrix.matrixId).toBe(
+      "specwright.test.harness-loader.compatibility.v1"
+    );
+    expect(matrix.rows.map((row) => row.id)).toEqual([
+      "current-v0-load",
+      "historical-v0alpha-migrate"
+    ]);
+  });
+
+  test("loads an older schema version through a signed migration descriptor", async () => {
+    const fixture = await makeMigrationFixture("compatibility-migrate");
+    const first = await loadHarnessPackageWithRecord({
+      packageDir: fixture.packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      compatibilityMatrix: await compatibilityMatrixFromFixture(),
+      migrationDescriptor: fixture.descriptor,
+      migrationTrustStore: fixture.trustStore,
+      migrationNow: "2026-05-29T00:00:00.000Z"
+    });
+    const second = await loadHarnessPackageWithRecord({
+      packageDir: fixture.packageDir,
+      loadedAt: "2026-05-30T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      compatibilityMatrix: await compatibilityMatrixFromFixture(),
+      migrationDescriptor: fixture.descriptor,
+      migrationTrustStore: fixture.trustStore,
+      migrationNow: "2026-05-29T00:00:00.000Z"
+    });
+
+    expect(first.snapshot.schemaVersion).toBe(SUPPORTED_HARNESS_SCHEMA_VERSION);
+    expect(first.snapshot.specHash).toBe(fixture.migratedSpecHash);
+    expect(first.snapshot.specHash).toBe(second.snapshot.specHash);
+    expect(first.compatibility).toMatchObject({
+      declaredSchemaVersion: "specwright.harness.v0alpha",
+      targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+      compatibilityClass: "migration-required",
+      loaderBehavior: "migrate",
+      migration: {
+        descriptorId: fixture.descriptor.migrationId,
+        originalSpecHash: fixture.originalSpecHash,
+        migratedSpecHash: fixture.migratedSpecHash
+      }
+    });
+    expect("compatibility" in first.snapshot).toBe(false);
+  });
+
+  test("fails closed when an older schema version has no migration descriptor", async () => {
+    const packageDir = await writeHarnessPackage(
+      "compatibility-missing-descriptor",
+      historicalHarnessFiles()
+    );
+    let snapshot: unknown;
+
+    const error = await captureError(async () => {
+      snapshot = await loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        grantSource: await grantSourceFromFixture("default-registry.json"),
+        compatibilityMatrix: await compatibilityMatrixFromFixture()
+      });
+    });
+
+    expect(snapshot).toBeUndefined();
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
+    expect((error as HarnessLoaderError).reason).toBe(
+      "missing_migration_descriptor"
+    );
+  });
+
+  test("rejects unknown future schema versions", async () => {
+    const packageDir = await writeHarnessPackage(
+      "compatibility-future",
+      historicalHarnessFiles("specwright.harness.v999")
+    );
+
+    const error = await captureError(async () =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        grantSource: await grantSourceFromFixture("default-registry.json"),
+        compatibilityMatrix: await compatibilityMatrixFromFixture()
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe(
+      "unsupported_schema_version"
+    );
+    expect((error as HarnessLoaderError).reason).toBe("no_matrix_cell");
+  });
+
+  test("rejects migration output when descriptor attestation mismatches", async () => {
+    const fixture = await makeMigrationFixture(
+      "compatibility-attestation-mismatch",
+      `sha256:${"f".repeat(64)}`
+    );
+    let snapshot: unknown;
+
+    const error = await captureError(async () => {
+      snapshot = await loadHarnessPackage({
+        packageDir: fixture.packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        grantSource: await grantSourceFromFixture("default-registry.json"),
+        compatibilityMatrix: await compatibilityMatrixFromFixture(),
+        migrationDescriptor: fixture.descriptor,
+        migrationTrustStore: fixture.trustStore,
+        migrationNow: "2026-05-29T00:00:00.000Z"
+      });
+    });
+
+    expect(snapshot).toBeUndefined();
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
+    expect((error as HarnessLoaderError).reason).toBe("attestation_mismatch");
+  });
+
   test("evaluateGrant and grant events are deterministic", () => {
     const requested = {
       tools: ["fs.read", "shell.exec", "fs.read"],
@@ -840,12 +1080,126 @@ async function dependencyResolverFromFixture(name: string) {
   );
 }
 
+async function compatibilityMatrixFromFixture() {
+  return loadCompatibilityMatrixFromFile(
+    join(repoRoot, "packages/harness-loader/test/fixtures/compatibility/matrix.json")
+  );
+}
+
 function dependencyFixturePackageDir(name: string) {
   return join(
     repoRoot,
     "packages/harness-loader/test/fixtures/dependencies",
     name
   );
+}
+
+function historicalHarnessFiles(schemaVersion = "specwright.harness.v0alpha") {
+  return {
+    "harness.yaml": `
+id: specwright.test
+version: 0.1.0
+schemaVersion: ${schemaVersion}
+metadata:
+  fixture: compatibility
+runtime:
+  strict: true
+phases:
+  - id: intake
+`
+  };
+}
+
+async function makeMigrationFixture(
+  name: string,
+  expectedMigratedSpecHashOverride?: string
+) {
+  const sourceSchemaVersion = "specwright.harness.v0alpha";
+  const targetSchemaVersion = SUPPORTED_HARNESS_SCHEMA_VERSION;
+  const sourceFiles = historicalHarnessFiles(sourceSchemaVersion);
+  const migratedFiles = historicalHarnessFiles(targetSchemaVersion);
+  const packageDir = await writeHarnessPackage(name, sourceFiles);
+  const originalSpecHash = computeSpecHash(sourceFilesFromRecord(sourceFiles));
+  const migratedSpecHash = computeSpecHash(sourceFilesFromRecord(migratedFiles));
+  const keyPair = generateKeyPairSync("ed25519");
+  const publicKey = keyPair.publicKey.export({
+    type: "spki",
+    format: "pem"
+  });
+  const body: MigrationDescriptorBody = {
+    migrationId: "migration.specwright.harness.v0alpha-to-v0",
+    source: {
+      contractId: "specwright.harness",
+      version: sourceSchemaVersion
+    },
+    target: {
+      contractId: "specwright.harness",
+      version: targetSchemaVersion
+    },
+    sourceSchemaVersion,
+    targetSchemaVersion,
+    migrationType: "deterministic-text-transform",
+    transform: {
+      operation: "replace-manifest-schema-version",
+      from: sourceSchemaVersion,
+      to: targetSchemaVersion
+    },
+    dataLoss: "none",
+    authorityChanges: [],
+    redactionChanges: [],
+    validation: {
+      before: ["CompatibilityManifestEnvelopeSchema"],
+      after: ["HarnessManifestSchema", "HarnessSnapshotSchema"]
+    },
+    rollbackStrategy: "preserve-original-bytes-and-specHash",
+    replayFixtures: ["compatibility-v0alpha"],
+    operatorApprovalRequired: false,
+    expectedMigratedSpecHash:
+      expectedMigratedSpecHashOverride ?? migratedSpecHash
+  };
+  const signatureBytes = sign(
+    null,
+    canonicalizeMigrationDescriptor(body),
+    keyPair.privateKey
+  );
+  const descriptor: MigrationDescriptor = {
+    ...body,
+    signature: {
+      publisherId: "publisher.compatibility",
+      signingKeyId: "key.compatibility",
+      algorithm: "ed25519",
+      signature: signatureBytes.toString("base64")
+    }
+  };
+  const trustStore = new InMemoryTrustStore({
+    version: "migration-trust.v1",
+    entries: [
+      {
+        publisherId: "publisher.compatibility",
+        signingKeyId: "key.compatibility",
+        publicKey,
+        algorithm: "ed25519",
+        status: "active"
+      }
+    ]
+  });
+
+  return {
+    packageDir,
+    descriptor,
+    trustStore,
+    originalSpecHash,
+    migratedSpecHash
+  };
+}
+
+function sourceFilesFromRecord(files: Record<string, string>) {
+  return Object.entries(files)
+    .map(([relativePath, raw]) => ({
+      relativePath,
+      raw: raw.trimStart()
+    }))
+    .sort((left, right) => left.relativePath.localeCompare(right.relativePath));
 }
 
 async function writeHarnessPackage(
