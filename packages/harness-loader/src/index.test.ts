@@ -4,10 +4,16 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  buildGrantEvaluatedEvent,
+  evaluateGrant,
   HarnessLoaderError,
+  loadCapabilityGrantRegistryFromFile,
   loadHarnessPackage,
+  loadHarnessPackageWithRecord,
+  RegistryGrantSource,
   SUPPORTED_HARNESS_SCHEMA_VERSION
 } from "./index";
+import type { CapabilityGrant, HarnessGrantEvent } from "./index";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -143,6 +149,9 @@ phases:
     expect(first.version).toBe("0.1.0");
     expect(first.schemaVersion).toBe(SUPPORTED_HARNESS_SCHEMA_VERSION);
     expect(first.specHash).toStartWith("sha256:");
+    expect(first.specHash).toBe(
+      "sha256:d878da67ae18d763e9f61bad0e3f15a883f78cd77ac17823a0a4a67e35847135"
+    );
     expect(first.specHash).toBe(second.specHash);
     expect(first.phases.map((phase) => phase.id)).toEqual([
       "intake",
@@ -199,6 +208,309 @@ phases:
         }
       }
     });
+  });
+
+  test("emits harness.grant.evaluated on an in-grant load", async () => {
+    const packageDir = await writeHarnessPackage("grant-allow", validHarnessFiles());
+    const events: HarnessGrantEvent[] = [];
+
+    const record = await loadHarnessPackageWithRecord({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      onGrantEvent(event) {
+        events.push(event);
+      }
+    });
+
+    expect(record.grant.granted).toBe(true);
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: "harness.grant.evaluated",
+      payload: {
+        packageId: "specwright.default",
+        version: "0.1.0",
+        verdict: "allowed",
+        requested: {
+          tools: ["fs.read"],
+          requireApproval: [],
+          toolDefinitions: ["fs.read"],
+          policyEffects: [],
+          policyLayers: [],
+          runtimeInvariantToolIds: []
+        },
+        granted: {
+          tools: ["eval.run", "fs.list", "fs.read"],
+          requireApproval: [],
+          toolDefinitions: ["eval.run", "fs.list", "fs.read"],
+          policyEffects: ["deny"],
+          policyLayers: ["runtime_invariant"],
+          runtimeInvariantToolIds: [
+            "fs.write",
+            "git.branch",
+            "git.commit",
+            "git.push",
+            "network.request",
+            "network.write",
+            "shell.exec"
+          ]
+        },
+        overGrant: {
+          tools: [],
+          requireApproval: [],
+          toolDefinitions: [],
+          policyEffects: [],
+          policyLayers: [],
+          runtimeInvariantToolIds: []
+        },
+        deniedCapabilities: []
+      }
+    });
+  });
+
+  test("denies a tool declared outside the grant and returns no snapshot", async () => {
+    const packageDir = await writeHarnessPackage(
+      "grant-over-tool",
+      overGrantToolFiles()
+    );
+    const events: HarnessGrantEvent[] = [];
+    let snapshot: unknown;
+
+    const error = await captureError(async () => {
+      snapshot = await loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        grantSource: await grantSourceFromFixture("over-grant-registry.json"),
+        onGrantEvent(event) {
+          events.push(event);
+        }
+      });
+    });
+
+    expect(snapshot).toBeUndefined();
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("grant_denied");
+    expect((error as HarnessLoaderError).message).toContain("tool:shell.exec");
+    expect((error as HarnessLoaderError).details).toMatchObject({
+      offendingCapability: "tool:shell.exec"
+    });
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      type: "harness.grant.evaluated",
+      payload: {
+        verdict: "denied",
+        deniedCapabilities: [
+          "tool:shell.exec",
+          "toolDefinition:shell.exec"
+        ],
+        overGrant: {
+          tools: ["shell.exec"],
+          toolDefinitions: ["shell.exec"]
+        },
+        denialReason: "capability_outside_grant",
+        failClosed: true
+      }
+    });
+  });
+
+  test("denies a package with no grant on file", async () => {
+    const packageDir = await writeHarnessPackage(
+      "grant-missing",
+      packageFilesWithId("specwright.missing-grant")
+    );
+    const events: HarnessGrantEvent[] = [];
+
+    const error = await captureError(async () =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        grantSource: await grantSourceFromFixture("missing-grant-registry.json"),
+        onGrantEvent(event) {
+          events.push(event);
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("grant_denied");
+    expect((error as HarnessLoaderError).message).toContain(
+      "grant:specwright.missing-grant@0.1.0"
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      payload: {
+        verdict: "denied",
+        deniedCapabilities: ["grant:specwright.missing-grant@0.1.0"],
+        denialReason: "missing_grant",
+        failClosed: true
+      }
+    });
+  });
+
+  test("denies a malformed grant before freeze", async () => {
+    const packageDir = await writeHarnessPackage(
+      "grant-malformed",
+      packageFilesWithId("specwright.malformed")
+    );
+    const events: HarnessGrantEvent[] = [];
+    let snapshot: unknown;
+
+    const error = await captureError(async () => {
+      snapshot = await loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        grantSource: await grantSourceFromFixture("malformed-grant-registry.json"),
+        onGrantEvent(event) {
+          events.push(event);
+        }
+      });
+    });
+
+    expect(snapshot).toBeUndefined();
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("grant_denied");
+    expect((error as HarnessLoaderError).reason).toBe("malformed_grant");
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      payload: {
+        verdict: "denied",
+        deniedCapabilities: ["grant:malformed_grant"],
+        denialReason: "malformed_grant",
+        failClosed: true
+      }
+    });
+  });
+
+  test("denies runtime-invariant target tools outside the grant", async () => {
+    const packageDir = await writeHarnessPackage(
+      "grant-runtime-invariant",
+      runtimeInvariantFiles()
+    );
+    const events: HarnessGrantEvent[] = [];
+
+    const error = await captureError(async () =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        grantSource: await grantSourceFromFixture(
+          "runtime-invariant-registry.json"
+        ),
+        onGrantEvent(event) {
+          events.push(event);
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("grant_denied");
+    expect((error as HarnessLoaderError).message).toContain(
+      "runtimeInvariantTool:network.request"
+    );
+    expect(events[0]).toMatchObject({
+      payload: {
+        overGrant: {
+          runtimeInvariantToolIds: ["network.request"]
+        },
+        deniedCapabilities: ["runtimeInvariantTool:network.request"],
+        denialReason: "capability_outside_grant"
+      }
+    });
+  });
+
+  test("does not change in-grant specHash or frozen snapshot bytes", async () => {
+    const packageDir = join(repoRoot, "harnesses/default");
+    const defaultGrantSource = await grantSourceFromFixture("default-registry.json");
+    const broaderGrantSource = new RegistryGrantSource({
+      registryId: "specwright.test.capability-grants.broader",
+      grants: [
+        {
+          grantId: "grant.specwright.default.broader.0.1.0",
+          packageId: "specwright.default",
+          versionPins: ["0.1.0"],
+          allowedTools: ["eval.run", "fs.list", "fs.read", "model.generate"],
+          allowedRequireApproval: [],
+          allowedToolDefinitions: ["eval.run", "fs.list", "fs.read"],
+          allowedPolicyEffects: ["allow", "deny"],
+          allowedPolicyLayers: ["harness", "runtime_invariant"],
+          allowedRuntimeInvariantToolIds: [
+            "fs.write",
+            "git.branch",
+            "git.commit",
+            "git.push",
+            "network.request",
+            "network.write",
+            "shell.exec"
+          ],
+          issuer: {
+            registryId: "specwright.test.capability-grants.broader",
+            authorityId: "specwright.registry.operator"
+          }
+        }
+      ]
+    });
+
+    const first = await loadHarnessPackage({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: defaultGrantSource
+    });
+    const second = await loadHarnessPackage({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: broaderGrantSource
+    });
+
+    expect(first.specHash).toBe(second.specHash);
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    expect(Object.isFrozen(first)).toBe(true);
+  });
+
+  test("evaluateGrant and grant events are deterministic", () => {
+    const requested = {
+      tools: ["fs.read", "shell.exec", "fs.read"],
+      requireApproval: ["fs.read"],
+      toolDefinitions: ["shell.exec", "fs.read"],
+      policyEffects: ["deny", "allow"],
+      policyLayers: ["runtime_invariant"],
+      runtimeInvariantToolIds: ["network.request", "shell.exec"]
+    };
+    const grant: CapabilityGrant = {
+      grantId: "grant.specwright.determinism.0.1.0",
+      packageId: "specwright.determinism",
+      versionPins: ["0.1.0"],
+      allowedTools: ["fs.read"],
+      allowedRequireApproval: ["fs.read"],
+      allowedToolDefinitions: ["fs.read"],
+      allowedPolicyEffects: ["deny"],
+      allowedPolicyLayers: ["runtime_invariant"],
+      allowedRuntimeInvariantToolIds: ["shell.exec"],
+      issuer: {
+        registryId: "specwright.test.capability-grants.determinism",
+        authorityId: "specwright.registry.operator"
+      }
+    };
+
+    const first = evaluateGrant(requested, grant);
+    const second = evaluateGrant(requested, grant);
+    const firstEvent = buildGrantEvaluatedEvent(
+      "specwright.determinism",
+      "0.1.0",
+      first
+    );
+    const secondEvent = buildGrantEvaluatedEvent(
+      "specwright.determinism",
+      "0.1.0",
+      second
+    );
+
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+    expect(JSON.stringify(firstEvent)).toBe(JSON.stringify(secondEvent));
+    expect(first.deniedCapabilities).toEqual([
+      "tool:shell.exec",
+      "toolDefinition:shell.exec",
+      "policyEffect:allow",
+      "runtimeInvariantTool:network.request"
+    ]);
   });
 });
 
@@ -297,6 +609,77 @@ description: Minimal planning prompt
 Create source-bound plans only.
 `
   };
+}
+
+function packageFilesWithId(id: string) {
+  return {
+    ...validHarnessFiles(),
+    "harness.yaml": validHarnessFiles()["harness.yaml"].replace(
+      "id: specwright.default",
+      `id: ${id}`
+    )
+  };
+}
+
+function overGrantToolFiles() {
+  const files = packageFilesWithId("specwright.over-grant");
+
+  return {
+    ...files,
+    "harness.yaml": files["harness.yaml"]
+      .replace(
+        "    - fs.read\nartifactSchemas:",
+        "    - fs.read\n    - shell.exec\nartifactSchemas:"
+      )
+      .replace(
+        "tools:\n  allow:\n    - fs.read",
+        "tools:\n  allow:\n    - fs.read\n    - shell.exec"
+      ),
+    "tools/shell.exec.yaml": `
+id: shell.exec
+version: 0.1.0
+inputSchema:
+  type: object
+  required:
+    - command
+outputSchema:
+  type: object
+`
+  };
+}
+
+function runtimeInvariantFiles() {
+  const files = packageFilesWithId("specwright.runtime-invariant");
+
+  return {
+    ...files,
+    "harness.yaml": files["harness.yaml"].replace(
+      "tools:\n  allow:",
+      "policies:\n  - runtime_bound\ntools:\n  allow:"
+    ),
+    "policies/runtime_bound.yaml": `
+id: runtime_bound
+runtimeInvariants:
+  - id: deny.shell.exec
+    layer: runtime_invariant
+    effect: deny
+    match:
+      actionKind: tool_call
+      toolId: shell.exec
+  - id: deny.network.request
+    layer: runtime_invariant
+    effect: deny
+    match:
+      actionKind: tool_call
+      toolId: network.request
+`
+  };
+}
+
+async function grantSourceFromFixture(name: string) {
+  return loadCapabilityGrantRegistryFromFile(
+    join(repoRoot, "packages/harness-loader/test/fixtures/grants", name)
+  );
 }
 
 async function writeHarnessPackage(

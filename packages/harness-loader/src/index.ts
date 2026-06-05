@@ -38,6 +38,24 @@ import type {
   TrustStore,
   TrustVerdict
 } from "./trust";
+import {
+  buildGrantDeniedEvaluation,
+  buildGrantEvaluatedEvent,
+  DEFAULT_GRANT_SOURCE,
+  evaluateGrant,
+  extractRequestedSurface,
+  firstDeniedCapability,
+  grantAuthorizesVersion,
+  parseCapabilityGrant,
+  CapabilityGrantResolutionError
+} from "./capability-grant";
+import type {
+  CapabilityGrant,
+  GrantDenialReason,
+  GrantEvaluation,
+  GrantSource,
+  HarnessGrantEvent
+} from "./capability-grant";
 
 export {
   AttestationSchema,
@@ -54,6 +72,20 @@ export {
   loadTrustStoreFromFile,
   verifyPackageTrust
 } from "./trust";
+export {
+  CapabilityGrantIssuerSchema,
+  CapabilityGrantRegistrySchema,
+  CapabilityGrantResolutionError,
+  CapabilityGrantSchema,
+  DEFAULT_GRANT_SOURCE,
+  HarnessGrantEvaluatedEventSchema,
+  RegistryGrantSource,
+  buildGrantEvaluatedEvent,
+  evaluateGrant,
+  extractRequestedSurface,
+  loadCapabilityGrantRegistryFromFile,
+  parseCapabilityGrant
+} from "./capability-grant";
 export type {
   Attestation,
   HarnessTrustEvent,
@@ -65,6 +97,17 @@ export type {
   TrustStoreEntry,
   TrustVerdict
 } from "./trust";
+export type {
+  CapabilityGrant,
+  CapabilityGrantIssuer,
+  CapabilityGrantRegistry,
+  CapabilityGrantSummary,
+  GrantDenialReason,
+  GrantEvaluation,
+  GrantSource,
+  HarnessGrantEvent,
+  RequestedCapabilitySurface
+} from "./capability-grant";
 
 export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
@@ -78,10 +121,13 @@ export type LoadHarnessPackageOptions = {
   strict?: boolean;
   trustNow?: Date | string;
   onTrustEvent?(event: HarnessTrustEvent): void | Promise<void>;
+  grantSource?: GrantSource;
+  onGrantEvent?(event: HarnessGrantEvent): void | Promise<void>;
 };
 
 export type HarnessLoadRecord = {
   snapshot: HarnessSnapshot;
+  grant: GrantEvaluation;
   trust?: TrustVerdict;
 };
 
@@ -96,6 +142,7 @@ export type HarnessLoaderErrorCode =
   | "missing_harness_manifest"
   | "missing_reference"
   | "parse_error"
+  | "grant_denied"
   | "trust_rejected"
   | "unsupported_schema_version";
 
@@ -328,8 +375,14 @@ export async function loadHarnessPackageWithRecord(
     prompts
   });
 
-  const specHash = computeSpecHash(loadedFiles);
   const trust = await verifyTrustIfConfigured({ input, loadedFiles, manifest });
+  const grant = await enforceCapabilityGrant({
+    input,
+    manifest,
+    policies,
+    tools
+  });
+  const specHash = computeSpecHash(loadedFiles);
   const snapshot = HarnessSnapshotSchema.parse({
     id: manifest.id,
     version: manifest.version,
@@ -350,6 +403,7 @@ export async function loadHarnessPackageWithRecord(
 
   return {
     snapshot: deepFreeze(snapshot),
+    grant,
     ...(trust === undefined ? {} : { trust })
   };
 }
@@ -418,6 +472,149 @@ async function emitTrustEvent(
   event: HarnessTrustEvent
 ) {
   await options.onTrustEvent?.(event);
+}
+
+async function enforceCapabilityGrant(context: {
+  input: string | LoadHarnessPackageOptions;
+  manifest: HarnessManifest;
+  policies: readonly PolicyBundle[];
+  tools: readonly ToolDefinition[];
+}): Promise<GrantEvaluation> {
+  const requested = extractRequestedSurface({
+    manifest: context.manifest,
+    policies: context.policies,
+    tools: context.tools
+  });
+  const grantSource =
+    typeof context.input === "string"
+      ? DEFAULT_GRANT_SOURCE
+      : context.input.grantSource ?? DEFAULT_GRANT_SOURCE;
+  let resolvedGrant: CapabilityGrant | undefined;
+
+  try {
+    resolvedGrant = await grantSource.resolveGrant(
+      context.manifest.id,
+      context.manifest.version
+    );
+  } catch (error) {
+    const reason =
+      error instanceof CapabilityGrantResolutionError
+        ? error.reason
+        : "grant_resolution_error";
+    const evaluation = buildGrantDeniedEvaluation({
+      requested,
+      reason,
+      deniedCapabilities: [`grant:${reason}`]
+    });
+
+    await emitGrantEvent(context.input, context.manifest, evaluation);
+    throw grantDeniedError(context.manifest, evaluation, error, reason);
+  }
+
+  if (resolvedGrant === undefined) {
+    const evaluation = buildGrantDeniedEvaluation({
+      requested,
+      reason: "missing_grant",
+      deniedCapabilities: [`grant:${context.manifest.id}@${context.manifest.version}`]
+    });
+
+    await emitGrantEvent(context.input, context.manifest, evaluation);
+    throw grantDeniedError(context.manifest, evaluation, undefined, "missing_grant");
+  }
+
+  let grant: CapabilityGrant;
+
+  try {
+    grant = parseCapabilityGrant(resolvedGrant);
+  } catch (error) {
+    const reason =
+      error instanceof CapabilityGrantResolutionError
+        ? error.reason
+        : "malformed_grant";
+    const evaluation = buildGrantDeniedEvaluation({
+      requested,
+      reason,
+      deniedCapabilities: [`grant:${reason}`]
+    });
+
+    await emitGrantEvent(context.input, context.manifest, evaluation);
+    throw grantDeniedError(context.manifest, evaluation, error, reason);
+  }
+
+  if (
+    grant.packageId !== context.manifest.id ||
+    !grantAuthorizesVersion(grant, context.manifest.version)
+  ) {
+    const evaluation = buildGrantDeniedEvaluation({
+      requested,
+      grant,
+      reason: "grant_not_applicable",
+      deniedCapabilities: [
+        `grant:${grant.grantId}:${context.manifest.id}@${context.manifest.version}`
+      ]
+    });
+
+    await emitGrantEvent(context.input, context.manifest, evaluation);
+    throw grantDeniedError(
+      context.manifest,
+      evaluation,
+      undefined,
+      "grant_not_applicable"
+    );
+  }
+
+  const evaluation = evaluateGrant(requested, grant);
+
+  await emitGrantEvent(context.input, context.manifest, evaluation);
+
+  if (!evaluation.granted) {
+    throw grantDeniedError(
+      context.manifest,
+      evaluation,
+      undefined,
+      "capability_outside_grant"
+    );
+  }
+
+  return evaluation;
+}
+
+async function emitGrantEvent(
+  input: string | LoadHarnessPackageOptions,
+  manifest: HarnessManifest,
+  evaluation: GrantEvaluation
+) {
+  if (typeof input === "string") {
+    return;
+  }
+
+  await input.onGrantEvent?.(
+    buildGrantEvaluatedEvent(manifest.id, manifest.version, evaluation)
+  );
+}
+
+function grantDeniedError(
+  manifest: HarnessManifest,
+  evaluation: GrantEvaluation,
+  cause: unknown,
+  reason: GrantDenialReason
+) {
+  const offendingCapability = firstDeniedCapability(evaluation);
+
+  return new HarnessLoaderError(
+    "grant_denied",
+    `Capability grant denied for ${manifest.id}@${manifest.version}: ${offendingCapability}`,
+    cause,
+    {
+      reason,
+      details: {
+        offendingCapability,
+        deniedCapabilities: evaluation.deniedCapabilities,
+        overGrant: evaluation.overGrant,
+        ...(evaluation.grant === undefined ? {} : { grant: evaluation.grant })
+      }
+    }
+  );
 }
 
 function mergeTrustProvenance(

@@ -1,0 +1,20 @@
+{
+  "registryId": "specwright.test.capability-grants.over-grant",
+  "grants": [
+    {
+      "grantId": "grant.specwright.over-grant.0.1.0",
+      "packageId": "specwright.over-grant",
+      "versionPins": ["0.1.0"],
+      "allowedTools": ["fs.read"],
+      "allowedRequireApproval": [],
+      "allowedToolDefinitions": ["fs.read"],
+      "allowedPolicyEffects": [],
+      "allowedPolicyLayers": [],
+      "allowedRuntimeInvariantToolIds": [],
+      "issuer": {
+        "registryId": "specwright.test.capability-grants.over-grant",
+        "authorityId": "specwright.registry.operator"
+      }
+    }
+  ]
+}
