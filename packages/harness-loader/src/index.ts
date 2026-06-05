@@ -26,6 +26,45 @@ import {
   type RoleDefinition,
   type ToolDefinition
 } from "@specwright/schemas";
+import {
+  buildTrustRejectedEvent,
+  buildTrustVerifiedEvent,
+  TrustRejectedError,
+  verifyPackageTrust
+} from "./trust";
+import type {
+  HarnessTrustEvent,
+  SignatureEnvelope,
+  TrustStore,
+  TrustVerdict
+} from "./trust";
+
+export {
+  AttestationSchema,
+  HarnessTrustEventSchema,
+  HarnessTrustRejectedEventSchema,
+  HarnessTrustVerifiedEventSchema,
+  InMemoryTrustStore,
+  SignatureEnvelopeSchema,
+  TrustProvenanceSchema,
+  TrustRejectReasonSchema,
+  TrustStoreEntrySchema,
+  TrustStoreSchema,
+  canonicalizeAttestation,
+  loadTrustStoreFromFile,
+  verifyPackageTrust
+} from "./trust";
+export type {
+  Attestation,
+  HarnessTrustEvent,
+  SignatureEnvelope,
+  TrustProvenance,
+  TrustRejectReason,
+  TrustStore,
+  TrustStoreData,
+  TrustStoreEntry,
+  TrustVerdict
+} from "./trust";
 
 export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
@@ -34,6 +73,16 @@ export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
 export type LoadHarnessPackageOptions = {
   packageDir: string;
   loadedAt?: Date | string;
+  signature?: SignatureEnvelope;
+  trustStore?: TrustStore;
+  strict?: boolean;
+  trustNow?: Date | string;
+  onTrustEvent?(event: HarnessTrustEvent): void | Promise<void>;
+};
+
+export type HarnessLoadRecord = {
+  snapshot: HarnessSnapshot;
+  trust?: TrustVerdict;
 };
 
 export type HarnessLoaderErrorCode =
@@ -47,15 +96,28 @@ export type HarnessLoaderErrorCode =
   | "missing_harness_manifest"
   | "missing_reference"
   | "parse_error"
+  | "trust_rejected"
   | "unsupported_schema_version";
 
 export class HarnessLoaderError extends Error {
   readonly code: HarnessLoaderErrorCode;
+  readonly reason: string | undefined;
+  readonly details: Record<string, unknown> | undefined;
 
-  constructor(code: HarnessLoaderErrorCode, message: string, cause?: unknown) {
+  constructor(
+    code: HarnessLoaderErrorCode,
+    message: string,
+    cause?: unknown,
+    context: {
+      reason?: string;
+      details?: Record<string, unknown>;
+    } = {}
+  ) {
     super(message);
     this.name = "HarnessLoaderError";
     this.code = code;
+    this.reason = context.reason;
+    this.details = context.details;
 
     if (cause !== undefined) {
       Object.assign(this, { cause });
@@ -63,7 +125,7 @@ export class HarnessLoaderError extends Error {
   }
 }
 
-type SourceFile = {
+export type SourceFile = {
   absolutePath: string;
   relativePath: string;
   raw: string;
@@ -94,6 +156,14 @@ type GraphEdge = {
 export async function loadHarnessPackage(
   input: string | LoadHarnessPackageOptions
 ): Promise<HarnessSnapshot> {
+  const record = await loadHarnessPackageWithRecord(input);
+
+  return record.snapshot;
+}
+
+export async function loadHarnessPackageWithRecord(
+  input: string | LoadHarnessPackageOptions
+): Promise<HarnessLoadRecord> {
   const packageDir = resolve(
     typeof input === "string" ? input : input.packageDir
   );
@@ -259,6 +329,7 @@ export async function loadHarnessPackage(
   });
 
   const specHash = computeSpecHash(loadedFiles);
+  const trust = await verifyTrustIfConfigured({ input, loadedFiles, manifest });
   const snapshot = HarnessSnapshotSchema.parse({
     id: manifest.id,
     version: manifest.version,
@@ -274,10 +345,100 @@ export async function loadHarnessPackage(
     evals,
     roles,
     prompts,
-    metadata: manifest.metadata
+    metadata: mergeTrustProvenance(manifest.metadata, trust)
   });
 
-  return deepFreeze(snapshot);
+  return {
+    snapshot: deepFreeze(snapshot),
+    ...(trust === undefined ? {} : { trust })
+  };
+}
+
+async function verifyTrustIfConfigured(context: {
+  input: string | LoadHarnessPackageOptions;
+  loadedFiles: readonly SourceFile[];
+  manifest: HarnessManifest;
+}) {
+  if (typeof context.input === "string") {
+    return undefined;
+  }
+
+  const trustConfigured =
+    context.input.signature !== undefined ||
+    context.input.trustStore !== undefined ||
+    context.input.strict === true;
+
+  if (!trustConfigured) {
+    return undefined;
+  }
+
+  try {
+    const trust = verifyPackageTrust({
+      loadedFiles: context.loadedFiles,
+      manifest: context.manifest,
+      strict: context.input.strict ?? true,
+      computeSpecHash,
+      ...(context.input.signature === undefined
+        ? {}
+        : { envelope: context.input.signature }),
+      ...(context.input.trustStore === undefined
+        ? {}
+        : { trustStore: context.input.trustStore }),
+      ...(context.input.trustNow === undefined
+        ? {}
+        : { now: context.input.trustNow })
+    });
+
+    if (trust !== undefined) {
+      await emitTrustEvent(context.input, buildTrustVerifiedEvent(trust));
+    }
+
+    return trust;
+  } catch (error) {
+    if (!(error instanceof TrustRejectedError)) {
+      throw error;
+    }
+
+    await emitTrustEvent(context.input, buildTrustRejectedEvent(error));
+
+    throw new HarnessLoaderError(
+      "trust_rejected",
+      `Harness package trust rejected: ${error.reason}`,
+      error,
+      {
+        reason: error.reason,
+        ...(error.details === undefined ? {} : { details: error.details })
+      }
+    );
+  }
+}
+
+async function emitTrustEvent(
+  options: LoadHarnessPackageOptions,
+  event: HarnessTrustEvent
+) {
+  await options.onTrustEvent?.(event);
+}
+
+function mergeTrustProvenance(
+  metadata: unknown,
+  trust: TrustVerdict | undefined
+) {
+  if (trust === undefined) {
+    return metadata;
+  }
+
+  const merged = isRecord(metadata) ? { ...metadata } : {};
+  const provenance = isRecord(merged.provenance)
+    ? { ...merged.provenance }
+    : {};
+
+  merged.provenance = {
+    ...provenance,
+    trust: trust.provenance
+  };
+
+  return merged;
 }
 
 function parseManifest(file: SourceFile): HarnessManifest {
@@ -1116,7 +1277,9 @@ function normalizeLoadedAt(value: Date | string | undefined) {
   return date.toISOString();
 }
 
-function computeSpecHash(files: readonly SourceFile[]) {
+export function computeSpecHash(
+  files: readonly Pick<SourceFile, "relativePath" | "raw">[]
+) {
   const payload = [...files]
     .sort((left, right) => left.relativePath.localeCompare(right.relativePath))
     .map(

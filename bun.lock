@@ -7,10 +7,36 @@
         "typescript": "^5.6.3",
       },
     },
+    "packages/adapters-cli": {
+      "name": "@specwright/adapters-cli",
+      "version": "0.0.0",
+      "bin": {
+        "specwright": "./dist/bin.js",
+      },
+      "dependencies": {
+        "@specwright/runtime": "workspace:*",
+      },
+    },
+    "packages/artifact-store": {
+      "name": "@specwright/artifact-store",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/run-store": "workspace:*",
+        "@specwright/schemas": "workspace:*",
+      },
+    },
     "packages/eval-runner": {
       "name": "@specwright/eval-runner",
       "version": "0.0.0",
       "dependencies": {
+        "@specwright/schemas": "workspace:*",
+      },
+    },
+    "packages/evidence-store": {
+      "name": "@specwright/evidence-store",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/run-store": "workspace:*",
         "@specwright/schemas": "workspace:*",
       },
     },
@@ -26,6 +52,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@specwright/schemas": "workspace:*",
+        "zod": "^3.22.4",
       },
     },
     "packages/policy-engine": {
@@ -33,6 +60,17 @@
       "version": "0.0.0",
       "dependencies": {
         "@specwright/schemas": "workspace:*",
+      },
+    },
+    "packages/run-reports": {
+      "name": "@specwright/run-reports",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/artifact-store": "workspace:*",
+        "@specwright/evidence-store": "workspace:*",
+        "@specwright/run-store": "workspace:*",
+        "@specwright/schemas": "workspace:*",
+        "@specwright/trace-recorder": "workspace:*",
       },
     },
     "packages/run-store": {
@@ -46,12 +84,16 @@
       "name": "@specwright/runtime",
       "version": "0.0.0",
       "dependencies": {
+        "@specwright/artifact-store": "workspace:*",
         "@specwright/eval-runner": "workspace:*",
+        "@specwright/evidence-store": "workspace:*",
         "@specwright/gate-engine": "workspace:*",
         "@specwright/harness-loader": "workspace:*",
+        "@specwright/run-reports": "workspace:*",
         "@specwright/run-store": "workspace:*",
         "@specwright/schemas": "workspace:*",
         "@specwright/tool-broker": "workspace:*",
+        "@specwright/trace-recorder": "workspace:*",
       },
     },
     "packages/schemas": {
@@ -70,15 +112,31 @@
         "zod": "^3.22.4",
       },
     },
+    "packages/trace-recorder": {
+      "name": "@specwright/trace-recorder",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/run-store": "workspace:*",
+        "@specwright/schemas": "workspace:*",
+      },
+    },
   },
   "packages": {
+    "@specwright/adapters-cli": ["@specwright/adapters-cli@workspace:packages/adapters-cli"],
+
+    "@specwright/artifact-store": ["@specwright/artifact-store@workspace:packages/artifact-store"],
+
     "@specwright/eval-runner": ["@specwright/eval-runner@workspace:packages/eval-runner"],
+
+    "@specwright/evidence-store": ["@specwright/evidence-store@workspace:packages/evidence-store"],
 
     "@specwright/gate-engine": ["@specwright/gate-engine@workspace:packages/gate-engine"],
 
     "@specwright/harness-loader": ["@specwright/harness-loader@workspace:packages/harness-loader"],
 
     "@specwright/policy-engine": ["@specwright/policy-engine@workspace:packages/policy-engine"],
+
+    "@specwright/run-reports": ["@specwright/run-reports@workspace:packages/run-reports"],
 
     "@specwright/run-store": ["@specwright/run-store@workspace:packages/run-store"],
 
@@ -87,6 +145,8 @@
     "@specwright/schemas": ["@specwright/schemas@workspace:packages/schemas"],
 
     "@specwright/tool-broker": ["@specwright/tool-broker@workspace:packages/tool-broker"],
+
+    "@specwright/trace-recorder": ["@specwright/trace-recorder@workspace:packages/trace-recorder"],
 
     "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
