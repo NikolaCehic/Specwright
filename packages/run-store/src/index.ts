@@ -13,13 +13,17 @@ import {
   ApprovalRequestSchema,
   ArtifactRefSchema,
   HumanQuestionSchema,
+  RedactionClassSchema,
   RunInputSchema,
   RunStateSchema,
   RuntimeEventSchema,
+  redactionClassAtLeast,
   runtimeEventContractForType,
   type ApprovalRequest,
   type ArtifactRef,
   type HumanQuestion,
+  type RedactionClass,
+  type RedactionPolicy,
   type RunInput,
   type RunState,
   type RuntimeEvent,
@@ -46,8 +50,10 @@ export type RunStoreErrorCode =
   | "invalid_run_id"
   | "invalid_sequence"
   | "missing_events"
+  | "raw_read_denied"
   | "run_exists"
   | "run_not_started"
+  | "unclassified_field"
   | "unknown_event_contract"
   | "unsupported_event_version";
 
@@ -140,9 +146,84 @@ export type RebuildFromCheckpointResult = {
   reducedEventCount: number;
 };
 
+export type RedactedHashReference = {
+  redacted: true;
+  redactionClass: RedactionClass;
+  hash: string;
+};
+
+export type RedactionEgressMode = "redacted" | "raw";
+
+export type RedactionGrant =
+  | "audit_raw"
+  | {
+      class: "audit_raw";
+      actor?: string;
+      reason?: string;
+    };
+
+/*
+ * Local consuming profile until packages/schemas owns a full RedactionProfile
+ * contract. The classes themselves are parsed with RedactionClassSchema from
+ * @specwright/schemas; this type is deliberately only the run-store read
+ * consumer shape authorized by Scope 02 Packet 03.
+ */
+export type RedactionProfile = {
+  id: string;
+  fieldClasses: Record<string, RedactionClass>;
+  defaultClass?: RedactionClass;
+};
+
+export type RedactForEgressOptions = {
+  profile?: RedactionProfile;
+  grant?: RedactionGrant;
+  mode?: RedactionEgressMode;
+};
+
+export type ReadRunStateOptions = {
+  rootDir?: string | undefined;
+  runId: string;
+  profile?: RedactionProfile;
+  grant?: RedactionGrant;
+  mode?: RedactionEgressMode;
+};
+
 export const EVENT_INTEGRITY_ALGO = "sha256";
 export const EVENT_INTEGRITY_HASH_PREFIX = `${EVENT_INTEGRITY_ALGO}:`;
 export const EVENT_INTEGRITY_GENESIS_SEED = `${EVENT_INTEGRITY_HASH_PREFIX}${"0".repeat(64)}`;
+
+export const DEFAULT_REDACTION_PROFILE = {
+  id: "default-redacted-egress",
+  fieldClasses: {
+    "artifact.fileRef.uri": "restricted",
+    "artifact.uri": "restricted",
+    "artifacts.*.fileRef.uri": "restricted",
+    "artifacts.*.uri": "restricted",
+    "content": "restricted",
+    "evidence.sourceRefs.*.locator": "restricted",
+    "evidence.sourceRefs.*.path": "restricted",
+    "evidence.sourceRefs.*.uri": "restricted",
+    "fileRef.uri": "restricted",
+    "metadata.args": "restricted",
+    "metadata.output": "restricted",
+    "metadata.result": "restricted",
+    "payload.evidence.sourceRefs.*.locator": "restricted",
+    "payload.evidence.sourceRefs.*.path": "restricted",
+    "payload.evidence.sourceRefs.*.uri": "restricted",
+    "payload.request.args": "restricted",
+    "payload.result.output": "restricted",
+    "payload.result.result": "restricted",
+    "request.args": "restricted",
+    "result.output": "restricted",
+    "result.result": "restricted",
+    "sourceRefs.*.locator": "restricted",
+    "sourceRefs.*.path": "restricted",
+    "sourceRefs.*.uri": "restricted",
+    "spans.*.metadata.args": "restricted",
+    "spans.*.metadata.output": "restricted",
+    "spans.*.metadata.result": "restricted"
+  }
+} satisfies RedactionProfile;
 
 export type RunIntegrityDefectCode =
   | RunStoreErrorCode
@@ -409,6 +490,47 @@ export async function materializeRunState(options: {
 }
 
 export const replayRunState = materializeRunState;
+
+export async function readRunState(
+  options: ReadRunStateOptions
+): Promise<unknown> {
+  const state = await materializeRunState({
+    rootDir: options.rootDir,
+    runId: options.runId
+  });
+
+  return redactForEgress(state, {
+    ...(options.profile === undefined ? {} : { profile: options.profile }),
+    ...(options.grant === undefined ? {} : { grant: options.grant }),
+    ...(options.mode === undefined ? {} : { mode: options.mode })
+  });
+}
+
+export function redactForEgress(
+  value: unknown,
+  options: RedactForEgressOptions = {}
+): unknown {
+  const profile = normalizeRedactionProfile(
+    options.profile ?? DEFAULT_REDACTION_PROFILE
+  );
+  const mode = options.mode ?? "redacted";
+  const rawGranted = hasAuditRawGrant(options.grant);
+
+  if (mode === "raw" && !rawGranted) {
+    throw new RunStoreError(
+      "raw_read_denied",
+      "Raw run-store egress requires an audit_raw grant"
+    );
+  }
+
+  return redactValue(value, {
+    profile,
+    mode,
+    rawGranted,
+    path: [],
+    ancestors: []
+  });
+}
 
 export async function rebuildFromCheckpoint(options: {
   rootDir?: string | undefined;
@@ -1122,6 +1244,380 @@ function integrityBrokenError(runId: string, verdict: RunIntegrityVerdict) {
     `Run ${runId} event ledger integrity is broken at sequence ${verdict.brokenAtSequence}: ${verdict.detail}`,
     verdict
   );
+}
+
+type NormalizedRedactionProfile = {
+  id: string;
+  fieldClasses: Record<string, RedactionClass>;
+  defaultClass?: RedactionClass;
+};
+
+type RedactionWalkContext = {
+  profile: NormalizedRedactionProfile;
+  mode: RedactionEgressMode;
+  rawGranted: boolean;
+  path: readonly string[];
+  ancestors: readonly Record<string, unknown>[];
+};
+
+const SECRET_BEARING_FIELD_NAMES = new Set([
+  "args",
+  "content",
+  "output",
+  "secret",
+  "sourceText",
+  "text"
+]);
+
+function normalizeRedactionProfile(
+  profile: RedactionProfile
+): NormalizedRedactionProfile {
+  if (typeof profile.id !== "string" || profile.id.length === 0) {
+    throw new RunStoreError(
+      "unclassified_field",
+      "Redaction profile id must be a non-empty string"
+    );
+  }
+
+  const fieldClasses: Record<string, RedactionClass> = {};
+
+  for (const key of Object.keys(profile.fieldClasses).sort()) {
+    const value = profile.fieldClasses[key];
+
+    if (value === undefined) {
+      continue;
+    }
+
+    fieldClasses[key] = RedactionClassSchema.parse(value);
+  }
+
+  const defaultClass =
+    profile.defaultClass === undefined
+      ? undefined
+      : RedactionClassSchema.parse(profile.defaultClass);
+
+  return {
+    id: profile.id,
+    fieldClasses,
+    ...(defaultClass === undefined ? {} : { defaultClass })
+  };
+}
+
+function hasAuditRawGrant(grant: RedactionGrant | undefined) {
+  return grant === "audit_raw" || grant?.class === "audit_raw";
+}
+
+function redactValue(value: unknown, context: RedactionWalkContext): unknown {
+  const classification = classifyPath(value, context);
+
+  if (
+    classification !== undefined &&
+    redactionClassAtLeast(classification, "restricted")
+  ) {
+    if (context.mode === "raw" && context.rawGranted) {
+      return cloneJsonValue(value);
+    }
+
+    return redactedHashReference(value, classification, context);
+  }
+
+  if (Array.isArray(value)) {
+    return value.map((item, index) =>
+      redactValue(item, {
+        ...context,
+        path: [...context.path, String(index)]
+      })
+    );
+  }
+
+  if (!isRecord(value)) {
+    return cloneJsonValue(value);
+  }
+
+  const next: Record<string, unknown> = {};
+  const childContext = {
+    ...context,
+    ancestors: [value, ...context.ancestors]
+  };
+
+  for (const key of Object.keys(value).sort()) {
+    next[key] = redactValue(value[key], {
+      ...childContext,
+      path: [...context.path, key]
+    });
+  }
+
+  return next;
+}
+
+function classifyPath(
+  value: unknown,
+  context: RedactionWalkContext
+): RedactionClass | undefined {
+  const key = context.path.at(-1);
+  const profileClass = classFromProfile(context.profile, context.path);
+
+  if (profileClass !== undefined) {
+    return profileClass;
+  }
+
+  const policyClass = classFromNearestPolicy(context);
+
+  if (policyClass !== undefined) {
+    return policyClass;
+  }
+
+  if (
+    key !== undefined &&
+    isSecretBearingKey(key) &&
+    value !== undefined &&
+    value !== null
+  ) {
+    const defaultClass = context.profile.defaultClass;
+
+    if (defaultClass !== undefined) {
+      return defaultClass;
+    }
+
+    throw new RunStoreError(
+      "unclassified_field",
+      `Secret-bearing field ${pathLabel(context.path)} has no redaction classification`
+    );
+  }
+
+  return undefined;
+}
+
+function classFromProfile(
+  profile: NormalizedRedactionProfile,
+  path: readonly string[]
+) {
+  const candidates = pathCandidates(path);
+
+  for (const candidate of candidates) {
+    const classified = profile.fieldClasses[candidate];
+
+    if (classified !== undefined) {
+      return classified;
+    }
+  }
+
+  return undefined;
+}
+
+function classFromNearestPolicy(
+  context: RedactionWalkContext
+): RedactionClass | undefined {
+  const key = context.path.at(-1);
+
+  if (key === undefined) {
+    return undefined;
+  }
+
+  for (const ancestor of context.ancestors) {
+    const sourceRefClass = RedactionClassSchema.safeParse(
+      ancestor.redactionClass
+    );
+
+    if (
+      sourceRefClass.success &&
+      ["content", "locator", "path", "text", "uri", "value"].includes(key)
+    ) {
+      return sourceRefClass.data;
+    }
+
+    const policy = parseRedactionPolicy(ancestor.redactionPolicy);
+
+    if (policy === undefined) {
+      continue;
+    }
+
+    if (typeof policy === "string") {
+      return shouldPolicyApplyToKey(key) ? policy : undefined;
+    }
+
+    const direct = policy[key];
+
+    if (direct !== undefined) {
+      return direct;
+    }
+  }
+
+  return undefined;
+}
+
+function parseRedactionPolicy(value: unknown): RedactionPolicy | undefined {
+  const classValue = RedactionClassSchema.safeParse(value);
+
+  if (classValue.success) {
+    return classValue.data;
+  }
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const parsed: Record<string, RedactionClass> = {};
+
+  for (const key of Object.keys(value).sort()) {
+    const classForKey = RedactionClassSchema.safeParse(value[key]);
+
+    if (!classForKey.success) {
+      return undefined;
+    }
+
+    parsed[key] = classForKey.data;
+  }
+
+  return parsed;
+}
+
+function shouldPolicyApplyToKey(key: string) {
+  return SECRET_BEARING_FIELD_NAMES.has(key) || key === "claim";
+}
+
+function isSecretBearingKey(key: string) {
+  return SECRET_BEARING_FIELD_NAMES.has(key) || /secret/i.test(key);
+}
+
+function pathCandidates(path: readonly string[]) {
+  const normalized = path.map((segment) =>
+    /^\d+$/.test(segment) ? "*" : segment
+  );
+  const candidates: string[] = [];
+
+  for (let index = 0; index < normalized.length; index += 1) {
+    candidates.push(normalized.slice(index).join("."));
+  }
+
+  return candidates;
+}
+
+function redactedHashReference(
+  value: unknown,
+  redactionClass: RedactionClass,
+  context: RedactionWalkContext
+): RedactedHashReference {
+  return {
+    redacted: true,
+    redactionClass,
+    hash: resolveHashReference(context) ?? hashRestrictedValue(value)
+  };
+}
+
+function resolveHashReference(context: RedactionWalkContext) {
+  const hashKeys = hashKeysForPath(context.path);
+
+  for (const ancestor of context.ancestors) {
+    for (const hashKey of hashKeys) {
+      const direct = stringFromRecord(ancestor, hashKey);
+
+      if (direct !== undefined) {
+        return direct;
+      }
+
+      const provenance = recordValue(ancestor.provenance);
+      const provenanceHash = stringFromRecord(provenance, hashKey);
+
+      if (provenanceHash !== undefined) {
+        return provenanceHash;
+      }
+
+      const fileRef = recordValue(ancestor.fileRef);
+      const fileRefHash = stringFromRecord(fileRef, hashKey);
+
+      if (fileRefHash !== undefined) {
+        return fileRefHash;
+      }
+    }
+
+    const deepHash = findHashReference(ancestor, hashKeys);
+
+    if (deepHash !== undefined) {
+      return deepHash;
+    }
+  }
+
+  return undefined;
+}
+
+function hashKeysForPath(path: readonly string[]) {
+  const key = path.at(-1);
+
+  if (key === "args") {
+    return ["argsHash"];
+  }
+
+  if (key === "output" || key === "result") {
+    return ["resultHash", "contentHash"];
+  }
+
+  return ["contentHash"];
+}
+
+function findHashReference(
+  value: unknown,
+  hashKeys: readonly string[]
+): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found: string | undefined = findHashReference(item, hashKeys);
+
+      if (found !== undefined) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  for (const hashKey of hashKeys) {
+    const direct = stringFromRecord(value, hashKey);
+
+    if (direct !== undefined) {
+      return direct;
+    }
+  }
+
+  for (const key of Object.keys(value).sort()) {
+    const found: string | undefined = findHashReference(value[key], hashKeys);
+
+    if (found !== undefined) {
+      return found;
+    }
+  }
+
+  return undefined;
+}
+
+function hashRestrictedValue(value: unknown) {
+  const digest = createHash("sha256")
+    .update(canonicalJsonStringify(value))
+    .digest("hex");
+
+  return `sha256:${digest}`;
+}
+
+function cloneJsonValue(value: unknown) {
+  return normalizeJsonValue(value);
+}
+
+function recordValue(value: unknown) {
+  return isRecord(value) ? value : {};
+}
+
+function stringFromRecord(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function pathLabel(path: readonly string[]) {
+  return path.length === 0 ? "<root>" : path.join(".");
 }
 
 function parseRuntimeEvent(value: unknown, index: number) {
