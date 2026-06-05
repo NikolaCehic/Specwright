@@ -33,6 +33,9 @@ export const STATE_FILE = "state.json";
 export const TRACE_FILE = "trace.json";
 export const DECISIONS_FILE = "decisions.jsonl";
 export const SUMMARY_FILE = "summary.md";
+export const CHECKPOINT_FILE = "state.checkpoint.json";
+export const RUN_STATE_CHECKPOINT_VERSION = 1;
+export const CHECKPOINT_INTERVAL = 128;
 
 export type RunStoreErrorCode =
   | "corrupt_event"
@@ -73,6 +76,7 @@ export type RunStorePaths = {
   artifactsDir: string;
   evidenceDir: string;
   cacheDir: string;
+  checkpointPath: string;
   evalsDir: string;
   summaryPath: string;
 };
@@ -119,6 +123,21 @@ export type CreateRunResult = {
 export type AppendEventResult = {
   event: RuntimeEvent;
   state: RunState;
+};
+
+export type RunStateCheckpoint = {
+  checkpointVersion: number;
+  runId: string;
+  coveredSequence: number;
+  coveredLastEventId: string;
+  state: RunState;
+  coveredHeadHash?: string;
+};
+
+export type RebuildFromCheckpointResult = {
+  state: RunState;
+  usedCheckpoint: boolean;
+  reducedEventCount: number;
 };
 
 export const EVENT_INTEGRITY_ALGO = "sha256";
@@ -168,6 +187,7 @@ export function getRunStorePaths(rootDir: string | undefined, runId: string) {
     artifactsDir: join(runDir, "artifacts"),
     evidenceDir: join(runDir, "evidence"),
     cacheDir: join(runDir, "cache"),
+    checkpointPath: join(runDir, "cache", CHECKPOINT_FILE),
     evalsDir: join(runDir, "evals"),
     summaryPath: join(runDir, SUMMARY_FILE)
   } satisfies RunStorePaths;
@@ -268,10 +288,17 @@ export async function appendEvent<TPayload>(
       ? withIntegrity(builtEvent, existingIntegrity.headHash)
       : builtEvent;
   const events = [...existingEvents, event];
-  const state = projectRunState(events);
+  const updatedIntegrity = verifyParsedRunIntegrity(events);
+  const { state } = await rebuildStateFromCheckpoint({
+    paths,
+    runId,
+    events,
+    integrity: updatedIntegrity
+  });
 
   await appendJsonLine(paths.eventsPath, event);
   await writeProjection(paths, state);
+  await refreshCheckpointAfterAppend(paths, events, updatedIntegrity, state);
 
   return {
     event,
@@ -371,6 +398,24 @@ export async function materializeRunState(options: {
 }): Promise<RunState> {
   const runId = assertSafeRunId(options.runId);
   const paths = getRunStorePaths(options.rootDir, runId);
+  const rebuilt = await rebuildFromCheckpoint({
+    rootDir: options.rootDir,
+    runId
+  });
+
+  await writeProjection(paths, rebuilt.state);
+
+  return rebuilt.state;
+}
+
+export const replayRunState = materializeRunState;
+
+export async function rebuildFromCheckpoint(options: {
+  rootDir?: string | undefined;
+  runId: string;
+}): Promise<RebuildFromCheckpointResult> {
+  const runId = assertSafeRunId(options.runId);
+  const paths = getRunStorePaths(options.rootDir, runId);
   const integrity = await verifyRunIntegrity({
     rootDir: options.rootDir,
     runId
@@ -380,19 +425,57 @@ export async function materializeRunState(options: {
     throw integrityBrokenError(runId, integrity);
   }
 
-  const state = projectRunState(
-    await readEvents({
-      rootDir: options.rootDir,
-      runId
-    })
-  );
+  const events = await readEvents({
+    rootDir: options.rootDir,
+    runId
+  });
 
-  await writeProjection(paths, state);
-
-  return state;
+  return rebuildStateFromCheckpoint({
+    paths,
+    runId,
+    events,
+    integrity
+  });
 }
 
-export const replayRunState = materializeRunState;
+export async function writeCheckpoint(
+  paths: RunStorePaths,
+  checkpoint: RunStateCheckpoint
+) {
+  const parsed = parseCheckpointRecord(checkpoint);
+
+  if (parsed === undefined) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Run state checkpoint does not match checkpoint requirements"
+    );
+  }
+
+  await mkdir(paths.cacheDir, { recursive: true });
+  await writeJsonAtomic(paths.checkpointPath, parsed);
+}
+
+export async function readCheckpoint(
+  paths: RunStorePaths
+): Promise<RunStateCheckpoint | undefined> {
+  let raw: string;
+
+  try {
+    raw = await readFile(paths.checkpointPath, "utf8");
+  } catch {
+    return undefined;
+  }
+
+  let parsedJson: unknown;
+
+  try {
+    parsedJson = JSON.parse(raw) as unknown;
+  } catch {
+    return undefined;
+  }
+
+  return parseCheckpointRecord(parsedJson);
+}
 
 export function projectRunState(events: readonly RuntimeEvent[]): RunState {
   if (events.length === 0) {
@@ -450,6 +533,224 @@ export function projectRunState(events: readonly RuntimeEvent[]): RunState {
   }
 
   return parsed.data;
+}
+
+async function rebuildStateFromCheckpoint(input: {
+  paths: RunStorePaths;
+  runId: string;
+  events: readonly RuntimeEvent[];
+  integrity: RunIntegrityVerdict;
+}): Promise<RebuildFromCheckpointResult> {
+  if (input.integrity.status === "broken") {
+    throw integrityBrokenError(input.runId, input.integrity);
+  }
+
+  const checkpoint = await readCheckpoint(input.paths);
+  const checkpointState = rebuildFromTrustedCheckpoint({
+    runId: input.runId,
+    events: input.events,
+    integrity: input.integrity,
+    checkpoint
+  });
+
+  if (checkpointState !== undefined) {
+    return checkpointState;
+  }
+
+  return {
+    state: projectRunState(input.events),
+    usedCheckpoint: false,
+    reducedEventCount: input.events.length
+  };
+}
+
+function rebuildFromTrustedCheckpoint(input: {
+  runId: string;
+  events: readonly RuntimeEvent[];
+  integrity: Exclude<RunIntegrityVerdict, { status: "broken" }>;
+  checkpoint: RunStateCheckpoint | undefined;
+}): RebuildFromCheckpointResult | undefined {
+  const { checkpoint } = input;
+
+  if (
+    checkpoint === undefined ||
+    !checkpointMatchesLedger({
+      runId: input.runId,
+      events: input.events,
+      integrity: input.integrity,
+      checkpoint
+    })
+  ) {
+    return undefined;
+  }
+
+  const state = cloneRunState(checkpoint.state);
+  const tail = input.events.slice(checkpoint.coveredSequence + 1);
+
+  /*
+   * Correctness basis for checkpointing:
+   * reduceEvent is pure over the prior RunState and the next event, and its
+   * collection updates are idempotent-by-key. A checkpoint is therefore only a
+   * cached prefix projection; replaying the verified tail must yield the same
+   * result as reducing the complete ledger from sequence zero.
+   */
+  for (const event of tail) {
+    if (event.runId !== input.runId) {
+      return undefined;
+    }
+
+    reduceEvent(state, event);
+    state.lastEventId = event.id;
+  }
+
+  const parsed = RunStateSchema.safeParse(state);
+
+  if (!parsed.success) {
+    return undefined;
+  }
+
+  return {
+    state: parsed.data,
+    usedCheckpoint: true,
+    reducedEventCount: tail.length
+  };
+}
+
+function checkpointMatchesLedger(input: {
+  runId: string;
+  events: readonly RuntimeEvent[];
+  integrity: Exclude<RunIntegrityVerdict, { status: "broken" }>;
+  checkpoint: RunStateCheckpoint;
+}) {
+  const { checkpoint, events, integrity } = input;
+
+  if (checkpoint.runId !== input.runId || checkpoint.state.runId !== input.runId) {
+    return false;
+  }
+
+  if (checkpoint.coveredSequence >= events.length) {
+    return false;
+  }
+
+  const coveredEvent = events[checkpoint.coveredSequence];
+
+  if (
+    coveredEvent === undefined ||
+    coveredEvent.id !== checkpoint.coveredLastEventId
+  ) {
+    return false;
+  }
+
+  if (integrity.status === "verified") {
+    return (
+      coveredEvent.integrity !== undefined &&
+      checkpoint.coveredHeadHash === coveredEvent.integrity.hash
+    );
+  }
+
+  return checkpoint.coveredHeadHash === undefined;
+}
+
+async function refreshCheckpointAfterAppend(
+  paths: RunStorePaths,
+  events: readonly RuntimeEvent[],
+  integrity: RunIntegrityVerdict,
+  state: RunState
+) {
+  const coveredSequence = events.length - 1;
+
+  if (
+    coveredSequence < 0 ||
+    coveredSequence % CHECKPOINT_INTERVAL !== 0 ||
+    integrity.status === "broken"
+  ) {
+    return;
+  }
+
+  const coveredEvent = events[coveredSequence];
+
+  if (coveredEvent === undefined) {
+    return;
+  }
+
+  const checkpoint: RunStateCheckpoint = {
+    checkpointVersion: RUN_STATE_CHECKPOINT_VERSION,
+    runId: coveredEvent.runId,
+    coveredSequence,
+    coveredLastEventId: coveredEvent.id,
+    state,
+    ...(integrity.status === "verified"
+      ? { coveredHeadHash: integrity.headHash }
+      : {})
+  };
+
+  try {
+    await writeCheckpoint(paths, checkpoint);
+  } catch {
+    return;
+  }
+}
+
+function parseCheckpointRecord(value: unknown): RunStateCheckpoint | undefined {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  if (value.checkpointVersion !== RUN_STATE_CHECKPOINT_VERSION) {
+    return undefined;
+  }
+
+  if (typeof value.runId !== "string" || value.runId.length === 0) {
+    return undefined;
+  }
+
+  if (
+    typeof value.coveredSequence !== "number" ||
+    !Number.isInteger(value.coveredSequence) ||
+    value.coveredSequence < 0
+  ) {
+    return undefined;
+  }
+
+  if (
+    typeof value.coveredLastEventId !== "string" ||
+    value.coveredLastEventId.length === 0
+  ) {
+    return undefined;
+  }
+
+  if (
+    value.coveredHeadHash !== undefined &&
+    (typeof value.coveredHeadHash !== "string" ||
+      value.coveredHeadHash.length === 0)
+  ) {
+    return undefined;
+  }
+
+  const state = RunStateSchema.safeParse(value.state);
+
+  if (
+    !state.success ||
+    state.data.runId !== value.runId ||
+    state.data.lastEventId !== value.coveredLastEventId
+  ) {
+    return undefined;
+  }
+
+  return {
+    checkpointVersion: RUN_STATE_CHECKPOINT_VERSION,
+    runId: value.runId,
+    coveredSequence: value.coveredSequence,
+    coveredLastEventId: value.coveredLastEventId,
+    state: state.data,
+    ...(value.coveredHeadHash === undefined
+      ? {}
+      : { coveredHeadHash: value.coveredHeadHash })
+  };
+}
+
+function cloneRunState(state: RunState): RunState {
+  return RunStateSchema.parse(JSON.parse(JSON.stringify(state)) as unknown);
 }
 
 function reduceEvent(state: RunState, event: RuntimeEvent) {
