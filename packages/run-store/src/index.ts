@@ -7,8 +7,19 @@ declare module "node:crypto" {
 }
 
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  readFile,
+  rename,
+  rm,
+  writeFile
+} from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { z } from "zod";
 import {
   ApprovalRequestSchema,
   ArtifactRefSchema,
@@ -29,6 +40,18 @@ import {
   type RuntimeEvent,
   type RuntimeEventIntegrity
 } from "@specwright/schemas";
+import {
+  appendAdministrationRecord,
+  runScopeForRun,
+  withDualControl,
+  type AdministrationProfileOrDescriptor,
+  type AdministrationRecord,
+  type AdministrationRunScope,
+  type LegalHoldDeclaration,
+  type WithDualControlRecordIds,
+  type WithDualControlResult,
+  type WithDualControlTimestamps
+} from "./administration";
 
 export const RUN_STORE_DIR = ".archetype";
 export const RUNS_DIR = "runs";
@@ -40,10 +63,24 @@ export const SUMMARY_FILE = "summary.md";
 export const CHECKPOINT_FILE = "state.checkpoint.json";
 export const RUN_PACKAGE_VERSION_FILE = "run.version.json";
 export const MIGRATIONS_FILE = "migrations.jsonl";
+export const SEAL_FILE = "seal.json";
+export const READ_MOSTLY_FILE = "read-mostly.json";
+export const RETENTION_FILE = "retention.json";
+export const LEGAL_HOLDS_FILE = "legal-holds.jsonl";
+export const TOMBSTONE_FILE = "archive.tombstone.json";
+export const ARCHIVE_MANIFEST_FILE = "archive.manifest.json";
+export const ARCHIVE_DIR = "archives";
+export const ARCHIVE_RUNS_DIR = "runs";
+export const ARCHIVE_STAGE_DIR = ".stage";
 export const RUN_STATE_CHECKPOINT_VERSION = 1;
 export const CHECKPOINT_INTERVAL = 128;
 export const RUN_PACKAGE_VERSION_RECORD_VERSION = 1;
 export const MIGRATION_RECORD_VERSION = 1;
+export const SEAL_RECORD_VERSION = 1;
+export const READ_MOSTLY_MARKER_VERSION = 1;
+export const LEGAL_HOLD_RECORD_VERSION = 1;
+export const ARCHIVE_MANIFEST_VERSION = 1;
+export const TOMBSTONE_VERSION = 1;
 export const MIGRATION_RECORD_HASH_PREFIX = "sha256:";
 export const MIGRATION_RECORD_GENESIS_SEED = `${MIGRATION_RECORD_HASH_PREFIX}${"0".repeat(64)}`;
 export const RUN_STORE_BASELINE_VERSION = {
@@ -82,8 +119,11 @@ export type RunStoreErrorCode =
   | "legal_hold_active"
   | "migration_failed"
   | "missing_events"
+  | "not_terminal"
   | "raw_read_denied"
+  | "retention_not_expired"
   | "run_exists"
+  | "run_sealed"
   | "run_not_started"
   | "unclassified_field"
   | "unknown_version"
@@ -118,6 +158,16 @@ export type RunStorePaths = {
   checkpointPath: string;
   versionPath: string;
   migrationsPath: string;
+  sealPath: string;
+  readMostlyPath: string;
+  retentionPath: string;
+  legalHoldsPath: string;
+  tombstonePath: string;
+  archiveDir: string;
+  archiveRunsDir: string;
+  archiveStageDir: string;
+  archiveRunDir: string;
+  archiveManifestPath: string;
   evalsDir: string;
   summaryPath: string;
 };
@@ -312,6 +362,354 @@ export type MigrationCohortResult = {
   results: MigrationCohortRunResult[];
 };
 
+const retentionNonEmptyString = z.string().min(1);
+const retentionIsoTimestamp = z.string().datetime({ offset: true });
+const RetentionJsonValueSchema: z.ZodType<RetentionJsonValue> = z.lazy(() =>
+  z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.null(),
+    z.array(RetentionJsonValueSchema),
+    z.record(RetentionJsonValueSchema)
+  ])
+);
+
+export const SealRecordSchema = z
+  .object({
+    recordVersion: z.literal(SEAL_RECORD_VERSION),
+    runId: retentionNonEmptyString,
+    sealedAt: retentionIsoTimestamp,
+    sealedStatus: z.enum(["completed", "failed"]),
+    integrityHead: retentionNonEmptyString,
+    eventCount: z.number().int().positive(),
+    stateHash: retentionNonEmptyString,
+    state: RunStateSchema
+  })
+  .strict();
+
+export const ReadMostlyMarkerSchema = z
+  .object({
+    recordVersion: z.literal(READ_MOSTLY_MARKER_VERSION),
+    runId: retentionNonEmptyString,
+    sealedAt: retentionIsoTimestamp,
+    sealRecordPath: retentionNonEmptyString,
+    integrityHead: retentionNonEmptyString,
+    readMostly: z.literal(true)
+  })
+  .strict();
+
+export const RetentionDescriptorSchema = z
+  .object({
+    descriptorId: retentionNonEmptyString.optional(),
+    retentionClass: retentionNonEmptyString,
+    archiveAfterMs: z.number().int().nonnegative().optional(),
+    archiveEligibleAt: retentionIsoTimestamp.optional(),
+    expireAfterMs: z.number().int().nonnegative().optional(),
+    expiresAt: retentionIsoTimestamp.optional(),
+    metadata: z.record(RetentionJsonValueSchema).optional()
+  })
+  .strict()
+  .superRefine((descriptor, context) => {
+    if (
+      descriptor.archiveAfterMs === undefined &&
+      descriptor.archiveEligibleAt === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "retention descriptor must provide archiveAfterMs or archiveEligibleAt"
+      });
+    }
+
+    if (
+      descriptor.archiveAfterMs !== undefined &&
+      descriptor.archiveEligibleAt !== undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "retention descriptor must not provide both archiveAfterMs and archiveEligibleAt"
+      });
+    }
+
+    if (
+      descriptor.expireAfterMs === undefined &&
+      descriptor.expiresAt === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "retention descriptor must provide expireAfterMs or expiresAt"
+      });
+    }
+
+    if (
+      descriptor.expireAfterMs !== undefined &&
+      descriptor.expiresAt !== undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "retention descriptor must not provide both expireAfterMs and expiresAt"
+      });
+    }
+
+    if (
+      descriptor.archiveAfterMs !== undefined &&
+      descriptor.expireAfterMs !== undefined &&
+      descriptor.expireAfterMs < descriptor.archiveAfterMs
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "expireAfterMs must be greater than or equal to archiveAfterMs"
+      });
+    }
+
+    if (
+      descriptor.archiveEligibleAt !== undefined &&
+      descriptor.expiresAt !== undefined &&
+      Date.parse(descriptor.expiresAt) < Date.parse(descriptor.archiveEligibleAt)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "expiresAt must be greater than or equal to archiveEligibleAt"
+      });
+    }
+  });
+
+export const LegalHoldRecordSchema = z
+  .object({
+    recordVersion: z.literal(LEGAL_HOLD_RECORD_VERSION),
+    holdId: retentionNonEmptyString,
+    runId: retentionNonEmptyString,
+    placedAt: retentionIsoTimestamp,
+    placedBy: retentionNonEmptyString,
+    reason: retentionNonEmptyString,
+    releasedAt: retentionIsoTimestamp.optional(),
+    releasedBy: retentionNonEmptyString.optional(),
+    releaseReason: retentionNonEmptyString.optional(),
+    metadata: z.record(RetentionJsonValueSchema).optional()
+  })
+  .strict()
+  .superRefine((record, context) => {
+    if (
+      (record.releasedAt === undefined) !==
+      (record.releasedBy === undefined)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "releasedAt and releasedBy must be recorded together"
+      });
+    }
+
+    if (
+      record.releasedAt !== undefined &&
+      Date.parse(record.releasedAt) < Date.parse(record.placedAt)
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "releasedAt must be greater than or equal to placedAt"
+      });
+    }
+  });
+
+export const ArchiveManifestSchema = z
+  .object({
+    manifestVersion: z.literal(ARCHIVE_MANIFEST_VERSION),
+    runId: retentionNonEmptyString,
+    archivedAt: retentionIsoTimestamp,
+    sealedAt: retentionIsoTimestamp,
+    sealedStatus: z.enum(["completed", "failed"]),
+    integrityHead: retentionNonEmptyString,
+    eventCount: z.number().int().positive(),
+    eventsHash: retentionNonEmptyString,
+    stateHash: retentionNonEmptyString,
+    sourceRunDir: retentionNonEmptyString,
+    archiveRunDir: retentionNonEmptyString,
+    archiveManifestPath: retentionNonEmptyString,
+    tombstonePath: retentionNonEmptyString,
+    retentionDescriptor: RetentionDescriptorSchema
+  })
+  .strict();
+
+export const TombstoneSchema = z
+  .object({
+    tombstoneVersion: z.literal(TOMBSTONE_VERSION),
+    runId: retentionNonEmptyString,
+    archivedAt: retentionIsoTimestamp,
+    archiveRunDir: retentionNonEmptyString,
+    archiveManifestPath: retentionNonEmptyString,
+    integrityHead: retentionNonEmptyString,
+    eventCount: z.number().int().positive(),
+    sealedAt: retentionIsoTimestamp,
+    retentionClass: retentionNonEmptyString
+  })
+  .strict();
+
+export type RetentionJsonValue =
+  | string
+  | number
+  | boolean
+  | null
+  | RetentionJsonValue[]
+  | { [key: string]: RetentionJsonValue };
+
+export type SealRecord = z.infer<typeof SealRecordSchema>;
+export type ReadMostlyMarker = z.infer<typeof ReadMostlyMarkerSchema>;
+export type RetentionDescriptor = z.infer<typeof RetentionDescriptorSchema>;
+export type LegalHoldRecord = z.infer<typeof LegalHoldRecordSchema>;
+export type ArchiveManifest = z.infer<typeof ArchiveManifestSchema>;
+export type Tombstone = z.infer<typeof TombstoneSchema>;
+
+export type RetentionState =
+  | {
+      status: "unsealed";
+      runId: string;
+      activeLegalHolds: LegalHoldRecord[];
+    }
+  | {
+      status: "held";
+      runId: string;
+      seal: SealRecord;
+      archiveEligibleAt: string;
+      expiresAt: string;
+      activeLegalHolds: LegalHoldRecord[];
+    }
+  | {
+      status: "sealed";
+      runId: string;
+      seal: SealRecord;
+      archiveEligibleAt: string;
+      expiresAt: string;
+      activeLegalHolds: [];
+    }
+  | {
+      status: "archive_eligible";
+      runId: string;
+      seal: SealRecord;
+      archiveEligibleAt: string;
+      expiresAt: string;
+      activeLegalHolds: [];
+    }
+  | {
+      status: "expired";
+      runId: string;
+      seal: SealRecord;
+      archiveEligibleAt: string;
+      expiresAt: string;
+      activeLegalHolds: [];
+    };
+
+export type SealRunOptions = {
+  rootDir?: string | undefined;
+  tenantId?: string | undefined;
+  runId: string;
+  actor?: string | undefined;
+  sealedAt?: Date | string | undefined;
+  recordId?: string | undefined;
+};
+
+export type SealRunResult = {
+  runId: string;
+  record: SealRecord;
+  marker: ReadMostlyMarker;
+  administrationRecord?: AdministrationRecord;
+  idempotent: boolean;
+};
+
+export type ComputeRetentionStateOptions = {
+  rootDir?: string | undefined;
+  runId: string;
+  descriptor: RetentionDescriptor;
+  now?: Date | string | undefined;
+};
+
+export type PlaceLegalHoldOptions = {
+  rootDir?: string | undefined;
+  tenantId?: string | undefined;
+  runId: string;
+  holdId?: string | undefined;
+  placedBy: string;
+  reason: string;
+  placedAt?: Date | string | undefined;
+  metadata?: Record<string, RetentionJsonValue> | undefined;
+  recordId?: string | undefined;
+};
+
+export type ReleaseLegalHoldOptions = {
+  rootDir?: string | undefined;
+  tenantId?: string | undefined;
+  runId: string;
+  holdId: string;
+  releasedBy: string;
+  releasedAt?: Date | string | undefined;
+  releaseReason?: string | undefined;
+  recordId?: string | undefined;
+};
+
+export type ArchiveRunOptions = {
+  rootDir?: string | undefined;
+  tenantId?: string | undefined;
+  runId: string;
+  actor: string;
+  approvalId?: string | undefined;
+  descriptor: RetentionDescriptor;
+  archivedAt?: Date | string | undefined;
+  now?: Date | string | undefined;
+  runScope?: AdministrationRunScope | undefined;
+  profileOrDescriptor?: AdministrationProfileOrDescriptor | undefined;
+  recordIds?: WithDualControlRecordIds | undefined;
+  timestamps?: WithDualControlTimestamps | undefined;
+};
+
+export type ArchiveRunResult = WithDualControlResult<{
+  runId: string;
+  archiveRunDir: string;
+  tombstonePath: string;
+  manifest: ArchiveManifest;
+  tombstone: Tombstone;
+  eventsHashBefore: string;
+  eventsHashAfter: string;
+}>;
+
+export type RestoreRunOptions = {
+  rootDir?: string | undefined;
+  tenantId?: string | undefined;
+  runId: string;
+  actor?: string | undefined;
+  restoredAt?: Date | string | undefined;
+  expectedState?: RunState | undefined;
+  recordId?: string | undefined;
+};
+
+export type RestoreRunResult = {
+  runId: string;
+  restoredRunDir: string;
+  manifest: ArchiveManifest;
+  state: RunState;
+  deterministicReplayHash: string;
+  administrationRecord?: AdministrationRecord;
+};
+
+export type HardDeleteRunOptions = {
+  rootDir?: string | undefined;
+  tenantId?: string | undefined;
+  runId: string;
+  actor: string;
+  approvalId?: string | undefined;
+  descriptor: RetentionDescriptor;
+  now?: Date | string | undefined;
+  runScope?: AdministrationRunScope | undefined;
+  profileOrDescriptor?: AdministrationProfileOrDescriptor | undefined;
+  recordIds?: WithDualControlRecordIds | undefined;
+  timestamps?: WithDualControlTimestamps | undefined;
+};
+
+export type HardDeleteRunResult = WithDualControlResult<{
+  deletedRunDir: string;
+  deletedArchiveRunDir?: string;
+}>;
+
 const MIGRATION_COMPATIBILITY_CLASSES = new Set<MigrationCompatibilityClass>([
   "patch-compatible",
   "additive-projection",
@@ -432,6 +830,9 @@ export function getRunStorePaths(rootDir: string | undefined, runId: string) {
   const absoluteRoot = resolve(rootDir ?? ".");
   const runsDir = join(absoluteRoot, RUN_STORE_DIR, RUNS_DIR);
   const runDir = join(runsDir, safeRunId);
+  const archiveDir = join(absoluteRoot, RUN_STORE_DIR, ARCHIVE_DIR);
+  const archiveRunsDir = join(archiveDir, ARCHIVE_RUNS_DIR);
+  const archiveRunDir = join(archiveRunsDir, safeRunId);
 
   return {
     rootDir: absoluteRoot,
@@ -447,9 +848,33 @@ export function getRunStorePaths(rootDir: string | undefined, runId: string) {
     checkpointPath: join(runDir, "cache", CHECKPOINT_FILE),
     versionPath: join(runDir, RUN_PACKAGE_VERSION_FILE),
     migrationsPath: join(runDir, MIGRATIONS_FILE),
+    sealPath: join(runDir, SEAL_FILE),
+    readMostlyPath: join(runDir, READ_MOSTLY_FILE),
+    retentionPath: join(runDir, RETENTION_FILE),
+    legalHoldsPath: join(runDir, LEGAL_HOLDS_FILE),
+    tombstonePath: join(runDir, TOMBSTONE_FILE),
+    archiveDir,
+    archiveRunsDir,
+    archiveStageDir: join(archiveDir, ARCHIVE_STAGE_DIR),
+    archiveRunDir,
+    archiveManifestPath: join(archiveRunDir, ARCHIVE_MANIFEST_FILE),
     evalsDir: join(runDir, "evals"),
     summaryPath: join(runDir, SUMMARY_FILE)
   } satisfies RunStorePaths;
+}
+
+export function getArchivedRunStorePaths(
+  rootDir: string | undefined,
+  runId: string
+) {
+  const livePaths = getRunStorePaths(rootDir, runId);
+
+  return runStorePathsForRunDir({
+    rootDir: livePaths.rootDir,
+    runsDir: livePaths.archiveRunsDir,
+    runDir: livePaths.archiveRunDir,
+    runId
+  });
 }
 
 export async function createRun(
@@ -524,6 +949,14 @@ export async function appendEvent<TPayload>(
 ): Promise<AppendEventResult> {
   const runId = assertSafeRunId(options.runId);
   const paths = getRunStorePaths(options.rootDir, runId);
+
+  if (await hasReadMostlyMarker(paths)) {
+    throw new RunStoreError(
+      "run_sealed",
+      `Run ${runId} is sealed and refuses further event appends`
+    );
+  }
+
   const existingEvents = await readEvents({
     rootDir: options.rootDir,
     runId
@@ -688,6 +1121,1390 @@ export async function readRunState(
     ...(options.grant === undefined ? {} : { grant: options.grant }),
     ...(options.mode === undefined ? {} : { mode: options.mode })
   });
+}
+
+export async function sealRun(options: SealRunOptions): Promise<SealRunResult> {
+  const runId = assertSafeRunId(options.runId);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  const existingSeal = await readSealRecord(paths, runId);
+
+  if (existingSeal !== undefined) {
+    const marker = await ensureReadMostlyMarker(paths, existingSeal);
+
+    return {
+      runId,
+      record: existingSeal,
+      marker,
+      idempotent: true
+    };
+  }
+
+  const state = await materializeRunState({
+    rootDir: options.rootDir,
+    runId
+  });
+
+  if (state.status !== "completed" && state.status !== "failed") {
+    throw new RunStoreError(
+      "not_terminal",
+      `Run ${runId} cannot be sealed while status is ${state.status}`
+    );
+  }
+
+  const integrity = verifiedIntegrityOrThrow(
+    runId,
+    await verifyRunIntegrity({
+      rootDir: options.rootDir,
+      runId
+    })
+  );
+  const sealedAt = normalizeTimestamp(options.sealedAt);
+  const record = parseSealRecord({
+    recordVersion: SEAL_RECORD_VERSION,
+    runId,
+    sealedAt,
+    sealedStatus: state.status,
+    integrityHead: integrity.headHash,
+    eventCount: integrity.eventCount,
+    stateHash: hashStableJson(state),
+    state
+  });
+  const marker = parseReadMostlyMarker({
+    recordVersion: READ_MOSTLY_MARKER_VERSION,
+    runId,
+    sealedAt,
+    sealRecordPath: paths.sealPath,
+    integrityHead: integrity.headHash,
+    readMostly: true
+  });
+
+  try {
+    await writeJsonAtomic(paths.sealPath, record);
+    await writeJsonAtomic(paths.readMostlyPath, marker);
+    const administrationRecord = await appendLifecycleAdministrationRecord({
+      rootDir: options.rootDir,
+      tenantId: options.tenantId,
+      runId,
+      operation: "retention_seal",
+      actor: options.actor ?? "run-store",
+      recordId: options.recordId,
+      timestamp: sealedAt,
+      runScope: runScopeFromEventCount(runId, integrity.eventCount),
+      profileOrDescriptor: {
+        reason: "terminal run sealed"
+      },
+      integrityBefore: integritySnapshotFromVerdict(runId, integrity),
+      integrityAfter: integritySnapshotFromVerdict(runId, integrity),
+      result: {
+        status: "success"
+      }
+    });
+
+    return {
+      runId,
+      record,
+      marker,
+      administrationRecord,
+      idempotent: false
+    };
+  } catch (error) {
+    await Promise.all([
+      rm(paths.sealPath, { force: true }),
+      rm(paths.readMostlyPath, { force: true })
+    ]);
+
+    throw error;
+  }
+}
+
+export async function computeRetentionState(
+  options: ComputeRetentionStateOptions
+): Promise<RetentionState> {
+  const runId = assertSafeRunId(options.runId);
+  const descriptor = parseRetentionDescriptor(options.descriptor);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  const seal =
+    (await readSealRecord(paths, runId)) ??
+    (await readSealRecord(getArchivedRunStorePaths(options.rootDir, runId), runId));
+  const activeLegalHolds = activeLegalHoldRecords(
+    await readLegalHoldRecordsForRun({
+      rootDir: options.rootDir,
+      runId
+    })
+  );
+
+  if (seal === undefined) {
+    return {
+      status: "unsealed",
+      runId,
+      activeLegalHolds
+    };
+  }
+
+  const { archiveEligibleAt, expiresAt } = retentionTimestamps(
+    seal,
+    descriptor
+  );
+
+  if (activeLegalHolds.length > 0) {
+    return {
+      status: "held",
+      runId,
+      seal,
+      archiveEligibleAt,
+      expiresAt,
+      activeLegalHolds
+    };
+  }
+
+  const nowMs = Date.parse(normalizeTimestamp(options.now));
+
+  if (nowMs >= Date.parse(expiresAt)) {
+    return {
+      status: "expired",
+      runId,
+      seal,
+      archiveEligibleAt,
+      expiresAt,
+      activeLegalHolds: []
+    };
+  }
+
+  if (nowMs >= Date.parse(archiveEligibleAt)) {
+    return {
+      status: "archive_eligible",
+      runId,
+      seal,
+      archiveEligibleAt,
+      expiresAt,
+      activeLegalHolds: []
+    };
+  }
+
+  return {
+    status: "sealed",
+    runId,
+    seal,
+    archiveEligibleAt,
+    expiresAt,
+    activeLegalHolds: []
+  };
+}
+
+export async function placeLegalHold(
+  options: PlaceLegalHoldOptions
+): Promise<LegalHoldRecord> {
+  const runId = assertSafeRunId(options.runId);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  const record = parseLegalHoldRecord({
+    recordVersion: LEGAL_HOLD_RECORD_VERSION,
+    holdId: options.holdId ?? randomUUID(),
+    runId,
+    placedAt: normalizeTimestamp(options.placedAt),
+    placedBy: options.placedBy,
+    reason: options.reason,
+    ...(options.metadata === undefined ? {} : { metadata: options.metadata })
+  });
+  const runScope = await runScopeForRetentionRun({
+    rootDir: options.rootDir,
+    runId
+  });
+
+  await mkdir(paths.runDir, { recursive: true });
+  await appendJsonLine(paths.legalHoldsPath, record);
+  await appendLifecycleAdministrationRecord({
+    rootDir: options.rootDir,
+    tenantId: options.tenantId,
+    runId,
+    operation: "legal_hold_place",
+    actor: options.placedBy,
+    recordId: options.recordId,
+    timestamp: record.placedAt,
+    runScope,
+    profileOrDescriptor: {
+      reason: record.reason
+    },
+    result: {
+      status: "success"
+    }
+  });
+
+  return record;
+}
+
+export async function releaseLegalHold(
+  options: ReleaseLegalHoldOptions
+): Promise<LegalHoldRecord> {
+  const runId = assertSafeRunId(options.runId);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  const activeHold = activeLegalHoldRecords(
+    await readLegalHoldRecordsForRun({
+      rootDir: options.rootDir,
+      runId
+    })
+  ).find((record) => record.holdId === options.holdId);
+
+  if (activeHold === undefined) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `No active legal hold ${options.holdId} exists for run ${runId}`
+    );
+  }
+
+  const releasedAt = normalizeTimestamp(options.releasedAt);
+  const record = parseLegalHoldRecord({
+    ...activeHold,
+    releasedAt,
+    releasedBy: options.releasedBy,
+    ...(options.releaseReason === undefined
+      ? {}
+      : { releaseReason: options.releaseReason })
+  });
+  const runScope = await runScopeForRetentionRun({
+    rootDir: options.rootDir,
+    runId
+  });
+
+  await appendJsonLine(paths.legalHoldsPath, record);
+  await appendLifecycleAdministrationRecord({
+    rootDir: options.rootDir,
+    tenantId: options.tenantId,
+    runId,
+    operation: "legal_hold_release",
+    actor: options.releasedBy,
+    recordId: options.recordId,
+    timestamp: releasedAt,
+    runScope,
+    profileOrDescriptor: {
+      reason: record.releaseReason ?? `released ${record.holdId}`
+    },
+    result: {
+      status: "success"
+    }
+  });
+
+  return record;
+}
+
+export async function archiveRun(
+  options: ArchiveRunOptions
+): Promise<ArchiveRunResult> {
+  const runId = assertSafeRunId(options.runId);
+  const descriptor = parseRetentionDescriptor(options.descriptor);
+  const activeHolds = activeLegalHoldRecords(
+    await readLegalHoldRecordsForRun({
+      rootDir: options.rootDir,
+      runId
+    })
+  );
+  const legalHold = legalHoldDeclaration(activeHolds);
+  const runScope =
+    options.runScope ??
+    (await runScopeForRetentionRun({
+      rootDir: options.rootDir,
+      runId
+    }));
+  const archivedAt = normalizeTimestamp(options.archivedAt ?? options.now);
+
+  return withDualControl({
+    rootDir: options.rootDir,
+    operation: "archive",
+    actor: options.actor,
+    runScope,
+    profileOrDescriptor:
+      options.profileOrDescriptor ?? descriptorToAdministrationProfile(descriptor),
+    timestamp: archivedAt,
+    ...(options.tenantId === undefined ? {} : { tenantId: options.tenantId }),
+    ...(options.approvalId === undefined
+      ? {}
+      : { approvalId: options.approvalId }),
+    ...(legalHold === undefined ? {} : { legalHold }),
+    ...(options.recordIds === undefined ? {} : { recordIds: options.recordIds }),
+    ...(options.timestamps === undefined
+      ? {}
+      : { timestamps: options.timestamps }),
+    execute: () =>
+      executeArchiveRun({
+        rootDir: options.rootDir,
+        runId,
+        descriptor,
+        archivedAt,
+        now: options.now ?? archivedAt
+      })
+  });
+}
+
+export async function restoreRun(
+  options: RestoreRunOptions
+): Promise<RestoreRunResult> {
+  const runId = assertSafeRunId(options.runId);
+  const livePaths = getRunStorePaths(options.rootDir, runId);
+  const archivePaths = getArchivedRunStorePaths(options.rootDir, runId);
+  const manifest = await readArchiveManifest(archivePaths, runId);
+  const stageDir = join(
+    livePaths.runsDir,
+    `${runId}.restore.${randomUUID()}.tmp`
+  );
+  let liveBackupDir: string | undefined;
+
+  try {
+    await copyDirectoryRecursive(archivePaths.runDir, stageDir);
+    const stagePaths = runStorePathsForRunDir({
+      rootDir: livePaths.rootDir,
+      runsDir: livePaths.runsDir,
+      runDir: stageDir,
+      runId
+    });
+    const stageManifest = await readArchiveManifest(stagePaths, runId);
+    const seal = await requireSealRecord(stagePaths, runId);
+    const integrity = verifiedIntegrityOrThrow(
+      runId,
+      await verifyRunIntegrityAtPaths(stagePaths, runId)
+    );
+
+    if (
+      integrity.headHash !== manifest.integrityHead ||
+      stageManifest.integrityHead !== manifest.integrityHead ||
+      seal.integrityHead !== manifest.integrityHead
+    ) {
+      throw new RunStoreError(
+        "integrity_broken",
+        `Archived run ${runId} integrity head does not match its seal/manifest`
+      );
+    }
+
+    const firstReplay = await rebuildStateForPackageAtPaths(stagePaths, runId);
+    const secondReplay = await rebuildStateForPackageAtPaths(stagePaths, runId);
+
+    if (stableJson(firstReplay) !== stableJson(secondReplay)) {
+      throw new RunStoreError(
+        "invalid_projection",
+        `Archived run ${runId} replay is not deterministic`
+      );
+    }
+
+    if (
+      options.expectedState !== undefined &&
+      stableJson(firstReplay) !== stableJson(options.expectedState)
+    ) {
+      throw new RunStoreError(
+        "invalid_projection",
+        `Archived run ${runId} replay does not match expected RunState`
+      );
+    }
+
+    await rm(stagePaths.tombstonePath, { force: true });
+    await writeProjection(stagePaths, firstReplay);
+    liveBackupDir = await replaceLiveRunDirectory(livePaths, stageDir);
+    await rm(liveBackupDir, { recursive: true, force: true });
+    liveBackupDir = undefined;
+
+    const restoredFirst = await materializeRunState({
+      rootDir: options.rootDir,
+      runId
+    });
+    const restoredSecond = await materializeRunState({
+      rootDir: options.rootDir,
+      runId
+    });
+
+    if (stableJson(restoredFirst) !== stableJson(restoredSecond)) {
+      throw new RunStoreError(
+        "invalid_projection",
+        `Restored run ${runId} replay is not deterministic`
+      );
+    }
+
+    const administrationRecord = await appendLifecycleAdministrationRecord({
+      rootDir: options.rootDir,
+      tenantId: options.tenantId,
+      runId,
+      operation: "restore",
+      actor: options.actor ?? "run-store",
+      recordId: options.recordId,
+      timestamp: normalizeTimestamp(options.restoredAt),
+      runScope: runScopeFromEventCount(runId, manifest.eventCount),
+      profileOrDescriptor: {
+        archiveTarget: manifest.archiveRunDir,
+        reason: "restored archived run package"
+      },
+      integrityBefore: integritySnapshotFromVerdict(runId, integrity),
+      integrityAfter: integritySnapshotFromVerdict(
+        runId,
+        verifiedIntegrityOrThrow(
+          runId,
+          await verifyRunIntegrity({
+            rootDir: options.rootDir,
+            runId
+          })
+        )
+      ),
+      result: {
+        status: "success"
+      }
+    });
+
+    return {
+      runId,
+      restoredRunDir: livePaths.runDir,
+      manifest,
+      state: restoredFirst,
+      deterministicReplayHash: hashStableJson(restoredFirst),
+      administrationRecord
+    };
+  } catch (error) {
+    await rm(stageDir, { recursive: true, force: true });
+
+    if (liveBackupDir !== undefined) {
+      await restoreLiveRunDirectory(livePaths, liveBackupDir);
+    }
+
+    throw error;
+  }
+}
+
+export async function hardDeleteRun(
+  options: HardDeleteRunOptions
+): Promise<HardDeleteRunResult> {
+  const runId = assertSafeRunId(options.runId);
+  const descriptor = parseRetentionDescriptor(options.descriptor);
+  const livePaths = getRunStorePaths(options.rootDir, runId);
+  const activeHolds = activeLegalHoldRecords(
+    await readLegalHoldRecordsForRun({
+      rootDir: options.rootDir,
+      runId
+    })
+  );
+  const legalHold = legalHoldDeclaration(activeHolds);
+  const runScope =
+    options.runScope ??
+    (await runScopeForRetentionRun({
+      rootDir: options.rootDir,
+      runId
+    }));
+
+  return withDualControl({
+    rootDir: options.rootDir,
+    operation: "hard_delete",
+    actor: options.actor,
+    runScope,
+    profileOrDescriptor:
+      options.profileOrDescriptor ?? descriptorToAdministrationProfile(descriptor),
+    ...(options.tenantId === undefined ? {} : { tenantId: options.tenantId }),
+    ...(options.approvalId === undefined
+      ? {}
+      : { approvalId: options.approvalId }),
+    ...(legalHold === undefined ? {} : { legalHold }),
+    ...(options.recordIds === undefined ? {} : { recordIds: options.recordIds }),
+    ...(options.timestamps === undefined
+      ? {}
+      : { timestamps: options.timestamps }),
+    execute: async () => {
+      const retention = await computeRetentionState({
+        rootDir: options.rootDir,
+        runId,
+        descriptor,
+        now: options.now
+      });
+
+      if (retention.status === "held") {
+        throw new RunStoreError(
+          "legal_hold_active",
+          `Active legal hold blocks hard delete for run ${runId}`
+        );
+      }
+
+      if (retention.status !== "expired") {
+        throw new RunStoreError(
+          "retention_not_expired",
+          `Run ${runId} is not expired for retention class ${descriptor.retentionClass}`
+        );
+      }
+
+      await rm(livePaths.runDir, { recursive: true, force: true });
+      await rm(livePaths.archiveRunDir, { recursive: true, force: true });
+
+      return {
+        deletedRunDir: livePaths.runDir,
+        deletedArchiveRunDir: livePaths.archiveRunDir
+      };
+    }
+  });
+}
+
+function runStorePathsForRunDir(input: {
+  rootDir: string;
+  runsDir: string;
+  runDir: string;
+  runId: string;
+}): RunStorePaths {
+  const safeRunId = assertSafeRunId(input.runId);
+  const archiveDir = join(input.rootDir, RUN_STORE_DIR, ARCHIVE_DIR);
+  const archiveRunsDir = join(archiveDir, ARCHIVE_RUNS_DIR);
+  const archiveRunDir = join(archiveRunsDir, safeRunId);
+
+  return {
+    rootDir: input.rootDir,
+    runsDir: input.runsDir,
+    runDir: input.runDir,
+    eventsPath: join(input.runDir, EVENTS_FILE),
+    statePath: join(input.runDir, STATE_FILE),
+    tracePath: join(input.runDir, TRACE_FILE),
+    decisionsPath: join(input.runDir, DECISIONS_FILE),
+    artifactsDir: join(input.runDir, "artifacts"),
+    evidenceDir: join(input.runDir, "evidence"),
+    cacheDir: join(input.runDir, "cache"),
+    checkpointPath: join(input.runDir, "cache", CHECKPOINT_FILE),
+    versionPath: join(input.runDir, RUN_PACKAGE_VERSION_FILE),
+    migrationsPath: join(input.runDir, MIGRATIONS_FILE),
+    sealPath: join(input.runDir, SEAL_FILE),
+    readMostlyPath: join(input.runDir, READ_MOSTLY_FILE),
+    retentionPath: join(input.runDir, RETENTION_FILE),
+    legalHoldsPath: join(input.runDir, LEGAL_HOLDS_FILE),
+    tombstonePath: join(input.runDir, TOMBSTONE_FILE),
+    archiveDir,
+    archiveRunsDir,
+    archiveStageDir: join(archiveDir, ARCHIVE_STAGE_DIR),
+    archiveRunDir,
+    archiveManifestPath: join(input.runDir, ARCHIVE_MANIFEST_FILE),
+    evalsDir: join(input.runDir, "evals"),
+    summaryPath: join(input.runDir, SUMMARY_FILE)
+  };
+}
+
+async function hasReadMostlyMarker(paths: RunStorePaths) {
+  try {
+    await readFile(paths.readMostlyPath, "utf8");
+    return true;
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return false;
+    }
+
+    throw error;
+  }
+}
+
+async function ensureReadMostlyMarker(
+  paths: RunStorePaths,
+  seal: SealRecord
+) {
+  const existing = await readReadMostlyMarker(paths);
+
+  if (existing !== undefined) {
+    return existing;
+  }
+
+  const marker = parseReadMostlyMarker({
+    recordVersion: READ_MOSTLY_MARKER_VERSION,
+    runId: seal.runId,
+    sealedAt: seal.sealedAt,
+    sealRecordPath: paths.sealPath,
+    integrityHead: seal.integrityHead,
+    readMostly: true
+  });
+
+  await writeJsonAtomic(paths.readMostlyPath, marker);
+
+  return marker;
+}
+
+async function readReadMostlyMarker(paths: RunStorePaths) {
+  const raw = await readOptionalFile(paths.readMostlyPath);
+
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  return parseReadMostlyMarker(parseJsonSidecar(raw, paths.readMostlyPath));
+}
+
+async function readSealRecord(paths: RunStorePaths, runId: string) {
+  const raw = await readOptionalFile(paths.sealPath);
+
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const record = parseSealRecord(parseJsonSidecar(raw, paths.sealPath));
+
+  if (record.runId !== runId) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Seal record at ${paths.sealPath} belongs to ${record.runId}, expected ${runId}`
+    );
+  }
+
+  return record;
+}
+
+async function requireSealRecord(paths: RunStorePaths, runId: string) {
+  const record = await readSealRecord(paths, runId);
+
+  if (record === undefined) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Run ${runId} has no seal record at ${paths.sealPath}`
+    );
+  }
+
+  return record;
+}
+
+function parseSealRecord(value: unknown) {
+  const parsed = SealRecordSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Seal record does not match run-store retention schema",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+function parseReadMostlyMarker(value: unknown) {
+  const parsed = ReadMostlyMarkerSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Read-mostly marker does not match run-store retention schema",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+function parseRetentionDescriptor(value: unknown) {
+  const parsed = RetentionDescriptorSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Retention descriptor does not match run-store retention schema",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+function parseLegalHoldRecord(value: unknown) {
+  const parsed = LegalHoldRecordSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Legal-hold record does not match run-store retention schema",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+function parseArchiveManifest(value: unknown) {
+  const parsed = ArchiveManifestSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Archive manifest does not match run-store retention schema",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+function parseTombstone(value: unknown) {
+  const parsed = TombstoneSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Archive tombstone does not match run-store retention schema",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+async function readArchiveManifest(paths: RunStorePaths, runId: string) {
+  const raw = await readOptionalFile(paths.archiveManifestPath);
+
+  if (raw === undefined) {
+    throw new RunStoreError(
+      "missing_events",
+      `Missing archive manifest for run ${runId}`
+    );
+  }
+
+  const manifest = parseArchiveManifest(
+    parseJsonSidecar(raw, paths.archiveManifestPath)
+  );
+
+  if (manifest.runId !== runId) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Archive manifest belongs to ${manifest.runId}, expected ${runId}`
+    );
+  }
+
+  return manifest;
+}
+
+async function readTombstone(paths: RunStorePaths, runId: string) {
+  const raw = await readOptionalFile(paths.tombstonePath);
+
+  if (raw === undefined) {
+    return undefined;
+  }
+
+  const tombstone = parseTombstone(parseJsonSidecar(raw, paths.tombstonePath));
+
+  if (tombstone.runId !== runId) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Archive tombstone belongs to ${tombstone.runId}, expected ${runId}`
+    );
+  }
+
+  return tombstone;
+}
+
+async function readLegalHoldRecordsForRun(options: {
+  rootDir?: string | undefined;
+  runId: string;
+}) {
+  const runId = assertSafeRunId(options.runId);
+  const livePaths = getRunStorePaths(options.rootDir, runId);
+  const archivePaths = getArchivedRunStorePaths(options.rootDir, runId);
+  const [liveRecords, archivedRecords] = await Promise.all([
+    readLegalHoldRecordLog(livePaths.legalHoldsPath, runId),
+    readLegalHoldRecordLog(archivePaths.legalHoldsPath, runId)
+  ]);
+  const seen = new Set<string>();
+  const records: LegalHoldRecord[] = [];
+
+  for (const record of [...archivedRecords, ...liveRecords]) {
+    const key = `${record.holdId}:${record.placedAt}:${
+      record.releasedAt ?? "active"
+    }`;
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      records.push(record);
+    }
+  }
+
+  return records;
+}
+
+async function readLegalHoldRecordLog(path: string, expectedRunId: string) {
+  const raw = await readOptionalFile(path);
+
+  if (raw === undefined || raw.length === 0) {
+    return [];
+  }
+
+  const lines = raw.split(/\r?\n/);
+
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
+
+  return lines.map((line, index) => {
+    if (line.trim() === "") {
+      throw new RunStoreError(
+        "invalid_projection",
+        `Blank legal-hold record at line ${index + 1}`
+      );
+    }
+
+    const record = parseLegalHoldRecord(parseJsonSidecar(line, path));
+
+    if (record.runId !== expectedRunId) {
+      throw new RunStoreError(
+        "invalid_projection",
+        `Legal-hold record at line ${index + 1} belongs to ${record.runId}, expected ${expectedRunId}`
+      );
+    }
+
+    return record;
+  });
+}
+
+function activeLegalHoldRecords(records: readonly LegalHoldRecord[]) {
+  const latestByHold = new Map<string, LegalHoldRecord>();
+
+  for (const record of records) {
+    const prior = latestByHold.get(record.holdId);
+
+    if (
+      prior === undefined ||
+      Date.parse(record.releasedAt ?? record.placedAt) >=
+        Date.parse(prior.releasedAt ?? prior.placedAt)
+    ) {
+      latestByHold.set(record.holdId, record);
+    }
+  }
+
+  return [...latestByHold.values()]
+    .filter((record) => record.releasedAt === undefined)
+    .sort((left, right) => left.holdId.localeCompare(right.holdId));
+}
+
+function legalHoldDeclaration(
+  activeHolds: readonly LegalHoldRecord[]
+): LegalHoldDeclaration | undefined {
+  if (activeHolds.length === 0) {
+    return undefined;
+  }
+
+  return {
+    active: true,
+    reason: activeHolds.map((hold) => hold.reason).join("; "),
+    runIds: [...new Set(activeHolds.map((hold) => hold.runId))].sort()
+  };
+}
+
+function retentionTimestamps(
+  seal: SealRecord,
+  descriptor: RetentionDescriptor
+) {
+  const sealedAtMs = Date.parse(seal.sealedAt);
+  const archiveEligibleAt =
+    descriptor.archiveEligibleAt ??
+    new Date(sealedAtMs + (descriptor.archiveAfterMs ?? 0)).toISOString();
+  const expiresAt =
+    descriptor.expiresAt ??
+    new Date(sealedAtMs + (descriptor.expireAfterMs ?? 0)).toISOString();
+
+  if (Date.parse(expiresAt) < Date.parse(archiveEligibleAt)) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Retention descriptor expiry precedes archive eligibility"
+    );
+  }
+
+  return {
+    archiveEligibleAt,
+    expiresAt
+  };
+}
+
+function verifiedIntegrityOrThrow(
+  runId: string,
+  verdict: RunIntegrityVerdict
+): Extract<RunIntegrityVerdict, { status: "verified" }> {
+  if (verdict.status === "verified") {
+    return verdict;
+  }
+
+  if (verdict.status === "broken") {
+    throw integrityBrokenError(runId, verdict);
+  }
+
+  throw new RunStoreError(
+    "integrity_broken",
+    `Run ${runId} must carry a verified integrity chain`
+  );
+}
+
+function integritySnapshotFromVerdict(
+  runId: string,
+  verdict: RunIntegrityVerdict
+) {
+  if (verdict.status === "verified") {
+    return {
+      runHeads: [
+        {
+          runId,
+          status: "verified" as const,
+          eventCount: verdict.eventCount,
+          headHash: verdict.headHash
+        }
+      ]
+    };
+  }
+
+  if (verdict.status === "unchained") {
+    return {
+      runHeads: [
+        {
+          runId,
+          status: "unchained" as const,
+          eventCount: verdict.eventCount
+        }
+      ]
+    };
+  }
+
+  return {
+    runHeads: [
+      {
+        runId,
+        status: "broken" as const,
+        eventCount: verdict.eventCount,
+        brokenAtSequence: verdict.brokenAtSequence,
+        code: verdict.code,
+        detail: verdict.detail
+      }
+    ]
+  };
+}
+
+function runScopeFromEventCount(
+  runId: string,
+  eventCount: number
+): AdministrationRunScope {
+  return {
+    runIds: [runId],
+    eventRange: {
+      startSequence: 0,
+      endSequence: Math.max(0, eventCount - 1)
+    }
+  };
+}
+
+async function runScopeForRetentionRun(options: {
+  rootDir?: string | undefined;
+  runId: string;
+}): Promise<AdministrationRunScope> {
+  const runId = assertSafeRunId(options.runId);
+  const livePaths = getRunStorePaths(options.rootDir, runId);
+  const archivePaths = getArchivedRunStorePaths(options.rootDir, runId);
+  const liveSeal = await readSealRecord(livePaths, runId);
+
+  if (liveSeal !== undefined) {
+    return runScopeFromEventCount(runId, liveSeal.eventCount);
+  }
+
+  const tombstone = await readTombstone(livePaths, runId);
+
+  if (tombstone !== undefined) {
+    return runScopeFromEventCount(runId, tombstone.eventCount);
+  }
+
+  const archivedSeal = await readSealRecord(archivePaths, runId);
+
+  if (archivedSeal !== undefined) {
+    return runScopeFromEventCount(runId, archivedSeal.eventCount);
+  }
+
+  return runScopeForRun({
+    rootDir: options.rootDir,
+    runId
+  });
+}
+
+async function appendLifecycleAdministrationRecord(options: {
+  rootDir?: string | undefined;
+  tenantId?: string | undefined;
+  runId: string;
+  operation: AdministrationRecord["operation"];
+  actor: string;
+  recordId?: string | undefined;
+  timestamp: string;
+  runScope: AdministrationRunScope;
+  profileOrDescriptor?: AdministrationProfileOrDescriptor | undefined;
+  integrityBefore?: AdministrationRecord["integrityBefore"];
+  integrityAfter?: AdministrationRecord["integrityAfter"];
+  result: AdministrationRecord["result"];
+}) {
+  const recordId = options.recordId ?? randomUUID();
+
+  return appendAdministrationRecord({
+    rootDir: options.rootDir,
+    tenantId: options.tenantId,
+    record: {
+      recordId,
+      recordKind: options.result.status === "failure" ? "denial" : "post_operation",
+      operation: options.operation,
+      actor: options.actor,
+      approvalRef: {
+        approvalId: `not-gated:${options.operation}:${recordId}`,
+        requestedBy: options.actor,
+        approvedBy: "run-store-administration",
+        decision: "approved"
+      },
+      runScope: options.runScope,
+      ...(options.profileOrDescriptor === undefined
+        ? {}
+        : { profileOrDescriptor: options.profileOrDescriptor }),
+      ...(options.integrityBefore === undefined
+        ? {}
+        : { integrityBefore: options.integrityBefore }),
+      ...(options.integrityAfter === undefined
+        ? {}
+        : { integrityAfter: options.integrityAfter }),
+      result: options.result,
+      timestamp: options.timestamp
+    }
+  });
+}
+
+function descriptorToAdministrationProfile(
+  descriptor: RetentionDescriptor
+): AdministrationProfileOrDescriptor {
+  return {
+    ...(descriptor.descriptorId === undefined
+      ? {}
+      : { descriptorId: descriptor.descriptorId }),
+    retentionClass: descriptor.retentionClass,
+    metadata: {
+      archiveAfterMs: descriptor.archiveAfterMs ?? null,
+      archiveEligibleAt: descriptor.archiveEligibleAt ?? null,
+      expireAfterMs: descriptor.expireAfterMs ?? null,
+      expiresAt: descriptor.expiresAt ?? null,
+      ...(descriptor.metadata === undefined ? {} : descriptor.metadata)
+    }
+  };
+}
+
+async function verifyRunIntegrityAtPaths(
+  paths: RunStorePaths,
+  runId: string
+) {
+  let raw: string;
+
+  try {
+    raw = await readFile(paths.eventsPath, "utf8");
+  } catch (error) {
+    return brokenIntegrityVerdict({
+      eventCount: 0,
+      brokenAtSequence: 0,
+      code: "missing_events",
+      detail: `Missing event log for run ${runId}`,
+      cause: error
+    });
+  }
+
+  return verifyRawEventLogIntegrity(raw, runId);
+}
+
+async function rebuildStateForPackageAtPaths(
+  paths: RunStorePaths,
+  runId: string
+) {
+  await assertReadablePackageVersion(paths);
+  const raw = await readRequiredFile(
+    paths.eventsPath,
+    "missing_events",
+    `Missing event log for run ${runId}`
+  );
+  const events = parseEventLog(raw, runId);
+  const integrity = verifyRawEventLogIntegrity(raw, runId);
+
+  if (integrity.status === "broken") {
+    throw integrityBrokenError(runId, integrity);
+  }
+
+  return (
+    await rebuildStateForPackage({
+      paths,
+      runId,
+      events,
+      integrity
+    })
+  ).state;
+}
+
+async function executeArchiveRun(input: {
+  rootDir?: string | undefined;
+  runId: string;
+  descriptor: RetentionDescriptor;
+  archivedAt: string;
+  now: Date | string;
+}) {
+  const livePaths = getRunStorePaths(input.rootDir, input.runId);
+  const archivePaths = getArchivedRunStorePaths(input.rootDir, input.runId);
+  const stageDir = join(
+    livePaths.archiveStageDir,
+    `${input.runId}.${randomUUID()}.tmp`
+  );
+  const stagePaths = runStorePathsForRunDir({
+    rootDir: livePaths.rootDir,
+    runsDir: livePaths.archiveRunsDir,
+    runDir: stageDir,
+    runId: input.runId
+  });
+  let archiveCommitted = false;
+  let liveBackupDir: string | undefined;
+
+  try {
+    const retention = await computeRetentionState({
+      rootDir: input.rootDir,
+      runId: input.runId,
+      descriptor: input.descriptor,
+      now: input.now
+    });
+
+    if (retention.status === "held") {
+      throw new RunStoreError(
+        "legal_hold_active",
+        `Active legal hold blocks archive for run ${input.runId}`
+      );
+    }
+
+    if (
+      retention.status !== "archive_eligible" &&
+      retention.status !== "expired"
+    ) {
+      throw new RunStoreError(
+        "retention_not_expired",
+        `Run ${input.runId} is not archive-eligible for retention class ${input.descriptor.retentionClass}`
+      );
+    }
+
+    if ((await readOptionalFile(archivePaths.archiveManifestPath)) !== undefined) {
+      throw new RunStoreError(
+        "run_exists",
+        `Archive package already exists for run ${input.runId}`
+      );
+    }
+
+    const seal = await requireSealRecord(livePaths, input.runId);
+    const liveIntegrity = verifiedIntegrityOrThrow(
+      input.runId,
+      await verifyRunIntegrity({
+        rootDir: input.rootDir,
+        runId: input.runId
+      })
+    );
+
+    if (liveIntegrity.headHash !== seal.integrityHead) {
+      throw new RunStoreError(
+        "integrity_broken",
+        `Run ${input.runId} integrity head no longer matches the seal record`
+      );
+    }
+
+    const liveState = await materializeRunState({
+      rootDir: input.rootDir,
+      runId: input.runId
+    });
+
+    if (stableJson(liveState) !== stableJson(seal.state)) {
+      throw new RunStoreError(
+        "invalid_projection",
+        `Run ${input.runId} projection no longer matches its sealed state`
+      );
+    }
+
+    const sourceEvents = await readFile(livePaths.eventsPath, "utf8");
+    const sourceState = await readFile(livePaths.statePath, "utf8");
+    const eventsHashBefore = hashRawBytes(sourceEvents);
+    const stateHash = hashRawBytes(sourceState);
+
+    await mkdir(livePaths.archiveStageDir, { recursive: true });
+    await copyDirectoryRecursive(livePaths.runDir, stageDir);
+
+    const manifest = parseArchiveManifest({
+      manifestVersion: ARCHIVE_MANIFEST_VERSION,
+      runId: input.runId,
+      archivedAt: input.archivedAt,
+      sealedAt: seal.sealedAt,
+      sealedStatus: seal.sealedStatus,
+      integrityHead: seal.integrityHead,
+      eventCount: seal.eventCount,
+      eventsHash: eventsHashBefore,
+      stateHash,
+      sourceRunDir: livePaths.runDir,
+      archiveRunDir: archivePaths.runDir,
+      archiveManifestPath: archivePaths.archiveManifestPath,
+      tombstonePath: livePaths.tombstonePath,
+      retentionDescriptor: input.descriptor
+    });
+    const tombstone = parseTombstone({
+      tombstoneVersion: TOMBSTONE_VERSION,
+      runId: input.runId,
+      archivedAt: input.archivedAt,
+      archiveRunDir: archivePaths.runDir,
+      archiveManifestPath: archivePaths.archiveManifestPath,
+      integrityHead: seal.integrityHead,
+      eventCount: seal.eventCount,
+      sealedAt: seal.sealedAt,
+      retentionClass: input.descriptor.retentionClass
+    });
+
+    await writeJsonAtomic(stagePaths.archiveManifestPath, manifest);
+
+    const stagedIntegrity = verifiedIntegrityOrThrow(
+      input.runId,
+      await verifyRunIntegrityAtPaths(stagePaths, input.runId)
+    );
+
+    if (stagedIntegrity.headHash !== seal.integrityHead) {
+      throw new RunStoreError(
+        "integrity_broken",
+        `Staged archive for run ${input.runId} does not match the seal integrity head`
+      );
+    }
+
+    const stagedFirstReplay = await rebuildStateForPackageAtPaths(
+      stagePaths,
+      input.runId
+    );
+    const stagedSecondReplay = await rebuildStateForPackageAtPaths(
+      stagePaths,
+      input.runId
+    );
+
+    if (
+      stableJson(stagedFirstReplay) !== stableJson(stagedSecondReplay) ||
+      stableJson(stagedFirstReplay) !== stableJson(seal.state)
+    ) {
+      throw new RunStoreError(
+        "invalid_projection",
+        `Staged archive for run ${input.runId} does not replay to the sealed state`
+      );
+    }
+
+    const archivedEvents = await readFile(stagePaths.eventsPath, "utf8");
+    const eventsHashAfter = hashRawBytes(archivedEvents);
+
+    if (sourceEvents !== archivedEvents || eventsHashAfter !== eventsHashBefore) {
+      throw new RunStoreError(
+        "integrity_broken",
+        `Staged archive for run ${input.runId} changed events.jsonl bytes`
+      );
+    }
+
+    await mkdir(livePaths.archiveRunsDir, { recursive: true });
+    await rename(stageDir, archivePaths.runDir);
+    archiveCommitted = true;
+    liveBackupDir = await replaceLiveWithTombstone(livePaths, tombstone);
+    await rm(liveBackupDir, { recursive: true, force: true });
+    liveBackupDir = undefined;
+
+    return {
+      runId: input.runId,
+      archiveRunDir: archivePaths.runDir,
+      tombstonePath: livePaths.tombstonePath,
+      manifest,
+      tombstone,
+      eventsHashBefore,
+      eventsHashAfter
+    };
+  } catch (error) {
+    await rm(stageDir, { recursive: true, force: true });
+
+    if (liveBackupDir !== undefined) {
+      await restoreLiveRunDirectory(livePaths, liveBackupDir);
+    }
+
+    if (archiveCommitted) {
+      await rm(archivePaths.runDir, { recursive: true, force: true });
+    }
+
+    throw error;
+  }
+}
+
+async function replaceLiveWithTombstone(
+  paths: RunStorePaths,
+  tombstone: Tombstone
+) {
+  const tempDir = join(paths.runsDir, `${tombstone.runId}.tombstone.${randomUUID()}.tmp`);
+  const backupDir = join(paths.runsDir, `${tombstone.runId}.live.${randomUUID()}.bak`);
+
+  await mkdir(paths.runsDir, { recursive: true });
+  await mkdir(tempDir, { recursive: true });
+  await writeJsonAtomic(join(tempDir, TOMBSTONE_FILE), tombstone);
+  await rename(paths.runDir, backupDir);
+
+  try {
+    await rename(tempDir, paths.runDir);
+  } catch (error) {
+    await rename(backupDir, paths.runDir);
+    await rm(tempDir, { recursive: true, force: true });
+    throw error;
+  }
+
+  return backupDir;
+}
+
+async function replaceLiveRunDirectory(paths: RunStorePaths, stageDir: string) {
+  const backupDir = join(paths.runsDir, `${assertSafeRunIdFromPath(paths.runDir)}.restore.${randomUUID()}.bak`);
+
+  await mkdir(paths.runsDir, { recursive: true });
+
+  try {
+    await rename(paths.runDir, backupDir);
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") {
+      throw error;
+    }
+
+    await rename(stageDir, paths.runDir);
+    return backupDir;
+  }
+
+  try {
+    await rename(stageDir, paths.runDir);
+  } catch (error) {
+    await rename(backupDir, paths.runDir);
+    throw error;
+  }
+
+  return backupDir;
+}
+
+async function restoreLiveRunDirectory(
+  paths: RunStorePaths,
+  backupDir: string
+) {
+  await rm(paths.runDir, { recursive: true, force: true });
+
+  try {
+    await rename(backupDir, paths.runDir);
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
+async function copyDirectoryRecursive(sourceDir: string, targetDir: string) {
+  await mkdir(targetDir, { recursive: true });
+
+  for (const entry of await readdir(sourceDir)) {
+    const sourcePath = join(sourceDir, entry);
+    const targetPath = join(targetDir, entry);
+    const stats = await lstat(sourcePath);
+
+    if (stats.isDirectory()) {
+      await copyDirectoryRecursive(sourcePath, targetPath);
+      continue;
+    }
+
+    if (stats.isFile()) {
+      await copyFile(sourcePath, targetPath);
+    }
+  }
+}
+
+function assertSafeRunIdFromPath(path: string) {
+  return assertSafeRunId(path.split(/[/\\]/).at(-1) ?? "");
+}
+
+function parseJsonSidecar(raw: string, path: string) {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Sidecar at ${path} is not valid JSON`,
+      error
+    );
+  }
 }
 
 export async function detectPackageVersion(

@@ -1,0 +1,10 @@
+{
+  "recordVersion": 1,
+  "version": {
+    "packageLayoutVersion": "specwright.run-package.v1",
+    "ledgerFormatVersion": "specwright.ledger.integrity-jsonl.v1",
+    "projectionVersion": "specwright.reducer.current.v1",
+    "snapshotFormatVersion": "specwright.snapshot.checkpoint.v1",
+    "backendAdapterVersion": "specwright.backend.file.v1"
+  }
+}

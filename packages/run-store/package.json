@@ -17,7 +17,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json --pretty false",
     "typecheck": "tsc --noEmit -p tsconfig.json --pretty false",
-    "test": "bun test src/index.test.ts src/migration.test.ts"
+    "test": "bun test src/index.test.ts src/migration.test.ts src/retention.test.ts"
   },
   "dependencies": {
     "@specwright/schemas": "workspace:*"
