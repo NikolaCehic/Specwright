@@ -1,0 +1,15 @@
+{
+  "runId": "fixture-migration-incompatible",
+  "status": "running",
+  "phase": "created",
+  "harness": {
+    "id": "default",
+    "version": "0.0.0",
+    "specHash": "sha256:migration-fixture"
+  },
+  "budgets": {},
+  "pendingApprovals": [],
+  "pendingQuestions": [],
+  "artifacts": [],
+  "lastEventId": "event-0-started"
+}
