@@ -1,0 +1,2 @@
+{"id":"event-0","runId":"fixture-invalid-payload","type":"run.started","timestamp":"2026-05-29T00:00:00.000Z","sequence":0,"traceId":"trace-invalid","payload":{"input":{"task":"Reject an invalid event payload","harnessId":"default","host":{"kind":"cli"}},"harness":{"id":"default","version":"0.0.0","specHash":"sha256:harness"},"initialPhase":"created","budgets":{}}}
+{"id":"event-1","runId":"fixture-invalid-payload","type":"phase.entered","timestamp":"2026-05-29T00:00:01.000Z","sequence":1,"traceId":"trace-invalid","payload":{"phase":42}}

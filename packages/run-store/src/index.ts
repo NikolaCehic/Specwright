@@ -8,6 +8,7 @@ import {
   RunInputSchema,
   RunStateSchema,
   RuntimeEventSchema,
+  runtimeEventContractForType,
   type ApprovalRequest,
   type ArtifactRef,
   type HumanQuestion,
@@ -27,12 +28,15 @@ export const SUMMARY_FILE = "summary.md";
 export type RunStoreErrorCode =
   | "corrupt_event"
   | "invalid_event"
+  | "invalid_event_payload"
   | "invalid_projection"
   | "invalid_run_id"
   | "invalid_sequence"
   | "missing_events"
   | "run_exists"
-  | "run_not_started";
+  | "run_not_started"
+  | "unknown_event_contract"
+  | "unsupported_event_version";
 
 export class RunStoreError extends Error {
   readonly code: RunStoreErrorCode;
@@ -98,12 +102,12 @@ export type AppendEventOptions<TPayload = unknown> = {
 export type CreateRunResult = {
   runId: string;
   paths: RunStorePaths;
-  event: RuntimeEvent<RunStartedPayload>;
+  event: RuntimeEvent;
   state: RunState;
 };
 
-export type AppendEventResult<TPayload = unknown> = {
-  event: RuntimeEvent<TPayload>;
+export type AppendEventResult = {
+  event: RuntimeEvent;
   state: RunState;
 };
 
@@ -191,7 +195,7 @@ export async function createRun(
 
 export async function appendEvent<TPayload>(
   options: AppendEventOptions<TPayload>
-): Promise<AppendEventResult<TPayload>> {
+): Promise<AppendEventResult> {
   const runId = assertSafeRunId(options.runId);
   const paths = getRunStorePaths(options.rootDir, runId);
   const existingEvents = await readEvents({
@@ -450,17 +454,7 @@ function parseEventLine(
     );
   }
 
-  const parsedEvent = RuntimeEventSchema.safeParse(parsedJson);
-
-  if (!parsedEvent.success) {
-    throw new RunStoreError(
-      "invalid_event",
-      `Invalid runtime event at line ${index + 1}`,
-      parsedEvent.error
-    );
-  }
-
-  const event = parsedEvent.data;
+  const event = parseRuntimeEvent(parsedJson, index);
 
   if (!("payload" in event)) {
     throw new RunStoreError(
@@ -483,7 +477,7 @@ function parseEventLine(
     );
   }
 
-  return event as RuntimeEvent;
+  return event;
 }
 
 function validateEventSequence(events: readonly RuntimeEvent[]) {
@@ -495,6 +489,57 @@ function validateEventSequence(events: readonly RuntimeEvent[]) {
       );
     }
   });
+}
+
+function parseRuntimeEvent(value: unknown, index: number) {
+  if (!isRecord(value)) {
+    throw new RunStoreError(
+      "invalid_event",
+      `Runtime event at line ${index + 1} must be an object`
+    );
+  }
+
+  const type = value.type;
+
+  if (typeof type !== "string" || type.length === 0) {
+    throw new RunStoreError(
+      "invalid_event",
+      `Runtime event at line ${index + 1} is missing type`
+    );
+  }
+
+  const contract = runtimeEventContractForType(type);
+
+  if (contract === undefined) {
+    throw new RunStoreError(
+      "unknown_event_contract",
+      `Unknown runtime event contract ${type} at line ${index + 1}`
+    );
+  }
+
+  if (
+    value.contractVersion !== undefined &&
+    value.contractVersion !== contract.contractVersion
+  ) {
+    throw new RunStoreError(
+      "unsupported_event_version",
+      `Unsupported runtime event contract version ${String(
+        value.contractVersion
+      )} for ${type} at line ${index + 1}`
+    );
+  }
+
+  const parsedEvent = RuntimeEventSchema.safeParse(value);
+
+  if (!parsedEvent.success) {
+    throw new RunStoreError(
+      hasPayloadIssue(parsedEvent.error) ? "invalid_event_payload" : "invalid_event",
+      `Invalid runtime event at line ${index + 1}`,
+      parsedEvent.error
+    );
+  }
+
+  return parsedEvent.data;
 }
 
 function parseRunStartedPayload(payload: unknown): RunStartedPayload {
@@ -618,8 +663,10 @@ function buildEvent<TPayload>(input: {
   correlationId?: string | undefined;
   timestamp?: Date | string | undefined;
   sequence: number;
-}) {
+}): RuntimeEvent {
   const traceId = nonEmpty(input.traceId, "traceId");
+  const type = nonEmpty(input.type, "type") ?? "";
+  const contract = runtimeEventContractForType(type);
 
   if (traceId === undefined) {
     throw new RunStoreError(
@@ -628,13 +675,23 @@ function buildEvent<TPayload>(input: {
     );
   }
 
+  if (contract === undefined) {
+    throw new RunStoreError(
+      "unknown_event_contract",
+      `Unknown runtime event contract ${type}`
+    );
+  }
+
   const event = {
     id: nonEmpty(input.id, "id") ?? randomUUID(),
     runId: assertSafeRunId(input.runId),
-    type: nonEmpty(input.type, "type") ?? "",
+    type,
     timestamp: normalizeTimestamp(input.timestamp),
     sequence: input.sequence,
     traceId,
+    contractId: contract.contractId,
+    contractVersion: contract.contractVersion,
+    schemaHash: contract.schemaHash,
     ...(input.causationId === undefined
       ? {}
       : { causationId: nonEmpty(input.causationId, "causationId") }),
@@ -647,13 +704,13 @@ function buildEvent<TPayload>(input: {
 
   if (!parsed.success) {
     throw new RunStoreError(
-      "invalid_event",
+      hasPayloadIssue(parsed.error) ? "invalid_event_payload" : "invalid_event",
       "Runtime event envelope is invalid",
       parsed.error
     );
   }
 
-  return parsed.data as RuntimeEvent<TPayload>;
+  return parsed.data;
 }
 
 async function createRunDirectory(paths: RunStorePaths) {
@@ -763,4 +820,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function isNodeError(error: unknown): error is { code: string } {
   return isRecord(error) && typeof error.code === "string";
+}
+
+function hasPayloadIssue(error: { issues: readonly { path: readonly unknown[] }[] }) {
+  return error.issues.some((issue) => issue.path[0] === "payload");
 }
