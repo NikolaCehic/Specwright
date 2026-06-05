@@ -13,12 +13,19 @@ declare module "node:fs/promises" {
     close(): Promise<void>;
     sync(): Promise<void>;
   }
+  export interface Stats {
+    isDirectory(): boolean;
+    isFile(): boolean;
+  }
 
+  export function copyFile(source: string, destination: string): Promise<void>;
+  export function lstat(path: string): Promise<Stats>;
   export function mkdir(
     path: string,
     options?: { recursive?: boolean }
   ): Promise<string | undefined>;
   export function open(path: string, flags: string): Promise<FileHandle>;
+  export function readdir(path: string): Promise<string[]>;
   export function readFile(path: string, encoding: "utf8"): Promise<string>;
   export function rename(oldPath: string, newPath: string): Promise<void>;
   export function rm(

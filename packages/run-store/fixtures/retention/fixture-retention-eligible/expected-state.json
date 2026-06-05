@@ -1,0 +1,24 @@
+{
+  "runId": "fixture-retention-eligible",
+  "status": "completed",
+  "phase": "retention",
+  "harness": {
+    "id": "default",
+    "version": "0.0.0",
+    "specHash": "sha256:retention"
+  },
+  "budgets": {},
+  "pendingApprovals": [],
+  "pendingQuestions": [],
+  "artifacts": [
+    {
+      "artifactId": "artifact-retention",
+      "artifactType": "report",
+      "evidenceRefs": [
+        "evidence-retention"
+      ],
+      "uri": "artifacts/retention.json"
+    }
+  ],
+  "lastEventId": "a901f178-89c8-4c90-8945-837e03e8e1f8"
+}

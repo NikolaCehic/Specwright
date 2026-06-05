@@ -21,6 +21,7 @@ import {
   hashEventContent,
   materializeRunState,
   parseEventLog,
+  placeLegalHold,
   projectRunState,
   readAdministrationLog,
   readRunState,
@@ -32,6 +33,7 @@ import {
   replayRunState,
   RunStoreError,
   runScopeForRun,
+  sealRun,
   verifyAdministrationLog,
   verifyRunIntegrity,
   withDualControl,
@@ -62,6 +64,13 @@ const harness = {
   version: "0.0.0",
   specHash: "sha256:test"
 } satisfies HarnessSnapshot;
+
+const expiredRetentionDescriptor = {
+  descriptorId: "admin-test-expired",
+  retentionClass: "admin-test",
+  archiveAfterMs: 0,
+  expireAfterMs: 1
+} as const;
 
 const eventFixturesDir = fileURLToPath(
   new URL("../../schemas/fixtures/events/", import.meta.url)
@@ -1178,7 +1187,26 @@ describe("run store", () => {
 
   test("hardDeleteRun deletes the run directory but leaves durable administration records", async () => {
     const runId = "run-admin-hard-delete";
-    const runScope = await createAdministrationRun(runId);
+    await createAdministrationRun(runId);
+    await appendEvent({
+      rootDir,
+      runId,
+      type: "run.completed",
+      payload: {
+        reason: "admin test expired"
+      },
+      timestamp: "2026-05-29T01:00:02.000Z"
+    });
+    await sealRun({
+      rootDir,
+      runId,
+      sealedAt: "2026-05-29T01:00:03.000Z",
+      recordId: "hard-delete-seal"
+    });
+    const runScope = await runScopeForRun({
+      rootDir,
+      runId
+    });
     const approvalId = "approval-hard-delete";
     await approveAdministrationOperation({
       approvalId,
@@ -1191,6 +1219,8 @@ describe("run store", () => {
       runId,
       actor: "operator-a",
       approvalId,
+      descriptor: expiredRetentionDescriptor,
+      now: "2026-05-29T01:00:05.000Z",
       runScope,
       timestamps: {
         preOperation: adminTimestamp(0, 10),
@@ -1210,13 +1240,13 @@ describe("run store", () => {
       getRunStorePaths(rootDir, runId).runDir
     );
     expectRunStoreError(readDeletedRun, "missing_events");
-    expect(records).toHaveLength(2);
     expect(records.map((record) => record.operation)).toEqual([
+      "retention_seal",
       "hard_delete",
       "hard_delete"
     ]);
     expect(records.every((record) => AdministrationRecordSchema.safeParse(record).success)).toBe(true);
-    expect(records[1]?.integrityAfter?.runHeads[0]).toMatchObject({
+    expect(records.at(-1)?.integrityAfter?.runHeads[0]).toMatchObject({
       runId,
       status: "broken",
       code: "missing_events"
@@ -1345,7 +1375,35 @@ describe("run store", () => {
 
   test("records legal-hold denials before hard delete or archive side effects", async () => {
     const runId = "run-admin-legal-hold";
-    const runScope = await createAdministrationRun(runId);
+    await createAdministrationRun(runId);
+    await appendEvent({
+      rootDir,
+      runId,
+      type: "run.completed",
+      payload: {
+        reason: "held"
+      },
+      timestamp: "2026-05-29T01:00:02.000Z"
+    });
+    await sealRun({
+      rootDir,
+      runId,
+      sealedAt: "2026-05-29T01:00:03.000Z",
+      recordId: "held-admin-seal"
+    });
+    await placeLegalHold({
+      rootDir,
+      runId,
+      holdId: "hold-admin",
+      placedBy: "operator-a",
+      reason: "litigation hold",
+      placedAt: "2026-05-29T01:00:04.000Z",
+      recordId: "held-admin-place"
+    });
+    const runScope = await runScopeForRun({
+      rootDir,
+      runId
+    });
 
     await approveAdministrationOperation({
       approvalId: "approval-held-delete",
@@ -1358,11 +1416,9 @@ describe("run store", () => {
         runId,
         actor: "operator-a",
         approvalId: "approval-held-delete",
+        descriptor: expiredRetentionDescriptor,
+        now: "2026-05-29T01:00:10.000Z",
         runScope,
-        legalHold: {
-          active: true,
-          reason: "litigation hold"
-        },
         recordIds: {
           denial: "held-delete-denial"
         },
@@ -1372,7 +1428,7 @@ describe("run store", () => {
       })
     );
     expectRunStoreError(deleteError, "legal_hold_active");
-    expect(await readEvents({ rootDir, runId })).toHaveLength(1);
+    expect(await readEvents({ rootDir, runId })).toHaveLength(2);
 
     await approveAdministrationOperation({
       approvalId: "approval-held-archive",
@@ -1403,15 +1459,18 @@ describe("run store", () => {
       })
     );
     const records = await readAdministrationLog({ rootDir });
+    const denialRecords = records.filter(
+      (record) => record.recordKind === "denial"
+    );
 
     expectRunStoreError(archiveError, "legal_hold_active");
     expect(archived).toBe(false);
-    expect(records).toHaveLength(2);
-    expect(records.map((record) => record.recordKind)).toEqual([
+    expect(denialRecords).toHaveLength(2);
+    expect(denialRecords.map((record) => record.recordKind)).toEqual([
       "denial",
       "denial"
     ]);
-    expect(records.map((record) => record.result.code)).toEqual([
+    expect(denialRecords.map((record) => record.result.code)).toEqual([
       "legal_hold_active",
       "legal_hold_active"
     ]);

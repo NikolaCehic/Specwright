@@ -1,0 +1,15 @@
+{
+  "runId": "fixture-retention-broken",
+  "status": "completed",
+  "phase": "retention",
+  "harness": {
+    "id": "default",
+    "version": "0.0.0",
+    "specHash": "sha256:retention"
+  },
+  "budgets": {},
+  "pendingApprovals": [],
+  "pendingQuestions": [],
+  "artifacts": [],
+  "lastEventId": "c0f3712b-6847-4741-981c-e7230395b746"
+}

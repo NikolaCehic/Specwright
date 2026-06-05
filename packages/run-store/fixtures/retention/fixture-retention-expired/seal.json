@@ -1,0 +1,24 @@
+{
+  "recordVersion": 1,
+  "runId": "fixture-retention-expired",
+  "sealedAt": "2026-05-01T00:00:00.000Z",
+  "sealedStatus": "completed",
+  "integrityHead": "sha256:7022b28617010aec989ccc67cba3b329294b6244ad71e09ae6858e640c1e8d22",
+  "eventCount": 3,
+  "stateHash": "sha256:63fcbfc0950c5cfa77b520396118aca69f12610f55c56669c68fb8e9217f721d",
+  "state": {
+    "runId": "fixture-retention-expired",
+    "status": "completed",
+    "phase": "retention",
+    "harness": {
+      "id": "default",
+      "version": "0.0.0",
+      "specHash": "sha256:retention"
+    },
+    "budgets": {},
+    "pendingApprovals": [],
+    "pendingQuestions": [],
+    "artifacts": [],
+    "lastEventId": "ccd4012e-1e2f-4f29-98e3-f31b7fba068c"
+  }
+}

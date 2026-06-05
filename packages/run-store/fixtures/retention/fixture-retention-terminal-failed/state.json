@@ -1,0 +1,15 @@
+{
+  "runId": "fixture-retention-terminal-failed",
+  "status": "failed",
+  "phase": "retention",
+  "harness": {
+    "id": "default",
+    "version": "0.0.0",
+    "specHash": "sha256:retention"
+  },
+  "budgets": {},
+  "pendingApprovals": [],
+  "pendingQuestions": [],
+  "artifacts": [],
+  "lastEventId": "366e15eb-c732-4e30-9f31-8babc56dba0f"
+}
