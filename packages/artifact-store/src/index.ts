@@ -2,9 +2,10 @@ import { mkdir, open, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   ArtifactRecordSchema,
+  isSelfCitingEvidenceRef,
   type ArtifactFileRef,
+  type ArtifactClaim,
   type ArtifactRecord,
-  type ClaimLevel,
   type MvpArtifactType
 } from "@specwright/schemas";
 import { getRunStorePaths } from "@specwright/run-store";
@@ -54,8 +55,32 @@ export type ArtifactStoreOptions = {
   runId: string;
 };
 
-export type ArtifactRecordInput = Omit<ArtifactRecord, "metadata"> & {
+export type ArtifactClaimInput = Omit<
+  ArtifactClaim,
+  | "owningArtifactId"
+  | "fieldPath"
+  | "owningSection"
+  | "verificationStatus"
+  | "redactionPolicy"
+> &
+  Partial<
+    Pick<
+      ArtifactClaim,
+      | "owningArtifactId"
+      | "fieldPath"
+      | "owningSection"
+      | "verificationStatus"
+      | "redactionPolicy"
+    >
+  >;
+
+export type ArtifactRecordInput = Omit<
+  ArtifactRecord,
+  "metadata" | "importantClaims" | "redactionPolicy"
+> & {
   metadata?: Record<string, unknown> | undefined;
+  importantClaims?: ArtifactClaimInput[] | undefined;
+  redactionPolicy?: ArtifactRecord["redactionPolicy"] | undefined;
 };
 
 export type AppendArtifactOptions = ArtifactStoreOptions & {
@@ -233,15 +258,18 @@ export function validateArtifactRecord(record: ArtifactRecord): ArtifactRecord {
   const parsed = ArtifactRecordSchema.safeParse(record);
 
   if (!parsed.success) {
+    const mappedError = artifactStoreErrorFromSchema(record, parsed.error);
+
+    if (mappedError !== undefined) {
+      throw mappedError;
+    }
+
     throw new ArtifactStoreError(
       "invalid_artifact",
       "Artifact record does not match the artifact schema",
       parsed.error
     );
   }
-
-  assertClaimSupport(parsed.data);
-  assertNoSelfCitation(parsed.data);
 
   return parsed.data;
 }
@@ -262,9 +290,16 @@ function withArtifactDefaults(
     evidenceRefs,
     producedBy: input.producedBy
   };
+  const redactionPolicy = input.redactionPolicy ?? "operator";
   const candidate = {
     ...input,
     evidenceRefs,
+    redactionPolicy,
+    importantClaims: normalizeImportantClaims(
+      input.artifactId,
+      input.importantClaims,
+      redactionPolicy
+    ),
     ...(normalizedFileRef === undefined ? {} : { fileRef: normalizedFileRef }),
     metadata
   };
@@ -272,74 +307,70 @@ function withArtifactDefaults(
   return candidate as ArtifactRecord;
 }
 
-function assertClaimSupport(record: ArtifactRecord) {
+function normalizeImportantClaims(
+  artifactId: string,
+  importantClaims: readonly ArtifactClaimInput[] | undefined,
+  redactionPolicy: ArtifactRecord["redactionPolicy"]
+): ArtifactClaim[] | undefined {
+  if (importantClaims === undefined) {
+    return undefined;
+  }
+
+  return importantClaims.map((claim, index) => ({
+    ...claim,
+    owningArtifactId: claim.owningArtifactId ?? artifactId,
+    fieldPath:
+      claim.fieldPath ??
+      (claim.owningSection === undefined
+        ? `importantClaims.${index}`
+        : undefined),
+    verificationStatus: claim.verificationStatus ?? "unverified",
+    redactionPolicy: claim.redactionPolicy ?? redactionPolicy
+  }));
+}
+
+function artifactStoreErrorFromSchema(
+  record: ArtifactRecord,
+  error: unknown
+): ArtifactStoreError | undefined {
+  if (!isZodErrorLike(error)) {
+    return undefined;
+  }
+
   if (
-    record.claimLevel !== undefined &&
-    requiresEvidence(record.claimLevel) &&
-    record.evidenceRefs.length === 0
+    record.evidenceRefs.some((ref) => isSelfCitingEvidenceRef(record, ref)) ||
+    (record.importantClaims ?? []).some((claim) =>
+      claim.evidenceRefs.some((ref) => isSelfCitingEvidenceRef(record, ref))
+    ) ||
+    error.issues.some((issue) => issue.message.includes("cannot cite itself"))
   ) {
-    throw new ArtifactStoreError(
-      "unsupported_claim",
-      `${record.claimLevel} artifact claims must include evidenceRefs`
+    return new ArtifactStoreError(
+      "generated_self_citation",
+      `Artifact ${record.artifactId} cannot cite itself as evidence`,
+      error
     );
   }
 
-  for (const claim of record.importantClaims ?? []) {
-    if (requiresEvidence(claim.claimLevel) && claim.evidenceRefs.length === 0) {
-      throw new ArtifactStoreError(
-        "unsupported_claim",
-        `${claim.claimLevel} important claims must include evidenceRefs`
-      );
-    }
-
-    if (
-      claim.claimLevel === "source_fact" &&
-      (claim.authority === "model" || claim.authority === "generated")
-    ) {
-      throw new ArtifactStoreError(
-        "unsupported_claim",
-        "source_fact claims cannot use model or generated authority"
-      );
-    }
-  }
-}
-
-function assertNoSelfCitation(record: ArtifactRecord) {
-  const evidenceRefs = [
-    ...record.evidenceRefs,
-    ...(record.importantClaims ?? []).flatMap((claim) => claim.evidenceRefs)
-  ];
-
-  for (const evidenceRef of evidenceRefs) {
-    if (isSelfCitation(record, evidenceRef)) {
-      throw new ArtifactStoreError(
-        "generated_self_citation",
-        `Artifact ${record.artifactId} cannot cite itself as evidence`
-      );
-    }
-  }
-}
-
-function isSelfCitation(record: ArtifactRecord, evidenceRef: string) {
-  const selfRefs = [
-    record.artifactId,
-    `artifact:${record.artifactId}`,
-    `artifact:${record.artifactType}`,
-    record.fileRef?.uri,
-    record.fileRef === undefined ? undefined : `artifact:${record.fileRef.uri}`
-  ].filter((value): value is string => value !== undefined);
-
-  return selfRefs.some(
-    (selfRef) => evidenceRef === selfRef || evidenceRef.startsWith(`${selfRef}#`)
+  const unsupportedClaimIssue = error.issues.find((issue) =>
+    isUnsupportedClaimMessage(issue.message)
   );
+
+  if (unsupportedClaimIssue !== undefined) {
+    return new ArtifactStoreError(
+      "unsupported_claim",
+      unsupportedClaimIssue.message,
+      error
+    );
+  }
+
+  return undefined;
 }
 
-function requiresEvidence(claimLevel: ClaimLevel) {
+function isUnsupportedClaimMessage(message: string) {
   return (
-    claimLevel === "source_fact" ||
-    claimLevel === "derived_fact" ||
-    claimLevel === "inference" ||
-    claimLevel === "human_decision"
+    message.endsWith("artifact claims must include evidenceRefs") ||
+    message.endsWith("important claims must include evidenceRefs") ||
+    message === "source_fact claims cannot use model or generated authority"
   );
 }
 
@@ -543,6 +574,18 @@ function uniqueStrings(values: readonly string[]) {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isZodErrorLike(
+  error: unknown
+): error is { issues: Array<{ message: string }> } {
+  return (
+    isRecord(error) &&
+    Array.isArray(error.issues) &&
+    error.issues.every(
+      (issue) => isRecord(issue) && typeof issue.message === "string"
+    )
+  );
 }
 
 function isNodeError(error: unknown): error is { code: string } {

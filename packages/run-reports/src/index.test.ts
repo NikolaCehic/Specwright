@@ -109,6 +109,8 @@ describe("run reports", () => {
         sourceRefs: [],
         confidence: "low",
         authority: "model",
+        unknownReason: "No browser inspection was run for this report fixture.",
+        redactionPolicy: "operator",
         createdBy: {
           phase: "verification",
           actionId: "record-unknown"
@@ -334,11 +336,15 @@ function sourceFact(id: string): EvidenceRecord {
     sourceRefs: [
       {
         path: "package.json",
-        locator: "scripts"
+        locator: "scripts",
+        authority: "repo",
+        redactionClass: "operator",
+        captureToolCallId: "tool-call-1"
       }
     ],
     confidence: "high",
     authority: "repo",
+    redactionPolicy: "operator",
     createdBy: {
       phase: "evidence",
       actionId: "read-package-json",

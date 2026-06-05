@@ -1,0 +1,27 @@
+{
+  "id": "evidence:repo:package-json",
+  "class": "source_fact",
+  "claim": "The repository declares a runnable package script.",
+  "sourceRefs": [
+    {
+      "id": "package.json",
+      "path": "package.json",
+      "locator": "scripts.test",
+      "authority": "repo",
+      "captureToolCallId": "tool-call-read-package",
+      "redactionClass": "operator",
+      "contentHash": "sha256:package-json"
+    }
+  ],
+  "confidence": "high",
+  "authority": "repo",
+  "createdBy": {
+    "phase": "evidence",
+    "actionId": "read-package-json",
+    "toolCallId": "tool-call-read-package"
+  },
+  "extractionMethod": "tool.fs.read",
+  "validationStatus": "validated",
+  "referencedToolCallIds": ["tool-call-read-package"],
+  "redactionPolicy": "operator"
+}
