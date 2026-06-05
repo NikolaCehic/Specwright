@@ -375,39 +375,6 @@ export const RunStateSchema = z
   .strict();
 export type RunState = z.infer<typeof RunStateSchema>;
 
-const RuntimeEventEnvelopeSchema = z
-  .object({
-    id: nonEmptyString,
-    runId: nonEmptyString,
-    type: nonEmptyString,
-    timestamp: z.string().datetime({ offset: true }),
-    sequence: z.number().int().nonnegative(),
-    traceId: nonEmptyString,
-    causationId: nonEmptyString.optional(),
-    correlationId: nonEmptyString.optional(),
-    payload: z.unknown()
-  })
-  .strict();
-
-export const RuntimeEventSchema = RuntimeEventEnvelopeSchema;
-
-export function runtimeEventSchema<TPayloadSchema extends ZodTypeAny>(
-  payloadSchema: TPayloadSchema
-) {
-  return RuntimeEventEnvelopeSchema.extend({
-    payload: payloadSchema
-  });
-}
-
-type RuntimeEventEnvelope = z.infer<typeof RuntimeEventSchema>;
-
-export type RuntimeEvent<TPayload = unknown> = Omit<
-  RuntimeEventEnvelope,
-  "payload"
-> & {
-  payload: TPayload;
-};
-
 export const ToolCallRequestSchema = z
   .object({
     toolId: nonEmptyString,
@@ -626,3 +593,752 @@ export const ApprovalDecisionSchema = z
   })
   .strict();
 export type ApprovalDecision = z.infer<typeof ApprovalDecisionSchema>;
+
+const runtimeEventEnvelopeFields = {
+  id: nonEmptyString,
+  runId: nonEmptyString,
+  timestamp: z.string().datetime({ offset: true }),
+  sequence: z.number().int().nonnegative(),
+  traceId: nonEmptyString,
+  causationId: nonEmptyString.optional(),
+  correlationId: nonEmptyString.optional()
+};
+
+const RUNTIME_EVENT_CONTRACT_VERSION = "1";
+
+const runtimeEventSchemaHashes = {
+  "artifact.recorded":
+    "sha256:f7c441e6d4f13d98b0499c1bf9c96993e7aa8de8c62eca29fe6ab3cfd18646c8",
+  "decision.recorded":
+    "sha256:1aa776e0f2fbebf7097badde9e18158331dafd220f53f5e35ec20f5d783a05e6",
+  "eval.completed":
+    "sha256:969c055d2739ee88bc8d480b981b76b2746f250034ab0fe0dd69bf809dd3f8aa",
+  "evidence.recorded":
+    "sha256:134cc6fbbebd05fc090c3570b6ed766e6445298f63ca4b0d6a11f0064f6cf973",
+  "gate.evaluated":
+    "sha256:4c6722719d8b6d5f9845431c4d0e4eadcb4fb462267b02978a562069e6346535",
+  "harness.loaded":
+    "sha256:0f35da17d5efe780854780975b8a809d37168fe8275a2824f81825d51992f0e8",
+  "human.answer_recorded":
+    "sha256:15fe78cab7efe4330d4f50737f53a61f3f85860f27970fcb5efcdb2d9bdcc0fa",
+  "human.input_requested":
+    "sha256:b59c49a3e80f7276cf84de0c3e68e9a07da349851a22882c339b547373e17a11",
+  "phase.entered":
+    "sha256:9ce6c0ad5c5a7ae89895b8e6e26c69432747be3b068b0857c71ea85f9bf03dcb",
+  "phase.transitioned":
+    "sha256:8616b9af9acfe0ff64a0957fb01acfac172846ce4af4c913fb90ed8f417a8cbf",
+  "policy.evaluated":
+    "sha256:197da68a3cf63bd9cba551c1f0af59b0c3be79bcc1ef509bd3285cb8838023f8",
+  "run.completed":
+    "sha256:c4f62260441e8c587332ba3d25a59e528b3f33e90e53243cd3f10e623aa2f503",
+  "run.failed":
+    "sha256:7c925ac0ba23531d2ae83d8b5e6db828c53897c1574689c9fa396e8238dc2b53",
+  "run.started":
+    "sha256:e0b598e6bbbfd99ddc1311970f7dcc99d0d3407253bdb111f342ac0250fd1931",
+  "tool.authorized":
+    "sha256:6a75eb1b6d112347d2f6ebe90e7c7870a72df9dbe99c61a563b21cebdf4d0b2b",
+  "tool.completed":
+    "sha256:aef559a3a5b84a2d98820f916f939b6557e9f1a43667d49621b9c5f3344bd556",
+  "tool.denied":
+    "sha256:8ad3e31eaa027c5c79c6f8c74bc9acc086c5edc7194e0e52459f74ce438f4c59",
+  "tool.requested":
+    "sha256:f4f018f792761e4038f88ed56ad39bdd242160a38f4a93ee7fd9380f03ff6c57"
+} as const;
+
+export const RuntimeEventContractMetadataSchema = z
+  .object({
+    contractId: nonEmptyString,
+    contractVersion: nonEmptyString,
+    schemaHash: nonEmptyString
+  })
+  .strict();
+export type RuntimeEventContractMetadata = z.infer<
+  typeof RuntimeEventContractMetadataSchema
+>;
+
+export const RunStartedEventPayloadSchema = z
+  .object({
+    input: RunInputSchema,
+    harness: RunStateSchema.shape.harness,
+    initialPhase: nonEmptyString,
+    budgets: BudgetStateSchema
+  })
+  .strict();
+export type RunStartedEventPayload = z.infer<
+  typeof RunStartedEventPayloadSchema
+>;
+
+export const HarnessLoadedEventPayloadSchema = z
+  .object({
+    harness: HarnessSnapshotSchema
+  })
+  .strict();
+export type HarnessLoadedEventPayload = z.infer<
+  typeof HarnessLoadedEventPayloadSchema
+>;
+
+export const PhaseEnteredEventPayloadSchema = z
+  .object({
+    phase: nonEmptyString,
+    reason: nonEmptyString.optional()
+  })
+  .strict();
+export type PhaseEnteredEventPayload = z.infer<
+  typeof PhaseEnteredEventPayloadSchema
+>;
+
+export const PhaseTransitionedEventPayloadSchema = z
+  .object({
+    phase: nonEmptyString.optional(),
+    fromPhase: nonEmptyString.optional(),
+    toPhase: nonEmptyString.optional(),
+    from: nonEmptyString.optional(),
+    to: nonEmptyString.optional(),
+    reason: nonEmptyString.optional()
+  })
+  .strict()
+  .superRefine((payload, context) => {
+    if (
+      payload.phase === undefined &&
+      payload.toPhase === undefined &&
+      payload.to === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "phase.transitioned requires phase, toPhase, or to"
+      });
+    }
+  });
+export type PhaseTransitionedEventPayload = z.infer<
+  typeof PhaseTransitionedEventPayloadSchema
+>;
+
+export const EvidenceRecordedEventPayloadSchema = z
+  .object({
+    evidence: EvidenceRecordSchema
+  })
+  .strict();
+export type EvidenceRecordedEventPayload = z.infer<
+  typeof EvidenceRecordedEventPayloadSchema
+>;
+
+export const ArtifactRecordedEventPayloadSchema = z
+  .object({
+    artifact: ArtifactRefSchema
+  })
+  .strict();
+export type ArtifactRecordedEventPayload = z.infer<
+  typeof ArtifactRecordedEventPayloadSchema
+>;
+
+export const ToolRequestedEventPayloadSchema = z
+  .object({
+    request: ToolCallRequestSchema
+  })
+  .strict();
+export type ToolRequestedEventPayload = z.infer<
+  typeof ToolRequestedEventPayloadSchema
+>;
+
+const ToolCallRequestSnapshotSchema = z
+  .object({
+    toolId: nonEmptyString,
+    args: z.unknown().optional(),
+    reason: nonEmptyString.optional(),
+    idempotencyKey: nonEmptyString.optional(),
+    requestedBy: z
+      .object({
+        phase: nonEmptyString,
+        gateId: nonEmptyString.optional(),
+        evalId: nonEmptyString.optional(),
+        modelCallId: nonEmptyString.optional()
+      })
+      .strict()
+  })
+  .strict();
+
+export const ToolCompletedEventPayloadSchema = z
+  .object({
+    request: ToolCallRequestSnapshotSchema,
+    result: ToolCallResultSchema
+  })
+  .strict();
+export type ToolCompletedEventPayload = z.infer<
+  typeof ToolCompletedEventPayloadSchema
+>;
+
+const policyVerdictStatusSchema = z.enum(["allow", "deny", "approval_required"]);
+
+const PolicyVerdictSchema = z
+  .object({
+    status: policyVerdictStatusSchema,
+    approvalId: nonEmptyString.optional(),
+    reasons: z.array(nonEmptyString).default([]),
+    constraints: z
+      .array(
+        z
+          .object({
+            kind: nonEmptyString,
+            value: z.unknown(),
+            sourceRuleId: nonEmptyString
+          })
+          .strict()
+      )
+      .default([]),
+    obligations: z
+      .array(
+        z
+          .object({
+            kind: nonEmptyString,
+            params: MetadataSchema.optional(),
+            sourceRuleId: nonEmptyString
+          })
+          .strict()
+      )
+      .default([]),
+    matchedRules: z
+      .array(
+        z
+          .object({
+            ruleId: nonEmptyString,
+            layer: nonEmptyString,
+            effect: nonEmptyString,
+            reason: nonEmptyString
+          })
+          .strict()
+      )
+      .default([]),
+    decisionHash: nonEmptyString.optional()
+  })
+  .strict();
+
+const PolicyRequestSchema = z
+  .object({
+    requestId: nonEmptyString,
+    runId: nonEmptyString,
+    phase: nonEmptyString,
+    action: z
+      .object({
+        kind: nonEmptyString,
+        toolId: nonEmptyString.optional(),
+        args: MetadataSchema.optional(),
+        requestedScopes: z.array(nonEmptyString).optional(),
+        risk: z.enum(["low", "medium", "high", "critical"]).optional(),
+        budgetCosts: z.record(z.string(), z.number()).optional()
+      })
+      .strict(),
+    runMode: nonEmptyString.optional(),
+    snapshots: MetadataSchema.optional()
+  })
+  .strict();
+
+export const ToolAuthorizedEventPayloadSchema = z
+  .object({
+    approvalId: nonEmptyString.optional(),
+    request: ToolCallRequestSnapshotSchema.optional(),
+    policyStatus: policyVerdictStatusSchema.optional(),
+    policyVerdict: PolicyVerdictSchema.optional()
+  })
+  .strict()
+  .superRefine((payload, context) => {
+    if (
+      payload.approvalId === undefined &&
+      payload.request === undefined &&
+      payload.policyVerdict === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "tool.authorized requires approvalId, request, or policyVerdict"
+      });
+    }
+  });
+export type ToolAuthorizedEventPayload = z.infer<
+  typeof ToolAuthorizedEventPayloadSchema
+>;
+
+export const ToolDeniedEventPayloadSchema = z
+  .object({
+    approvalId: nonEmptyString.optional(),
+    request: ToolCallRequestSnapshotSchema.optional(),
+    result: ToolCallResultSchema.optional(),
+    policyStatus: policyVerdictStatusSchema.optional(),
+    policyVerdict: PolicyVerdictSchema.optional(),
+    reason: nonEmptyString.optional()
+  })
+  .strict()
+  .superRefine((payload, context) => {
+    if (
+      payload.approvalId === undefined &&
+      payload.request === undefined &&
+      payload.result === undefined &&
+      payload.policyVerdict === undefined &&
+      payload.reason === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message:
+          "tool.denied requires request/result, approvalId, policyVerdict, or reason"
+      });
+    }
+  });
+export type ToolDeniedEventPayload = z.infer<
+  typeof ToolDeniedEventPayloadSchema
+>;
+
+const gateSeveritySchema = z.enum(["blocking", "advisory"]);
+const gateRequiredActionSchema = z.enum([
+  "repair",
+  "clarify",
+  "approve",
+  "fail_run"
+]);
+
+const GateFindingSchema = z
+  .object({
+    id: nonEmptyString,
+    severity: gateSeveritySchema,
+    message: nonEmptyString,
+    targetRef: nonEmptyString.optional(),
+    evidenceRefs: z.array(nonEmptyString),
+    repairHint: nonEmptyString.optional()
+  })
+  .strict();
+
+const GateObligationSchema = z
+  .object({
+    kind: z.enum([
+      "run_eval",
+      "request_clarification",
+      "create_repair_task",
+      "promote_artifact",
+      "attach_evidence",
+      "mark_assumption"
+    ]),
+    params: MetadataSchema.optional()
+  })
+  .strict();
+
+const GateVerdictSchema = z
+  .object({
+    gateId: nonEmptyString,
+    phase: nonEmptyString,
+    status: z.enum(["pass", "fail", "needs_review"]),
+    severity: gateSeveritySchema,
+    reasons: z.array(nonEmptyString),
+    findings: z.array(GateFindingSchema),
+    evidenceRefs: z.array(nonEmptyString),
+    requiredAction: gateRequiredActionSchema.optional(),
+    obligations: z.array(GateObligationSchema),
+    evaluatedAt: z.string().datetime({ offset: true }),
+    evaluator: z
+      .object({
+        kind: z.enum(["deterministic", "model_assisted", "human"]),
+        ref: nonEmptyString
+      })
+      .strict()
+  })
+  .strict();
+
+const GateHumanQuestionSchema = z
+  .object({
+    id: nonEmptyString,
+    gateId: nonEmptyString,
+    phase: nonEmptyString,
+    question: nonEmptyString,
+    requiredFor: nonEmptyString,
+    expectedAnswerSchema: nonEmptyString.optional()
+  })
+  .strict();
+
+const GateApprovalRequestSchema = z
+  .object({
+    id: nonEmptyString,
+    gateId: nonEmptyString,
+    phase: nonEmptyString,
+    reason: nonEmptyString,
+    requiredFor: nonEmptyString
+  })
+  .strict();
+
+const GateRepairTaskSchema = z
+  .object({
+    id: nonEmptyString,
+    gateId: nonEmptyString,
+    failedPhase: nonEmptyString,
+    targetRef: nonEmptyString.optional(),
+    problem: nonEmptyString,
+    requiredEvidenceRefs: z.array(nonEmptyString),
+    allowedTools: z.array(nonEmptyString),
+    blockedTools: z.array(nonEmptyString),
+    successGate: nonEmptyString,
+    createdFromFindingIds: z.array(nonEmptyString)
+  })
+  .strict();
+
+const GateLifecycleInstructionSchema = z.discriminatedUnion("kind", [
+  z
+    .object({
+      kind: z.literal("continue"),
+      gateId: nonEmptyString
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("transition_phase"),
+      gateId: nonEmptyString,
+      targetPhase: nonEmptyString
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("pause_for_human"),
+      gateId: nonEmptyString,
+      question: GateHumanQuestionSchema
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("request_approval"),
+      gateId: nonEmptyString,
+      approvalRequest: GateApprovalRequestSchema
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("create_repair_task"),
+      gateId: nonEmptyString,
+      repairTask: GateRepairTaskSchema
+    })
+    .strict(),
+  z
+    .object({
+      kind: z.literal("fail_run"),
+      gateId: nonEmptyString,
+      reason: nonEmptyString
+    })
+    .strict()
+]);
+
+export const GateEvaluatedEventPayloadSchema = z
+  .object({
+    gateId: nonEmptyString,
+    verdict: GateVerdictSchema,
+    instruction: GateLifecycleInstructionSchema
+  })
+  .strict();
+export type GateEvaluatedEventPayload = z.infer<
+  typeof GateEvaluatedEventPayloadSchema
+>;
+
+const EvalRunnerInputSchema = z
+  .object({
+    artifacts: z
+      .union([z.record(z.string(), MetadataSchema), z.array(MetadataSchema)])
+      .optional(),
+    evidence: MetadataSchema.optional()
+  })
+  .strict();
+
+const RunEvalRequestSchema = z
+  .object({
+    evalId: nonEmptyString.optional(),
+    evalDefinition: EvalDefinitionSchema.optional(),
+    evalDefinitions: z
+      .union([z.array(EvalDefinitionSchema), z.record(z.string(), EvalDefinitionSchema)])
+      .optional(),
+    input: EvalRunnerInputSchema.optional(),
+    evaluatorRef: nonEmptyString.optional()
+  })
+  .strict();
+
+export const EvalCompletedEventPayloadSchema = z
+  .object({
+    evalId: nonEmptyString,
+    request: RunEvalRequestSchema.optional(),
+    verdict: EvalVerdictSchema
+  })
+  .strict();
+export type EvalCompletedEventPayload = z.infer<
+  typeof EvalCompletedEventPayloadSchema
+>;
+
+export const RunCompletedEventPayloadSchema = z
+  .object({
+    reason: nonEmptyString.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type RunCompletedEventPayload = z.infer<
+  typeof RunCompletedEventPayloadSchema
+>;
+
+export const RunFailedEventPayloadSchema = z
+  .object({
+    reason: nonEmptyString,
+    errorCode: nonEmptyString.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type RunFailedEventPayload = z.infer<
+  typeof RunFailedEventPayloadSchema
+>;
+
+export const PolicyEvaluatedEventPayloadSchema = z
+  .object({
+    request: PolicyRequestSchema.optional(),
+    verdict: PolicyVerdictSchema,
+    approval: ApprovalRequestSchema.optional(),
+    approvalRequest: ApprovalRequestSchema.optional()
+  })
+  .strict();
+export type PolicyEvaluatedEventPayload = z.infer<
+  typeof PolicyEvaluatedEventPayloadSchema
+>;
+
+export const DecisionRecordedEventPayloadSchema = z
+  .object({
+    approvalId: nonEmptyString,
+    decision: ApprovalDecisionSchema.optional(),
+    subject: nonEmptyString.optional(),
+    reason: nonEmptyString.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type DecisionRecordedEventPayload = z.infer<
+  typeof DecisionRecordedEventPayloadSchema
+>;
+
+export const HumanInputRequestedEventPayloadSchema = z
+  .object({
+    question: HumanQuestionSchema.optional(),
+    humanQuestion: HumanQuestionSchema.optional()
+  })
+  .strict()
+  .superRefine((payload, context) => {
+    if (payload.question === undefined && payload.humanQuestion === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "human.input_requested requires question or humanQuestion"
+      });
+    }
+  });
+export type HumanInputRequestedEventPayload = z.infer<
+  typeof HumanInputRequestedEventPayloadSchema
+>;
+
+export const HumanAnswerRecordedEventPayloadSchema = z
+  .object({
+    questionId: nonEmptyString.optional(),
+    humanQuestionId: nonEmptyString.optional(),
+    answer: z.union([nonEmptyString, MetadataSchema]),
+    answeredBy: nonEmptyString.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict()
+  .superRefine((payload, context) => {
+    if (
+      payload.questionId === undefined &&
+      payload.humanQuestionId === undefined
+    ) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "human.answer_recorded requires questionId or humanQuestionId"
+      });
+    }
+  });
+export type HumanAnswerRecordedEventPayload = z.infer<
+  typeof HumanAnswerRecordedEventPayloadSchema
+>;
+
+export const EVENT_PAYLOAD_SCHEMAS = {
+  "artifact.recorded": ArtifactRecordedEventPayloadSchema,
+  "decision.recorded": DecisionRecordedEventPayloadSchema,
+  "eval.completed": EvalCompletedEventPayloadSchema,
+  "evidence.recorded": EvidenceRecordedEventPayloadSchema,
+  "gate.evaluated": GateEvaluatedEventPayloadSchema,
+  "harness.loaded": HarnessLoadedEventPayloadSchema,
+  "human.answer_recorded": HumanAnswerRecordedEventPayloadSchema,
+  "human.input_requested": HumanInputRequestedEventPayloadSchema,
+  "phase.entered": PhaseEnteredEventPayloadSchema,
+  "phase.transitioned": PhaseTransitionedEventPayloadSchema,
+  "policy.evaluated": PolicyEvaluatedEventPayloadSchema,
+  "run.completed": RunCompletedEventPayloadSchema,
+  "run.failed": RunFailedEventPayloadSchema,
+  "run.started": RunStartedEventPayloadSchema,
+  "tool.authorized": ToolAuthorizedEventPayloadSchema,
+  "tool.completed": ToolCompletedEventPayloadSchema,
+  "tool.denied": ToolDeniedEventPayloadSchema,
+  "tool.requested": ToolRequestedEventPayloadSchema
+} as const;
+export type EventPayloadSchemas = typeof EVENT_PAYLOAD_SCHEMAS;
+export type RuntimeEventType = keyof EventPayloadSchemas;
+export type RuntimeEventPayload = {
+  [TType in RuntimeEventType]: z.infer<EventPayloadSchemas[TType]>;
+}[RuntimeEventType];
+
+export const KNOWN_RUNTIME_EVENT_TYPES = Object.keys(
+  EVENT_PAYLOAD_SCHEMAS
+) as RuntimeEventType[];
+
+function contractIdForEventType(type: RuntimeEventType) {
+  return `specwright.event.${type}`;
+}
+
+function eventContractMetadataSchema<TType extends RuntimeEventType>(
+  type: TType
+) {
+  return {
+    contractId: z.literal(contractIdForEventType(type)).default(
+      contractIdForEventType(type)
+    ),
+    contractVersion: z
+      .literal(RUNTIME_EVENT_CONTRACT_VERSION)
+      .default(RUNTIME_EVENT_CONTRACT_VERSION),
+    schemaHash: z
+      .literal(runtimeEventSchemaHashes[type])
+      .default(runtimeEventSchemaHashes[type])
+  };
+}
+
+function runtimeEventVariantSchema<TType extends RuntimeEventType>(
+  type: TType,
+  payloadSchema: EventPayloadSchemas[TType]
+) {
+  return z
+    .object({
+      ...runtimeEventEnvelopeFields,
+      type: z.literal(type),
+      ...eventContractMetadataSchema(type),
+      payload: payloadSchema
+    })
+    .strict();
+}
+
+export const RuntimeEventEnvelopeSchema = z
+  .object({
+    ...runtimeEventEnvelopeFields,
+    type: nonEmptyString,
+    contractId: nonEmptyString.optional(),
+    contractVersion: nonEmptyString.optional(),
+    schemaHash: nonEmptyString.optional(),
+    payload: z.unknown()
+  })
+  .strict();
+
+export const RuntimeEventSchema = z.discriminatedUnion("type", [
+  runtimeEventVariantSchema(
+    "artifact.recorded",
+    EVENT_PAYLOAD_SCHEMAS["artifact.recorded"]
+  ),
+  runtimeEventVariantSchema(
+    "decision.recorded",
+    EVENT_PAYLOAD_SCHEMAS["decision.recorded"]
+  ),
+  runtimeEventVariantSchema(
+    "eval.completed",
+    EVENT_PAYLOAD_SCHEMAS["eval.completed"]
+  ),
+  runtimeEventVariantSchema(
+    "evidence.recorded",
+    EVENT_PAYLOAD_SCHEMAS["evidence.recorded"]
+  ),
+  runtimeEventVariantSchema(
+    "gate.evaluated",
+    EVENT_PAYLOAD_SCHEMAS["gate.evaluated"]
+  ),
+  runtimeEventVariantSchema(
+    "harness.loaded",
+    EVENT_PAYLOAD_SCHEMAS["harness.loaded"]
+  ),
+  runtimeEventVariantSchema(
+    "human.answer_recorded",
+    EVENT_PAYLOAD_SCHEMAS["human.answer_recorded"]
+  ),
+  runtimeEventVariantSchema(
+    "human.input_requested",
+    EVENT_PAYLOAD_SCHEMAS["human.input_requested"]
+  ),
+  runtimeEventVariantSchema(
+    "phase.entered",
+    EVENT_PAYLOAD_SCHEMAS["phase.entered"]
+  ),
+  runtimeEventVariantSchema(
+    "phase.transitioned",
+    EVENT_PAYLOAD_SCHEMAS["phase.transitioned"]
+  ),
+  runtimeEventVariantSchema(
+    "policy.evaluated",
+    EVENT_PAYLOAD_SCHEMAS["policy.evaluated"]
+  ),
+  runtimeEventVariantSchema(
+    "run.completed",
+    EVENT_PAYLOAD_SCHEMAS["run.completed"]
+  ),
+  runtimeEventVariantSchema("run.failed", EVENT_PAYLOAD_SCHEMAS["run.failed"]),
+  runtimeEventVariantSchema(
+    "run.started",
+    EVENT_PAYLOAD_SCHEMAS["run.started"]
+  ),
+  runtimeEventVariantSchema(
+    "tool.authorized",
+    EVENT_PAYLOAD_SCHEMAS["tool.authorized"]
+  ),
+  runtimeEventVariantSchema(
+    "tool.completed",
+    EVENT_PAYLOAD_SCHEMAS["tool.completed"]
+  ),
+  runtimeEventVariantSchema("tool.denied", EVENT_PAYLOAD_SCHEMAS["tool.denied"]),
+  runtimeEventVariantSchema(
+    "tool.requested",
+    EVENT_PAYLOAD_SCHEMAS["tool.requested"]
+  )
+]);
+
+export type RuntimeEventContract = z.infer<typeof RuntimeEventSchema>;
+export type RuntimeEvent<TPayload = RuntimeEventPayload> = [RuntimeEventPayload] extends [
+  TPayload
+]
+  ? RuntimeEventContract
+  : Omit<z.infer<typeof RuntimeEventEnvelopeSchema>, "payload"> & {
+      payload: TPayload;
+    };
+
+export type RuntimeEventPayloadByType = {
+  [TType in RuntimeEventType]: Extract<
+    RuntimeEventContract,
+    { type: TType }
+  >["payload"];
+};
+
+export const RUNTIME_EVENT_CONTRACTS = Object.fromEntries(
+  KNOWN_RUNTIME_EVENT_TYPES.map((type) => [
+    type,
+    {
+      contractId: contractIdForEventType(type),
+      contractVersion: RUNTIME_EVENT_CONTRACT_VERSION,
+      schemaHash: runtimeEventSchemaHashes[type],
+      payloadSchema: EVENT_PAYLOAD_SCHEMAS[type]
+    }
+  ])
+) as {
+  [TType in RuntimeEventType]: RuntimeEventContractMetadata & {
+    payloadSchema: EventPayloadSchemas[TType];
+  };
+};
+
+export function isRuntimeEventType(type: string): type is RuntimeEventType {
+  return Object.prototype.hasOwnProperty.call(EVENT_PAYLOAD_SCHEMAS, type);
+}
+
+export function runtimeEventContractForType(type: string) {
+  return isRuntimeEventType(type) ? RUNTIME_EVENT_CONTRACTS[type] : undefined;
+}
+
+export function runtimeEventSchema<TPayloadSchema extends ZodTypeAny>(
+  payloadSchema: TPayloadSchema
+) {
+  return RuntimeEventEnvelopeSchema.extend({
+    payload: payloadSchema
+  });
+}

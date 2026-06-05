@@ -2,11 +2,14 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   appendEvent,
   createRun,
   getRunStorePaths,
   materializeRunState,
+  parseEventLog,
+  projectRunState,
   readEvents,
   RunStoreError,
   type HarnessSnapshot
@@ -26,6 +29,10 @@ const harness = {
   version: "0.0.0",
   specHash: "sha256:test"
 } satisfies HarnessSnapshot;
+
+const eventFixturesDir = fileURLToPath(
+  new URL("../../schemas/fixtures/events/", import.meta.url)
+);
 
 let rootDir: string;
 
@@ -220,6 +227,107 @@ describe("run store", () => {
     expect(error).toBeInstanceOf(RunStoreError);
     expect((error as RunStoreError).code).toBe("invalid_sequence");
   });
+
+  test("rejects invalid event payload append and preserves the log", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-invalid-payload",
+      traceId: "trace-invalid-payload",
+      input: runInput,
+      harness
+    });
+    const paths = getRunStorePaths(rootDir, "run-invalid-payload");
+    const before = await readFile(paths.eventsPath, "utf8");
+
+    const error = await captureError(() =>
+      appendEvent({
+        rootDir,
+        runId: "run-invalid-payload",
+        type: "phase.entered",
+        payload: {
+          phase: 42
+        }
+      })
+    );
+    const after = await readFile(paths.eventsPath, "utf8");
+
+    expect(error).toBeInstanceOf(RunStoreError);
+    expect((error as RunStoreError).code).toBe("invalid_event_payload");
+    expect(after).toBe(before);
+  });
+
+  test("rejects unknown event type append and preserves the log", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-unknown-type",
+      traceId: "trace-unknown-type",
+      input: runInput,
+      harness
+    });
+    const paths = getRunStorePaths(rootDir, "run-unknown-type");
+    const before = await readFile(paths.eventsPath, "utf8");
+
+    const error = await captureError(() =>
+      appendEvent({
+        rootDir,
+        runId: "run-unknown-type",
+        type: "event.unknown",
+        payload: {}
+      })
+    );
+    const after = await readFile(paths.eventsPath, "utf8");
+
+    expect(error).toBeInstanceOf(RunStoreError);
+    expect((error as RunStoreError).code).toBe("unknown_event_contract");
+    expect(after).toBe(before);
+  });
+
+  test("replays the shared valid historical event fixture", async () => {
+    const events = parseEventLog(
+      await readEventFixture("valid-historical-run.jsonl"),
+      "fixture-run"
+    );
+    const state = projectRunState(events);
+
+    expect(events).toHaveLength(18);
+    expect(state).toMatchObject({
+      runId: "fixture-run",
+      status: "completed",
+      phase: "evidence"
+    });
+    expect(state.artifacts.map((artifact) => artifact.artifactId)).toContain(
+      "artifact-1"
+    );
+  });
+
+  test("rejects invalid replay fixtures with structured event contract errors", async () => {
+    const cases = [
+      {
+        fixture: "invalid-payload.jsonl",
+        runId: "fixture-invalid-payload",
+        code: "invalid_event_payload"
+      },
+      {
+        fixture: "unknown-type.jsonl",
+        runId: "fixture-unknown-type",
+        code: "unknown_event_contract"
+      },
+      {
+        fixture: "unsupported-version.jsonl",
+        runId: "fixture-unsupported-version",
+        code: "unsupported_event_version"
+      }
+    ] as const;
+
+    for (const testCase of cases) {
+      const error = await captureError(async () =>
+        parseEventLog(await readEventFixture(testCase.fixture), testCase.runId)
+      );
+
+      expect(error).toBeInstanceOf(RunStoreError);
+      expect((error as RunStoreError).code).toBe(testCase.code);
+    }
+  });
 });
 
 async function captureError(operation: () => Promise<unknown>) {
@@ -230,4 +338,8 @@ async function captureError(operation: () => Promise<unknown>) {
   }
 
   throw new Error("Expected operation to fail");
+}
+
+async function readEventFixture(name: string) {
+  return readFile(`${eventFixturesDir}${name}`, "utf8");
 }
