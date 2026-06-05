@@ -4,17 +4,28 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  EVENT_INTEGRITY_ALGO,
+  EVENT_INTEGRITY_GENESIS_SEED,
   appendEvent,
+  canonicalizeEventContent,
   createRun,
   getRunStorePaths,
+  hashEventContent,
   materializeRunState,
   parseEventLog,
   projectRunState,
   readEvents,
+  replayRunState,
   RunStoreError,
+  verifyRunIntegrity,
   type HarnessSnapshot
 } from "./index";
-import type { RunInput } from "@specwright/schemas";
+import { RuntimeEventSchema } from "@specwright/schemas";
+import type {
+  RunInput,
+  RuntimeEvent,
+  RuntimeEventIntegrity
+} from "@specwright/schemas";
 
 const runInput = {
   task: "Create a source-bound frontend contract",
@@ -138,6 +149,70 @@ describe("run store", () => {
     ]);
   });
 
+  test("chains appended event integrity and verifies the ledger", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-integrity",
+      traceId: "trace-integrity",
+      input: runInput,
+      harness,
+      timestamp: "2026-05-29T00:00:00.000Z"
+    });
+    await appendEvent({
+      rootDir,
+      runId: "run-integrity",
+      type: "phase.entered",
+      payload: {
+        phase: "intake"
+      },
+      timestamp: "2026-05-29T00:00:01.000Z"
+    });
+    await appendEvent({
+      rootDir,
+      runId: "run-integrity",
+      type: "run.completed",
+      payload: {
+        reason: "done"
+      },
+      timestamp: "2026-05-29T00:00:02.000Z"
+    });
+
+    const events = await readEvents({
+      rootDir,
+      runId: "run-integrity"
+    });
+    const firstIntegrity = requireIntegrity(events[0]);
+    const secondIntegrity = requireIntegrity(events[1]);
+    const thirdIntegrity = requireIntegrity(events[2]);
+
+    expect(firstIntegrity).toEqual({
+      algo: EVENT_INTEGRITY_ALGO,
+      prevHash: EVENT_INTEGRITY_GENESIS_SEED,
+      hash: hashEventContent(events[0])
+    });
+    expect(secondIntegrity.prevHash).toBe(firstIntegrity.hash);
+    expect(secondIntegrity.hash).toBe(hashEventContent(events[1]));
+    expect(thirdIntegrity.prevHash).toBe(secondIntegrity.hash);
+    expect(thirdIntegrity.hash).toBe(hashEventContent(events[2]));
+
+    const verdict = await verifyRunIntegrity({
+      rootDir,
+      runId: "run-integrity"
+    });
+
+    expect(verdict).toEqual({
+      status: "verified",
+      eventCount: 3,
+      headHash: thirdIntegrity.hash
+    });
+    expect(projectRunState(events)).toEqual(
+      await materializeRunState({
+        rootDir,
+        runId: "run-integrity"
+      })
+    );
+  });
+
   test("rebuilds state.json from events instead of trusting stale projection", async () => {
     await createRun({
       rootDir,
@@ -167,6 +242,286 @@ describe("run store", () => {
     expect(replayed.status).toBe("completed");
     expect(replayed.lastEventId).toBe(appended.event.id);
     expect(stateJson).toEqual(replayed);
+  });
+
+  test("detects a forged out-of-band line and quarantines projection rebuild", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-forged",
+      traceId: "trace-forged",
+      input: runInput,
+      harness
+    });
+    const paths = getRunStorePaths(rootDir, "run-forged");
+    const forged = RuntimeEventSchema.parse({
+      id: "forged-completion",
+      runId: "run-forged",
+      type: "run.completed",
+      timestamp: "2026-05-29T00:00:01.000Z",
+      sequence: 1,
+      traceId: "trace-forged",
+      payload: {
+        reason: "out-of-band"
+      }
+    });
+
+    await writeFile(paths.eventsPath, `${JSON.stringify(forged)}\n`, {
+      flag: "a"
+    });
+    const beforeState = await readFile(paths.statePath, "utf8");
+    const verdict = await verifyRunIntegrity({
+      rootDir,
+      runId: "run-forged"
+    });
+
+    expect(verdict).toMatchObject({
+      status: "broken",
+      brokenAtSequence: 1,
+      code: "integrity_missing"
+    });
+
+    const error = await captureError(() =>
+      replayRunState({
+        rootDir,
+        runId: "run-forged"
+      })
+    );
+    const afterState = await readFile(paths.statePath, "utf8");
+
+    expect(error).toBeInstanceOf(RunStoreError);
+    expect((error as RunStoreError).code).toBe("integrity_broken");
+    expect(afterState).toBe(beforeState);
+  });
+
+  test("detects valid-JSON payload mutation by recomputing the digest", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-mutated",
+      traceId: "trace-mutated",
+      input: runInput,
+      harness
+    });
+    await appendEvent({
+      rootDir,
+      runId: "run-mutated",
+      type: "phase.entered",
+      payload: {
+        phase: "intake"
+      }
+    });
+    const paths = getRunStorePaths(rootDir, "run-mutated");
+    const events = await readEvents({
+      rootDir,
+      runId: "run-mutated"
+    });
+    const phaseEvent = events[1];
+
+    if (phaseEvent === undefined || phaseEvent.type !== "phase.entered") {
+      throw new Error("Expected phase.entered event at sequence 1");
+    }
+
+    await writeEvents(paths.eventsPath, [
+      events[0],
+      {
+        ...phaseEvent,
+        payload: {
+          ...phaseEvent.payload,
+          phase: "planning"
+        }
+      }
+    ]);
+
+    const verdict = await verifyRunIntegrity({
+      rootDir,
+      runId: "run-mutated"
+    });
+
+    expect(verdict).toMatchObject({
+      status: "broken",
+      brokenAtSequence: 1,
+      code: "integrity_hash_mismatch"
+    });
+  });
+
+  test("detects sequence-stuffed and truncated tail ledgers as broken", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-adversarial",
+      traceId: "trace-adversarial",
+      input: runInput,
+      harness
+    });
+    const paths = getRunStorePaths(rootDir, "run-adversarial");
+    const stuffed = RuntimeEventSchema.parse({
+      id: "stuffed-event",
+      runId: "run-adversarial",
+      type: "run.completed",
+      timestamp: "2026-05-29T00:00:01.000Z",
+      sequence: 99,
+      traceId: "trace-adversarial",
+      payload: {
+        reason: "sequence stuffed"
+      }
+    });
+
+    await writeFile(paths.eventsPath, `${JSON.stringify(stuffed)}\n`, {
+      flag: "a"
+    });
+
+    const stuffedVerdict = await verifyRunIntegrity({
+      rootDir,
+      runId: "run-adversarial"
+    });
+
+    expect(stuffedVerdict).toMatchObject({
+      status: "broken",
+      brokenAtSequence: 1,
+      code: "invalid_sequence"
+    });
+
+    await createRun({
+      rootDir,
+      runId: "run-truncated",
+      traceId: "trace-truncated",
+      input: runInput,
+      harness
+    });
+    const truncatedPaths = getRunStorePaths(rootDir, "run-truncated");
+
+    await writeFile(truncatedPaths.eventsPath, "{\"id\":\"truncated-tail\"\n", {
+      flag: "a"
+    });
+
+    const truncatedVerdict = await verifyRunIntegrity({
+      rootDir,
+      runId: "run-truncated"
+    });
+
+    expect(truncatedVerdict).toMatchObject({
+      status: "broken",
+      brokenAtSequence: 1,
+      code: "corrupt_event"
+    });
+  });
+
+  test("keeps legacy unchained ledgers replayable and classified separately", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-legacy",
+      traceId: "trace-legacy",
+      input: runInput,
+      harness
+    });
+    await appendEvent({
+      rootDir,
+      runId: "run-legacy",
+      type: "phase.entered",
+      payload: {
+        phase: "intake"
+      }
+    });
+    const paths = getRunStorePaths(rootDir, "run-legacy");
+    const chainedEvents = await readEvents({
+      rootDir,
+      runId: "run-legacy"
+    });
+    const legacyEvents = chainedEvents.map(({ integrity, ...event }) => {
+      void integrity;
+      return event;
+    });
+
+    await writeEvents(paths.eventsPath, legacyEvents);
+
+    const verdict = await verifyRunIntegrity({
+      rootDir,
+      runId: "run-legacy"
+    });
+    const replayed = await materializeRunState({
+      rootDir,
+      runId: "run-legacy"
+    });
+
+    expect(verdict).toEqual({
+      status: "unchained",
+      eventCount: 2
+    });
+    expect(replayed.phase).toBe("intake");
+  });
+
+  test("refuses to append onto a broken chained ledger", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-broken-append",
+      traceId: "trace-broken-append",
+      input: runInput,
+      harness
+    });
+    const paths = getRunStorePaths(rootDir, "run-broken-append");
+    const events = await readEvents({
+      rootDir,
+      runId: "run-broken-append"
+    });
+    const started = events[0];
+
+    if (started === undefined || started.type !== "run.started") {
+      throw new Error("Expected run.started event at sequence 0");
+    }
+
+    await writeEvents(paths.eventsPath, [
+      {
+        ...started,
+        payload: {
+          ...started.payload,
+          initialPhase: "tampered"
+        }
+      }
+    ]);
+    const before = await readFile(paths.eventsPath, "utf8");
+
+    const error = await captureError(() =>
+      appendEvent({
+        rootDir,
+        runId: "run-broken-append",
+        type: "phase.entered",
+        payload: {
+          phase: "intake"
+        }
+      })
+    );
+    const after = await readFile(paths.eventsPath, "utf8");
+
+    expect(error).toBeInstanceOf(RunStoreError);
+    expect((error as RunStoreError).code).toBe("integrity_broken");
+    expect(after).toBe(before);
+  });
+
+  test("pins the canonical event-content digest", () => {
+    const event = RuntimeEventSchema.parse({
+      id: "event-golden",
+      runId: "run-golden",
+      type: "run.started",
+      timestamp: "2026-05-29T00:00:00.000Z",
+      sequence: 0,
+      traceId: "trace-golden",
+      payload: {
+        input: runInput,
+        harness,
+        initialPhase: "created",
+        budgets: {}
+      },
+      integrity: {
+        algo: EVENT_INTEGRITY_ALGO,
+        prevHash: EVENT_INTEGRITY_GENESIS_SEED,
+        hash: "sha256:ignored-by-canonicalizer"
+      }
+    });
+
+    expect(canonicalizeEventContent(event)).toBe(
+      "{\"id\":\"event-golden\",\"payload\":{\"budgets\":{},\"harness\":{\"id\":\"default\",\"specHash\":\"sha256:test\",\"version\":\"0.0.0\"},\"initialPhase\":\"created\",\"input\":{\"harnessId\":\"default\",\"host\":{\"kind\":\"cli\"},\"task\":\"Create a source-bound frontend contract\"}},\"runId\":\"run-golden\",\"sequence\":0,\"timestamp\":\"2026-05-29T00:00:00.000Z\",\"traceId\":\"trace-golden\",\"type\":\"run.started\"}"
+    );
+    expect(hashEventContent(event)).toBe(
+      "sha256:e3c0b4d26be44c49c6f7cb617c95c1bb5008e53b5fccb7a1a63d59924ee3a645"
+    );
   });
 
   test("rejects corrupt JSONL events", async () => {
@@ -342,4 +697,23 @@ async function captureError(operation: () => Promise<unknown>) {
 
 async function readEventFixture(name: string) {
   return readFile(`${eventFixturesDir}${name}`, "utf8");
+}
+
+function requireIntegrity(event: RuntimeEvent | undefined): RuntimeEventIntegrity {
+  if (event === undefined) {
+    throw new Error("Expected runtime event");
+  }
+
+  if (event.integrity === undefined) {
+    throw new Error(`Expected integrity metadata on event ${event.sequence}`);
+  }
+
+  return event.integrity;
+}
+
+async function writeEvents(path: string, events: readonly RuntimeEvent[]) {
+  await writeFile(
+    path,
+    `${events.map((event) => JSON.stringify(event)).join("\n")}\n`
+  );
 }

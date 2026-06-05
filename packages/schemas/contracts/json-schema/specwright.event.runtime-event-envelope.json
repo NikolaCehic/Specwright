@@ -18,6 +18,26 @@
     "id": {
       "type": "string"
     },
+    "integrity": {
+      "additionalProperties": false,
+      "properties": {
+        "algo": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "prevHash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "algo",
+        "hash",
+        "prevHash"
+      ],
+      "type": "object"
+    },
     "payload": {},
     "runId": {
       "type": "string"
@@ -52,7 +72,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:ad7e635333711a938840742bc21c193cbe06f916ab70e829146c743c82f5ccf1",
+    "hash": "sha256:c82002a85b93e7eb7f45f854ad0e82e4a3944488161322465026e5b77086daa1",
     "id": "specwright.event.runtime-event-envelope",
     "status": "public",
     "version": "1"

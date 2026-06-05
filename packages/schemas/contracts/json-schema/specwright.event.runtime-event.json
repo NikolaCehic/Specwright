@@ -20,6 +20,26 @@
         "id": {
           "type": "string"
         },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
         "payload": {
           "additionalProperties": false,
           "properties": {
@@ -106,6 +126,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -227,6 +267,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -1110,6 +1170,26 @@
         "id": {
           "type": "string"
         },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
         "payload": {
           "additionalProperties": false,
           "properties": {
@@ -1371,6 +1451,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -1953,6 +2053,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -2697,6 +2817,26 @@
         "id": {
           "type": "string"
         },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
         "payload": {
           "additionalProperties": false,
           "properties": {
@@ -2779,6 +2919,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -2907,6 +3067,26 @@
         "id": {
           "type": "string"
         },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
         "payload": {
           "additionalProperties": false,
           "properties": {
@@ -2970,6 +3150,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -3045,6 +3245,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -3425,6 +3645,26 @@
         "id": {
           "type": "string"
         },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
         "payload": {
           "additionalProperties": false,
           "properties": {
@@ -3487,6 +3727,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -3555,6 +3815,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -3722,6 +4002,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -4009,6 +4309,26 @@
         "id": {
           "type": "string"
         },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
         "payload": {
           "additionalProperties": false,
           "properties": {
@@ -4186,6 +4506,26 @@
         },
         "id": {
           "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
         },
         "payload": {
           "additionalProperties": false,
@@ -4554,6 +4894,26 @@
         "id": {
           "type": "string"
         },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
         "payload": {
           "additionalProperties": false,
           "properties": {
@@ -4642,7 +5002,7 @@
   "title": "RuntimeEventSchema",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
+    "hash": "sha256:c6a528b1b0d1e639130fec19559fa6ad875ef8c42a9c30d26b794bacb377f546",
     "id": "specwright.event.runtime-event",
     "status": "public",
     "version": "1"

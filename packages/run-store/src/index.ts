@@ -1,4 +1,12 @@
-import { randomUUID } from "node:crypto";
+declare module "node:crypto" {
+  export function createHash(algorithm: "sha256"): {
+    update(data: string): {
+      digest(encoding: "hex"): string;
+    };
+  };
+}
+
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, open, readFile, rename, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
@@ -14,7 +22,8 @@ import {
   type HumanQuestion,
   type RunInput,
   type RunState,
-  type RuntimeEvent
+  type RuntimeEvent,
+  type RuntimeEventIntegrity
 } from "@specwright/schemas";
 
 export const RUN_STORE_DIR = ".archetype";
@@ -29,6 +38,7 @@ export type RunStoreErrorCode =
   | "corrupt_event"
   | "invalid_event"
   | "invalid_event_payload"
+  | "integrity_broken"
   | "invalid_projection"
   | "invalid_run_id"
   | "invalid_sequence"
@@ -111,6 +121,36 @@ export type AppendEventResult = {
   state: RunState;
 };
 
+export const EVENT_INTEGRITY_ALGO = "sha256";
+export const EVENT_INTEGRITY_HASH_PREFIX = `${EVENT_INTEGRITY_ALGO}:`;
+export const EVENT_INTEGRITY_GENESIS_SEED = `${EVENT_INTEGRITY_HASH_PREFIX}${"0".repeat(64)}`;
+
+export type RunIntegrityDefectCode =
+  | RunStoreErrorCode
+  | "integrity_algo_mismatch"
+  | "integrity_hash_mismatch"
+  | "integrity_missing"
+  | "integrity_partial_chain"
+  | "integrity_prev_hash_mismatch";
+
+export type RunIntegrityVerdict =
+  | {
+      status: "verified";
+      eventCount: number;
+      headHash: string;
+    }
+  | {
+      status: "unchained";
+      eventCount: number;
+    }
+  | {
+      status: "broken";
+      eventCount: number;
+      brokenAtSequence: number;
+      code: RunIntegrityDefectCode;
+      detail: string;
+    };
+
 export function getRunStorePaths(rootDir: string | undefined, runId: string) {
   const safeRunId = assertSafeRunId(runId);
   const absoluteRoot = resolve(rootDir ?? ".");
@@ -172,14 +212,17 @@ export async function createRun(
     initialPhase,
     budgets
   };
-  const event = buildEvent({
-    runId,
-    type: "run.started",
-    payload,
-    traceId,
-    timestamp: options.timestamp,
-    sequence: 0
-  });
+  const event = withIntegrity(
+    buildEvent({
+      runId,
+      type: "run.started",
+      payload,
+      traceId,
+      timestamp: options.timestamp,
+      sequence: 0
+    }),
+    EVENT_INTEGRITY_GENESIS_SEED
+  );
   const state = projectRunState([event]);
 
   await appendJsonLine(paths.eventsPath, event);
@@ -202,8 +245,14 @@ export async function appendEvent<TPayload>(
     rootDir: options.rootDir,
     runId
   });
+  const existingIntegrity = verifyParsedRunIntegrity(existingEvents);
+
+  if (existingIntegrity.status === "broken") {
+    throw integrityBrokenError(runId, existingIntegrity);
+  }
+
   const lastEvent = existingEvents.at(-1);
-  const event = buildEvent({
+  const builtEvent = buildEvent({
     id: options.id,
     runId,
     type: options.type,
@@ -214,6 +263,10 @@ export async function appendEvent<TPayload>(
     timestamp: options.timestamp,
     sequence: existingEvents.length
   });
+  const event =
+    existingIntegrity.status === "verified"
+      ? withIntegrity(builtEvent, existingIntegrity.headHash)
+      : builtEvent;
   const events = [...existingEvents, event];
   const state = projectRunState(events);
 
@@ -247,6 +300,29 @@ export async function readEvents(options: {
   return parseEventLog(raw, runId);
 }
 
+export async function verifyRunIntegrity(options: {
+  rootDir?: string | undefined;
+  runId: string;
+}): Promise<RunIntegrityVerdict> {
+  const runId = assertSafeRunId(options.runId);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  let raw: string;
+
+  try {
+    raw = await readFile(paths.eventsPath, "utf8");
+  } catch (error) {
+    return brokenIntegrityVerdict({
+      eventCount: 0,
+      brokenAtSequence: 0,
+      code: "missing_events",
+      detail: `Missing event log for run ${runId}`,
+      cause: error
+    });
+  }
+
+  return verifyRawEventLogIntegrity(raw, runId);
+}
+
 export function parseEventLog(raw: string, expectedRunId?: string) {
   const lines = raw.split(/\r?\n/);
 
@@ -257,12 +333,53 @@ export function parseEventLog(raw: string, expectedRunId?: string) {
   return lines.map((line, index) => parseEventLine(line, index, expectedRunId));
 }
 
+function verifyRawEventLogIntegrity(
+  raw: string,
+  expectedRunId: string
+): RunIntegrityVerdict {
+  const lines = raw.split(/\r?\n/);
+
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
+
+  const events: RuntimeEvent[] = [];
+
+  for (const [index, line] of lines.entries()) {
+    try {
+      events.push(parseEventLine(line, index, expectedRunId));
+    } catch (error) {
+      return brokenIntegrityVerdict({
+        eventCount: events.length,
+        brokenAtSequence: index,
+        code: error instanceof RunStoreError ? error.code : "corrupt_event",
+        detail:
+          error instanceof Error
+            ? error.message
+            : `Invalid event at sequence ${index}`,
+        cause: error
+      });
+    }
+  }
+
+  return verifyParsedRunIntegrity(events);
+}
+
 export async function materializeRunState(options: {
   rootDir?: string | undefined;
   runId: string;
 }): Promise<RunState> {
   const runId = assertSafeRunId(options.runId);
   const paths = getRunStorePaths(options.rootDir, runId);
+  const integrity = await verifyRunIntegrity({
+    rootDir: options.rootDir,
+    runId
+  });
+
+  if (integrity.status === "broken") {
+    throw integrityBrokenError(runId, integrity);
+  }
+
   const state = projectRunState(
     await readEvents({
       rootDir: options.rootDir,
@@ -489,6 +606,221 @@ function validateEventSequence(events: readonly RuntimeEvent[]) {
       );
     }
   });
+}
+
+function verifyParsedRunIntegrity(
+  events: readonly RuntimeEvent[]
+): RunIntegrityVerdict {
+  if (events.length === 0) {
+    return brokenIntegrityVerdict({
+      eventCount: 0,
+      brokenAtSequence: 0,
+      code: "run_not_started",
+      detail: "Cannot verify integrity without events"
+    });
+  }
+
+  const firstChainedIndex = events.findIndex(
+    (event) => event.integrity !== undefined
+  );
+
+  if (firstChainedIndex === -1) {
+    return {
+      status: "unchained",
+      eventCount: events.length
+    };
+  }
+
+  if (firstChainedIndex > 0) {
+    return brokenIntegrityVerdict({
+      eventCount: events.length,
+      brokenAtSequence: firstChainedIndex,
+      code: "integrity_partial_chain",
+      detail:
+        "Ledger carries integrity after an unchained legacy prefix; partial chains are not trusted"
+    });
+  }
+
+  let expectedPrevHash = EVENT_INTEGRITY_GENESIS_SEED;
+  let headHash = EVENT_INTEGRITY_GENESIS_SEED;
+
+  for (const event of events) {
+    const integrity = event.integrity;
+
+    if (integrity === undefined) {
+      return brokenIntegrityVerdict({
+        eventCount: events.length,
+        brokenAtSequence: event.sequence,
+        code: "integrity_missing",
+        detail: `Event ${event.sequence} is missing integrity metadata`
+      });
+    }
+
+    if (integrity.algo !== EVENT_INTEGRITY_ALGO) {
+      return brokenIntegrityVerdict({
+        eventCount: events.length,
+        brokenAtSequence: event.sequence,
+        code: "integrity_algo_mismatch",
+        detail: `Event ${event.sequence} uses integrity algorithm ${integrity.algo}, expected ${EVENT_INTEGRITY_ALGO}`
+      });
+    }
+
+    if (integrity.prevHash !== expectedPrevHash) {
+      return brokenIntegrityVerdict({
+        eventCount: events.length,
+        brokenAtSequence: event.sequence,
+        code: "integrity_prev_hash_mismatch",
+        detail: `Event ${event.sequence} prevHash ${integrity.prevHash} does not match expected ${expectedPrevHash}`
+      });
+    }
+
+    const expectedHash = hashEventContent(event);
+
+    if (integrity.hash !== expectedHash) {
+      return brokenIntegrityVerdict({
+        eventCount: events.length,
+        brokenAtSequence: event.sequence,
+        code: "integrity_hash_mismatch",
+        detail: `Event ${event.sequence} hash ${integrity.hash} does not match recomputed ${expectedHash}`
+      });
+    }
+
+    expectedPrevHash = integrity.hash;
+    headHash = integrity.hash;
+  }
+
+  return {
+    status: "verified",
+    eventCount: events.length,
+    headHash
+  };
+}
+
+function withIntegrity(
+  event: RuntimeEvent,
+  prevHash: string
+): RuntimeEvent {
+  const parsed = RuntimeEventSchema.safeParse({
+    ...event,
+    integrity: computeIntegrity(event, prevHash)
+  });
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      hasPayloadIssue(parsed.error) ? "invalid_event_payload" : "invalid_event",
+      "Runtime event integrity envelope is invalid",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+export function computeIntegrity(
+  event: RuntimeEvent,
+  prevHash: string
+): RuntimeEventIntegrity {
+  return {
+    algo: EVENT_INTEGRITY_ALGO,
+    hash: hashEventContent(event),
+    prevHash
+  };
+}
+
+export function hashEventContent(event: RuntimeEvent) {
+  const digest = createHash(EVENT_INTEGRITY_ALGO)
+    .update(canonicalizeEventContent(event))
+    .digest("hex");
+
+  return `${EVENT_INTEGRITY_HASH_PREFIX}${digest}`;
+}
+
+export function canonicalizeEventContent(event: RuntimeEvent) {
+  const content = {
+    id: event.id,
+    runId: event.runId,
+    type: event.type,
+    timestamp: event.timestamp,
+    sequence: event.sequence,
+    traceId: event.traceId,
+    ...(event.causationId === undefined ? {} : { causationId: event.causationId }),
+    ...(event.correlationId === undefined
+      ? {}
+      : { correlationId: event.correlationId }),
+    payload: event.payload
+  };
+
+  /*
+   * Stability contract for event integrity:
+   * - genesis prevHash is EVENT_INTEGRITY_GENESIS_SEED
+   *   (sha256: followed by 64 zeroes)
+   * - the digest input is canonical JSON over the authoritative event content
+   * - the integrity field and contract metadata are excluded from the digest
+   * - object keys are sorted recursively; array order is preserved
+   * - JSON values are normalized through JSON.stringify/parse before sorting so
+   *   the hash matches the durable JSONL bytes after a write/read round trip
+   */
+  return canonicalJsonStringify(content);
+}
+
+function canonicalJsonStringify(value: unknown) {
+  return JSON.stringify(sortJsonValue(normalizeJsonValue(value)));
+}
+
+function normalizeJsonValue(value: unknown) {
+  const serialized = JSON.stringify(value);
+
+  if (serialized === undefined) {
+    return null;
+  }
+
+  return JSON.parse(serialized) as unknown;
+}
+
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((item) => sortJsonValue(item));
+  }
+
+  if (isRecord(value)) {
+    return Object.fromEntries(
+      Object.keys(value)
+        .sort()
+        .map((key) => [key, sortJsonValue(value[key])])
+    );
+  }
+
+  return value;
+}
+
+function brokenIntegrityVerdict(input: {
+  eventCount: number;
+  brokenAtSequence: number;
+  code: RunIntegrityDefectCode;
+  detail: string;
+  cause?: unknown;
+}): RunIntegrityVerdict {
+  void input.cause;
+
+  return {
+    status: "broken",
+    eventCount: input.eventCount,
+    brokenAtSequence: input.brokenAtSequence,
+    code: input.code,
+    detail: input.detail
+  };
+}
+
+function integrityBrokenError(runId: string, verdict: RunIntegrityVerdict) {
+  if (verdict.status !== "broken") {
+    throw new Error("Expected a broken integrity verdict");
+  }
+
+  return new RunStoreError(
+    "integrity_broken",
+    `Run ${runId} event ledger integrity is broken at sequence ${verdict.brokenAtSequence}: ${verdict.detail}`,
+    verdict
+  );
 }
 
 function parseRuntimeEvent(value: unknown, index: number) {

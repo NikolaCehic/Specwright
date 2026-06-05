@@ -221,7 +221,7 @@ export const contractHashManifest = [
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "RuntimeEventSchema",
-    "hash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
+    "hash": "sha256:c6a528b1b0d1e639130fec19559fa6ad875ef8c42a9c30d26b794bacb377f546",
     "id": "specwright.event.runtime-event",
     "version": "1"
   },
@@ -235,7 +235,7 @@ export const contractHashManifest = [
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "RuntimeEventEnvelopeSchema",
-    "hash": "sha256:ad7e635333711a938840742bc21c193cbe06f916ab70e829146c743c82f5ccf1",
+    "hash": "sha256:c82002a85b93e7eb7f45f854ad0e82e4a3944488161322465026e5b77086daa1",
     "id": "specwright.event.runtime-event-envelope",
     "version": "1"
   },
