@@ -4,8 +4,13 @@ import { dirname, join, relative } from "node:path";
 import { getArtifactStorePaths, listArtifacts } from "@specwright/artifact-store";
 import { getEvidenceStorePaths, listEvidence } from "@specwright/evidence-store";
 import {
+  DEFAULT_REDACTION_PROFILE,
   getRunStorePaths,
   readEvents,
+  redactForEgress,
+  type RedactionEgressMode,
+  type RedactionGrant,
+  type RedactionProfile,
   type RunStorePaths
 } from "@specwright/run-store";
 import {
@@ -24,6 +29,9 @@ export const RUN_REPORTS_VERSION = "0.1.0";
 export type GenerateRunReportOptions = {
   rootDir?: string | undefined;
   runId: string;
+  profile?: RedactionProfile;
+  grant?: RedactionGrant;
+  mode?: RedactionEgressMode;
 };
 
 export type WriteRunReportOptions = GenerateRunReportOptions;
@@ -36,13 +44,30 @@ export type RunReport = {
 };
 
 type RunFacts = {
-  events: RuntimeEvent[];
+  events: ReportEvent[];
   trace?: TraceFile | undefined;
-  artifacts: ArtifactRecord[];
-  evidence: EvidenceRecord[];
+  artifacts: unknown[];
+  evidence: unknown[];
   evalFileVerdicts: EvalVerdict[];
   missingInputs: string[];
   paths: RunStorePaths;
+  redactionProfileId: string;
+};
+
+type ReportEvent = {
+  id: string;
+  runId: string;
+  type: string;
+  timestamp: string;
+  sequence: number;
+  traceId: string;
+  contractId?: string;
+  contractVersion?: string;
+  schemaHash?: string;
+  causationId?: string;
+  correlationId?: string;
+  integrity?: RuntimeEvent["integrity"];
+  payload: unknown;
 };
 
 type GateSummary = {
@@ -60,8 +85,19 @@ type ToolSummary = {
   phase?: string | undefined;
   cacheStatus?: string | undefined;
   policyStatus?: string | undefined;
+  argsHash?: string | undefined;
+  resultHash?: string | undefined;
   durationMs?: number | undefined;
   eventIds: string[];
+};
+
+type EvidenceReportRecord = {
+  id: string;
+  class: string;
+  claim: unknown;
+  sourceRefs: unknown[];
+  confidence: string;
+  authority: string;
 };
 
 export async function generateRunReport(
@@ -113,36 +149,40 @@ export async function writeSummary(options: GenerateRunReportOptions & {
 
 async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts> {
   const paths = getRunStorePaths(options.rootDir, options.runId);
-  const events = await readEvents({
+  const redactionOptions = redactionOptionsFromReportOptions(options);
+  const events = (await readEvents({
     rootDir: options.rootDir,
     runId: options.runId
-  });
+  })).map((event) => redactReportEvent(event, redactionOptions));
   const missingInputs: string[] = [];
-  const trace = await optional("trace.json", missingInputs, () =>
-    readTrace({
-      rootDir: options.rootDir,
-      runId: options.runId
-    })
+  const trace = await optional("trace.json", missingInputs, async () =>
+    redactTrace(
+      await readTrace({
+        rootDir: options.rootDir,
+        runId: options.runId
+      }),
+      redactionOptions
+    )
   );
   const artifacts = await optionalIndexedRecords(
     "artifacts/index.jsonl",
     getArtifactStorePaths(options.rootDir, options.runId).indexPath,
     missingInputs,
-    () =>
-      listArtifacts({
+    async () =>
+      (await listArtifacts({
         rootDir: options.rootDir,
         runId: options.runId
-      })
+      })).map((artifact) => redactForEgress(artifact, redactionOptions))
   );
   const evidence = await optionalIndexedRecords(
     "evidence/index.jsonl",
     getEvidenceStorePaths(options.rootDir, options.runId).indexPath,
     missingInputs,
-    () =>
-      listEvidence({
+    async () =>
+      (await listEvidence({
         rootDir: options.rootDir,
         runId: options.runId
-      })
+      })).map((record) => redactForEgress(record, redactionOptions))
   );
   const evalFileVerdicts = await optional("evals/*.json", missingInputs, () =>
     readEvalVerdictsFromFiles(paths.evalsDir)
@@ -155,7 +195,63 @@ async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts
     evidence: evidence ?? [],
     evalFileVerdicts: evalFileVerdicts ?? [],
     missingInputs,
-    paths
+    paths,
+    redactionProfileId: (options.profile ?? DEFAULT_REDACTION_PROFILE).id
+  };
+}
+
+function redactReportEvent(
+  event: RuntimeEvent,
+  options: RedactReportOptions
+): ReportEvent {
+  const redacted = redactForEgress(event, options);
+  const record = recordFromUnknown(redacted);
+
+  return {
+    id: event.id,
+    runId: event.runId,
+    type: event.type,
+    timestamp: event.timestamp,
+    sequence: event.sequence,
+    traceId: event.traceId,
+    ...(event.contractId === undefined ? {} : { contractId: event.contractId }),
+    ...(event.contractVersion === undefined
+      ? {}
+      : { contractVersion: event.contractVersion }),
+    ...(event.schemaHash === undefined ? {} : { schemaHash: event.schemaHash }),
+    ...(event.causationId === undefined
+      ? {}
+      : { causationId: event.causationId }),
+    ...(event.correlationId === undefined
+      ? {}
+      : { correlationId: event.correlationId }),
+    ...(event.integrity === undefined ? {} : { integrity: event.integrity }),
+    payload: record.payload
+  };
+}
+
+function redactTrace(
+  trace: TraceFile,
+  options: RedactReportOptions
+): TraceFile {
+  const redacted = redactForEgress(trace, options);
+
+  return traceFileFromUnknown(redacted, trace);
+}
+
+type RedactReportOptions = {
+  profile?: RedactionProfile;
+  grant?: RedactionGrant;
+  mode?: RedactionEgressMode;
+};
+
+function redactionOptionsFromReportOptions(
+  options: GenerateRunReportOptions
+): RedactReportOptions {
+  return {
+    ...(options.profile === undefined ? {} : { profile: options.profile }),
+    ...(options.grant === undefined ? {} : { grant: options.grant }),
+    ...(options.mode === undefined ? {} : { mode: options.mode })
   };
 }
 
@@ -237,7 +333,7 @@ function harnessFromFacts(facts: RunFacts) {
   };
 }
 
-function runStatusFromEvents(events: readonly RuntimeEvent[]) {
+function runStatusFromEvents(events: readonly ReportEvent[]) {
   if (events.some((event) => event.type === "run.failed")) {
     return "failed";
   }
@@ -249,7 +345,7 @@ function runStatusFromEvents(events: readonly RuntimeEvent[]) {
   return "running";
 }
 
-function phaseSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
+function phaseSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
   const eventPhases = events
     .filter(
       (event) =>
@@ -269,7 +365,7 @@ function phaseSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
   return uniqueLines([...eventPhases, ...tracedPhases]);
 }
 
-function gateSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
+function gateSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
   const gates = new Map<string, GateSummary>();
 
   for (const event of events) {
@@ -321,7 +417,7 @@ function gateSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
   });
 }
 
-function toolSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
+function toolSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
   const tools = new Map<string, ToolSummary>();
 
   for (const event of events) {
@@ -345,6 +441,15 @@ function toolSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
       `tool.seq.${event.sequence}`;
     const key = toolCallId ?? stringValue(request.idempotencyKey) ?? toolId;
     const existing = tools.get(key);
+    const argsHash =
+      redactedReferenceHash(request.args) ??
+      stringValue(provenance.argsHash) ??
+      existing?.argsHash;
+    const resultHash =
+      redactedReferenceHash(result.output) ??
+      redactedReferenceHash(result.result) ??
+      stringValue(provenance.resultHash) ??
+      existing?.resultHash;
     const eventIds = [...(existing?.eventIds ?? []), event.id];
 
     tools.set(key, {
@@ -362,6 +467,8 @@ function toolSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
       policyStatus:
         stringValue(payload.policyStatus) ??
         existing?.policyStatus,
+      argsHash,
+      resultHash,
       durationMs: existing?.durationMs,
       eventIds
     });
@@ -376,6 +483,15 @@ function toolSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
     const toolId = stringValue(span.metadata.toolId) ?? span.name;
     const key = toolCallId ?? toolId;
     const existing = tools.get(key);
+    const argsHash =
+      redactedReferenceHash(span.metadata.args) ??
+      stringValue(span.metadata.argsHash) ??
+      existing?.argsHash;
+    const resultHash =
+      redactedReferenceHash(span.metadata.output) ??
+      redactedReferenceHash(span.metadata.result) ??
+      stringValue(span.metadata.resultHash) ??
+      existing?.resultHash;
 
     tools.set(key, {
       key,
@@ -388,6 +504,8 @@ function toolSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
       policyStatus:
         stringValue(span.metadata.policyStatus) ??
         existing?.policyStatus,
+      argsHash,
+      resultHash,
       durationMs: span.durationMs ?? existing?.durationMs,
       eventIds: uniqueStrings([...(existing?.eventIds ?? []), ...(span.eventIds ?? [])])
     });
@@ -398,6 +516,8 @@ function toolSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
       tool.phase === undefined ? undefined : `phase ${tool.phase}`,
       tool.cacheStatus === undefined ? undefined : `cache ${tool.cacheStatus}`,
       tool.policyStatus === undefined ? undefined : `policy ${tool.policyStatus}`,
+      tool.argsHash === undefined ? undefined : `args ${tool.argsHash}`,
+      tool.resultHash === undefined ? undefined : `result ${tool.resultHash}`,
       tool.durationMs === undefined ? undefined : `${tool.durationMs}ms`
     ].filter((value): value is string => value !== undefined);
 
@@ -406,7 +526,7 @@ function toolSummaries(events: readonly RuntimeEvent[], trace?: TraceFile) {
 }
 
 function evalSummaries(
-  events: readonly RuntimeEvent[],
+  events: readonly ReportEvent[],
   fileVerdicts: readonly EvalVerdict[],
   trace?: TraceFile
 ) {
@@ -451,25 +571,23 @@ function evalSummaries(
 }
 
 function artifactSummaries(
-  events: readonly RuntimeEvent[],
-  artifactRecords: readonly ArtifactRecord[]
+  events: readonly ReportEvent[],
+  artifactRecords: readonly unknown[]
 ) {
   const artifacts = new Map<string, {
     artifactId: string;
     artifactType: string;
     evidenceRefs: string[];
-    uri?: string | undefined;
+    uri?: unknown;
     claimLevel?: string | undefined;
   }>();
 
   for (const record of artifactRecords) {
-    artifacts.set(record.artifactId, {
-      artifactId: record.artifactId,
-      artifactType: record.artifactType,
-      evidenceRefs: record.evidenceRefs,
-      uri: record.fileRef?.uri,
-      claimLevel: record.claimLevel
-    });
+    const artifact = artifactSummaryFromUnknown(record);
+
+    if (artifact !== undefined) {
+      artifacts.set(artifact.artifactId, artifact);
+    }
   }
 
   for (const event of events) {
@@ -499,7 +617,7 @@ function artifactSummaries(
 
   return [...artifacts.values()].map((artifact) => {
     const details = [
-      artifact.uri,
+      formatEgressValue(artifact.uri),
       artifact.evidenceRefs.length === 0
         ? "no evidence refs"
         : `evidence ${artifact.evidenceRefs.join(", ")}`,
@@ -511,13 +629,17 @@ function artifactSummaries(
 }
 
 function evidenceSummaries(
-  events: readonly RuntimeEvent[],
-  evidenceRecords: readonly EvidenceRecord[]
+  events: readonly ReportEvent[],
+  evidenceRecords: readonly unknown[]
 ) {
-  const evidence = new Map<string, EvidenceRecord>();
+  const evidence = new Map<string, EvidenceReportRecord>();
 
   for (const record of evidenceRecords) {
-    evidence.set(record.id, record);
+    const summary = evidenceReportRecordFromUnknown(record);
+
+    if (summary !== undefined) {
+      evidence.set(summary.id, summary);
+    }
   }
 
   for (const event of events) {
@@ -537,11 +659,11 @@ function evidenceSummaries(
       record.sourceRefs.length === 0
         ? "no source refs"
         : `${record.sourceRefs.length} source ref(s)`;
-    return `- ${record.id}: ${record.class}/${record.confidence}/${record.authority} - ${record.claim} (${sourceText})`;
+    return `- ${record.id}: ${record.class}/${record.confidence}/${record.authority} - ${formatEgressValue(record.claim) ?? "unknown"} (${sourceText})`;
   });
 }
 
-function decisionSummaries(events: readonly RuntimeEvent[]) {
+function decisionSummaries(events: readonly ReportEvent[]) {
   return events
     .filter(
       (event) =>
@@ -616,7 +738,8 @@ function observabilityLines(facts: RunFacts) {
     `- trace.json: ${facts.trace === undefined ? "missing" : `${facts.trace.spans.length} span(s)`}`,
     `- artifacts: ${facts.artifacts.length} record(s)`,
     `- evidence: ${facts.evidence.length} record(s)`,
-    `- evals: ${facts.evalFileVerdicts.length} file verdict(s)`
+    `- evals: ${facts.evalFileVerdicts.length} file verdict(s)`,
+    `- redaction profile: ${facts.redactionProfileId}`
   ];
 
   if (facts.missingInputs.length > 0) {
@@ -699,7 +822,7 @@ function evalVerdictFromUnknown(value: unknown): EvalVerdict | undefined {
   return undefined;
 }
 
-function artifactRefFromEvent(event: RuntimeEvent) {
+function artifactRefFromEvent(event: ReportEvent) {
   const payload = recordFromUnknown(event.payload);
   const candidates = [payload.artifact, payload.artifactRef, payload.ref, event.payload];
 
@@ -716,25 +839,17 @@ function artifactRefFromEvent(event: RuntimeEvent) {
       };
     }
 
-    const record = recordFromUnknown(candidate);
-    const artifactId = stringValue(record.artifactId);
-    const artifactType = stringValue(record.artifactType);
+    const artifact = artifactSummaryFromUnknown(candidate);
 
-    if (artifactId !== undefined && artifactType !== undefined) {
-      return {
-        artifactId,
-        artifactType,
-        evidenceRefs: stringArray(record.evidenceRefs),
-        uri: stringValue(record.uri),
-        claimLevel: stringValue(record.claimLevel)
-      };
+    if (artifact !== undefined) {
+      return artifact;
     }
   }
 
   return undefined;
 }
 
-function evidenceRecordFromEvent(event: RuntimeEvent): EvidenceRecord | undefined {
+function evidenceRecordFromEvent(event: ReportEvent): EvidenceReportRecord | undefined {
   const payload = recordFromUnknown(event.payload);
   const candidates = [payload.evidence, payload.record, event.payload];
 
@@ -744,9 +859,63 @@ function evidenceRecordFromEvent(event: RuntimeEvent): EvidenceRecord | undefine
     if (parsed.success) {
       return parsed.data;
     }
+
+    const record = evidenceReportRecordFromUnknown(candidate);
+
+    if (record !== undefined) {
+      return record;
+    }
   }
 
   return undefined;
+}
+
+function artifactSummaryFromUnknown(value: unknown) {
+  const record = recordFromUnknown(value);
+  const artifactId = stringValue(record.artifactId);
+  const artifactType = stringValue(record.artifactType);
+
+  if (artifactId === undefined || artifactType === undefined) {
+    return undefined;
+  }
+
+  const fileRef = recordFromUnknown(record.fileRef);
+
+  return {
+    artifactId,
+    artifactType,
+    evidenceRefs: stringArray(record.evidenceRefs),
+    uri: record.uri ?? fileRef.uri,
+    claimLevel: stringValue(record.claimLevel)
+  };
+}
+
+function evidenceReportRecordFromUnknown(
+  value: unknown
+): EvidenceReportRecord | undefined {
+  const record = recordFromUnknown(value);
+  const id = stringValue(record.id);
+  const evidenceClass = stringValue(record.class);
+  const confidence = stringValue(record.confidence);
+  const authority = stringValue(record.authority);
+
+  if (
+    id === undefined ||
+    evidenceClass === undefined ||
+    confidence === undefined ||
+    authority === undefined
+  ) {
+    return undefined;
+  }
+
+  return {
+    id,
+    class: evidenceClass,
+    claim: record.claim,
+    sourceRefs: Array.isArray(record.sourceRefs) ? record.sourceRefs : [],
+    confidence,
+    authority
+  };
 }
 
 function bulletOrNone(lines: readonly string[], fallback: string) {
@@ -780,6 +949,107 @@ function formatHost(host: Record<string, unknown>) {
 
 function formatText(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : "unknown";
+}
+
+function formatEgressValue(value: unknown) {
+  const hash = redactedReferenceHash(value);
+
+  if (hash !== undefined) {
+    return hash;
+  }
+
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+
+  return undefined;
+}
+
+function redactedReferenceHash(value: unknown) {
+  const record = recordFromUnknown(value);
+
+  if (record.redacted !== true) {
+    return undefined;
+  }
+
+  return stringValue(record.hash);
+}
+
+function traceFileFromUnknown(value: unknown, fallback: TraceFile): TraceFile {
+  const record = recordFromUnknown(value);
+  const spans = Array.isArray(record.spans)
+    ? record.spans.map((span, index) =>
+        traceSpanFromUnknown(span, fallback.spans[index])
+      )
+    : fallback.spans;
+
+  return {
+    runId: stringValue(record.runId) ?? fallback.runId,
+    traceId: stringValue(record.traceId) ?? fallback.traceId,
+    ...(record.runtimeVersion === undefined
+      ? fallback.runtimeVersion === undefined
+        ? {}
+        : { runtimeVersion: fallback.runtimeVersion }
+      : { runtimeVersion: stringValue(record.runtimeVersion) ?? fallback.runtimeVersion }),
+    ...(record.harnessSpecHash === undefined
+      ? fallback.harnessSpecHash === undefined
+        ? {}
+        : { harnessSpecHash: fallback.harnessSpecHash }
+      : { harnessSpecHash: stringValue(record.harnessSpecHash) ?? fallback.harnessSpecHash }),
+    ...(record.hostAdapter === undefined
+      ? fallback.hostAdapter === undefined
+        ? {}
+        : { hostAdapter: fallback.hostAdapter }
+      : { hostAdapter: stringValue(record.hostAdapter) ?? fallback.hostAdapter }),
+    spans,
+    metadata: recordFromUnknown(record.metadata)
+  };
+}
+
+function traceSpanFromUnknown(
+  value: unknown,
+  fallback: TraceSpan | undefined
+): TraceSpan {
+  const record = recordFromUnknown(value);
+  const fallbackMetadata = fallback?.metadata ?? {};
+  const span: TraceSpan = {
+    runId: stringValue(record.runId) ?? fallback?.runId ?? "unknown",
+    traceId: stringValue(record.traceId) ?? fallback?.traceId ?? "unknown",
+    spanId: stringValue(record.spanId) ?? fallback?.spanId ?? "unknown",
+    kind: fallback?.kind ?? "phase",
+    name: stringValue(record.name) ?? fallback?.name ?? "unknown",
+    status: fallback?.status ?? "success",
+    startedAt: stringValue(record.startedAt) ?? fallback?.startedAt ?? "unknown",
+    metadata: {
+      ...fallbackMetadata,
+      ...recordFromUnknown(record.metadata)
+    }
+  };
+  const parentSpanId = stringValue(record.parentSpanId) ?? fallback?.parentSpanId;
+  const endedAt = stringValue(record.endedAt) ?? fallback?.endedAt;
+  const durationMs =
+    typeof record.durationMs === "number" ? record.durationMs : fallback?.durationMs;
+  const eventIds = Array.isArray(record.eventIds)
+    ? stringArray(record.eventIds)
+    : fallback?.eventIds;
+
+  if (parentSpanId !== undefined) {
+    span.parentSpanId = parentSpanId;
+  }
+
+  if (endedAt !== undefined) {
+    span.endedAt = endedAt;
+  }
+
+  if (durationMs !== undefined) {
+    span.durationMs = durationMs;
+  }
+
+  if (eventIds !== undefined) {
+    span.eventIds = eventIds;
+  }
+
+  return span;
 }
 
 function firstString(record: Record<string, unknown>, keys: readonly string[]) {

@@ -16,14 +16,17 @@ import {
   materializeRunState,
   parseEventLog,
   projectRunState,
+  readRunState,
   readCheckpoint,
   readEvents,
   rebuildFromCheckpoint,
+  redactForEgress,
   replayRunState,
   RunStoreError,
   verifyRunIntegrity,
   writeCheckpoint,
   type HarnessSnapshot,
+  type RedactionProfile,
   type RunStateCheckpoint
 } from "./index";
 import { RunStateSchema, RuntimeEventSchema } from "@specwright/schemas";
@@ -49,6 +52,9 @@ const harness = {
 
 const eventFixturesDir = fileURLToPath(
   new URL("../../schemas/fixtures/events/", import.meta.url)
+);
+const redactionFixturesDir = fileURLToPath(
+  new URL("../fixtures/redaction/", import.meta.url)
 );
 
 let rootDir: string;
@@ -870,6 +876,144 @@ describe("run store", () => {
     expect(after).toBe(before);
   });
 
+  test("redacts projection egress without rewriting authoritative state", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-redacted-state",
+      traceId: "trace-redacted-state",
+      input: runInput,
+      harness
+    });
+    await appendEvent({
+      rootDir,
+      runId: "run-redacted-state",
+      type: "artifact.recorded",
+      payload: {
+        artifact: {
+          artifactId: "artifact-restricted-plan",
+          artifactType: "plan",
+          evidenceRefs: ["evidence:restricted-source"],
+          uri: "artifacts/restricted-plan.md"
+        }
+      }
+    });
+
+    const paths = getRunStorePaths(rootDir, "run-redacted-state");
+    const authoritative = await materializeRunState({
+      rootDir,
+      runId: "run-redacted-state"
+    });
+    const redacted = await readRunState({
+      rootDir,
+      runId: "run-redacted-state"
+    });
+    const stateJson = await readFile(paths.statePath, "utf8");
+    const redactedJson = JSON.stringify(redacted);
+
+    expect(JSON.stringify(authoritative)).toContain(
+      "artifacts/restricted-plan.md"
+    );
+    expect(stateJson).toContain("artifacts/restricted-plan.md");
+    expect(redactedJson).not.toContain("artifacts/restricted-plan.md");
+    expect(redactedJson).toContain(
+      "sha256:6fe391f8f903ad5b55ff1eda1bed292b109d055a39268404f0e2b0dc43b81134"
+    );
+  });
+
+  test("requires audit_raw grant for raw restricted egress", async () => {
+    const value = {
+      payload: {
+        request: {
+          args: {
+            token: "sk_live_fixture_scope_02_packet_03"
+          }
+        },
+        result: {
+          output: {
+            contents:
+              "DATABASE_URL=postgres://scope-02-packet-03@example.invalid/specwright"
+          },
+          provenance: {
+            argsHash:
+              "sha256:d8576b4d26ccf208a9372f9df7e7e9d6786fd8a292091fea2bc1e86a6a41b5d8",
+            resultHash:
+              "sha256:4b01f791f3caecd55bb6f23a443731846f66adef1d7bc0c1c8d817cf32603fbe"
+          }
+        }
+      }
+    };
+
+    const denied = await captureError(async () =>
+      redactForEgress(value, {
+        mode: "raw"
+      })
+    );
+    const redacted = redactForEgress(value);
+    const raw = redactForEgress(value, {
+      mode: "raw",
+      grant: {
+        class: "audit_raw",
+        actor: "test-auditor",
+        reason: "grant gate regression"
+      }
+    });
+
+    expect(denied).toBeInstanceOf(RunStoreError);
+    expect((denied as RunStoreError).code).toBe("raw_read_denied");
+    expect(JSON.stringify(redacted)).not.toContain(
+      "sk_live_fixture_scope_02_packet_03"
+    );
+    expect(JSON.stringify(redacted)).toContain(
+      "sha256:d8576b4d26ccf208a9372f9df7e7e9d6786fd8a292091fea2bc1e86a6a41b5d8"
+    );
+    expect(JSON.stringify(raw)).toContain(
+      "sk_live_fixture_scope_02_packet_03"
+    );
+  });
+
+  test("fails closed on unclassified secret-bearing fields", async () => {
+    const strictProfile = {
+      id: "strict-test-profile",
+      fieldClasses: {}
+    } satisfies RedactionProfile;
+
+    const error = await captureError(async () =>
+      redactForEgress(
+        {
+          secret: "unclassified-secret"
+        },
+        {
+          profile: strictProfile
+        }
+      )
+    );
+
+    expect(error).toBeInstanceOf(RunStoreError);
+    expect((error as RunStoreError).code).toBe("unclassified_field");
+  });
+
+  test("redacts fixture egress deterministically with carried hash references", async () => {
+    const events = parseEventLog(
+      await readRedactionFixture("secret-bearing-events.jsonl"),
+      "fixture-redaction-run"
+    );
+    const first = events.map((event) => redactForEgress(event));
+    const second = events.map((event) => redactForEgress(event));
+    const firstJson = JSON.stringify(first);
+
+    expect(firstJson).toBe(JSON.stringify(second));
+    expect(firstJson).not.toContain("sk_live_fixture_scope_02_packet_03");
+    expect(firstJson).not.toContain(
+      "DATABASE_URL=postgres://scope-02-packet-03@example.invalid/specwright"
+    );
+    expect(firstJson).toContain(
+      "sha256:d8576b4d26ccf208a9372f9df7e7e9d6786fd8a292091fea2bc1e86a6a41b5d8"
+    );
+    expect(firstJson).toContain(
+      "sha256:4b01f791f3caecd55bb6f23a443731846f66adef1d7bc0c1c8d817cf32603fbe"
+    );
+  });
+
   test("replays the shared valid historical event fixture", async () => {
     const events = parseEventLog(
       await readEventFixture("valid-historical-run.jsonl"),
@@ -969,6 +1113,10 @@ function buildCheckpoint(
 
 async function readEventFixture(name: string) {
   return readFile(`${eventFixturesDir}${name}`, "utf8");
+}
+
+async function readRedactionFixture(name: string) {
+  return readFile(`${redactionFixturesDir}${name}`, "utf8");
 }
 
 function requireIntegrity(event: RuntimeEvent | undefined): RuntimeEventIntegrity {

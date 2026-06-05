@@ -5,10 +5,12 @@ import { join } from "node:path";
 import { appendArtifact } from "@specwright/artifact-store";
 import { appendEvidence } from "@specwright/evidence-store";
 import {
+  DEFAULT_REDACTION_PROFILE,
   appendEvent,
   createRun,
   getRunStorePaths,
-  type HarnessSnapshot
+  type HarnessSnapshot,
+  type RedactionProfile
 } from "@specwright/run-store";
 import type { EvalVerdict, EvidenceRecord, RunInput } from "@specwright/schemas";
 import { recordTraceSpan } from "@specwright/trace-recorder";
@@ -45,6 +47,11 @@ const passedEval = {
   }
 } satisfies EvalVerdict;
 
+const redactionProfile = {
+  ...DEFAULT_REDACTION_PROFILE,
+  id: "packet-03-test-profile"
+} satisfies RedactionProfile;
+
 let rootDir: string;
 
 beforeEach(async () => {
@@ -71,6 +78,7 @@ describe("run reports", () => {
     expect(report.markdown).toContain("intake (phase.entered");
     expect(report.markdown).toContain("context_sufficiency: pass");
     expect(report.markdown).toContain("source_fidelity: pass");
+    expect(report.markdown).toContain("redaction profile: default-redacted-egress");
   });
 
   test("includes tools, gate verdicts, eval verdicts, artifacts, evidence, and unknowns", async () => {
@@ -151,6 +159,7 @@ describe("run reports", () => {
     expect(report.markdown).toContain("evidence:unknown:browser-state: unknown/low/model");
     expect(report.markdown).toContain("What Remains Unknown");
     expect(report.markdown).toContain("browser-rendered layout was not inspected");
+    expect(report.markdown).toContain("sha256:");
   });
 
   test("remains useful when optional trace, evidence, artifact, and eval files are missing", async () => {
@@ -173,6 +182,146 @@ describe("run reports", () => {
     expect(report.markdown).toContain("tool.fs.read");
     expect(report.markdown).toContain("context_sufficiency: pass");
     expect(report.markdown).toContain("source_fidelity: pass");
+  });
+
+  test("redacts report and trace egress while preserving hash references and profile id", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-redacted-report",
+      traceId: "trace-redacted-report",
+      input: runInput,
+      harness,
+      initialPhase: "created",
+      timestamp: "2026-05-29T00:00:00.000Z"
+    });
+    await appendEvent({
+      rootDir,
+      runId: "run-redacted-report",
+      type: "tool.completed",
+      payload: {
+        request: {
+          toolId: "tool.fs.read",
+          args: {
+            path: "package.json",
+            token: "sk_live_fixture_scope_02_packet_03"
+          },
+          reason: "Read restricted source",
+          idempotencyKey: "read-restricted-source",
+          requestedBy: {
+            phase: "evidence"
+          }
+        },
+        result: {
+          toolCallId: "tool-call-redaction",
+          status: "success",
+          output: {
+            contents:
+              "DATABASE_URL=postgres://scope-02-packet-03@example.invalid/specwright"
+          },
+          provenance: {
+            toolId: "tool.fs.read",
+            toolVersion: "0.1.0",
+            argsHash:
+              "sha256:d8576b4d26ccf208a9372f9df7e7e9d6786fd8a292091fea2bc1e86a6a41b5d8",
+            resultHash:
+              "sha256:4b01f791f3caecd55bb6f23a443731846f66adef1d7bc0c1c8d817cf32603fbe",
+            cacheStatus: "bypass",
+            traceId: "trace-redacted-report"
+          }
+        }
+      },
+      timestamp: "2026-05-29T00:00:01.000Z"
+    });
+    await appendEvent({
+      rootDir,
+      runId: "run-redacted-report",
+      type: "evidence.recorded",
+      payload: {
+        evidence: {
+          id: "evidence:restricted-source",
+          class: "source_fact",
+          claim:
+            "The restricted source contains DATABASE_URL=postgres://scope-02-packet-03@example.invalid/specwright",
+          sourceRefs: [
+            {
+              path: "restricted.env",
+              contentHash:
+                "sha256:6d40eaf5353d46203a2663fe017bce6d4ba504ed166ed4f27711460e6867d306",
+              authority: "repo",
+              redactionClass: "restricted",
+              captureToolCallId: "tool-call-redaction"
+            }
+          ],
+          confidence: "high",
+          authority: "repo",
+          redactionPolicy: "restricted",
+          createdBy: {
+            phase: "evidence",
+            actionId: "record-restricted-source",
+            toolCallId: "tool-call-redaction"
+          }
+        }
+      },
+      timestamp: "2026-05-29T00:00:02.000Z"
+    });
+    await recordTraceSpan({
+      rootDir,
+      runId: "run-redacted-report",
+      traceId: "trace-redacted-report",
+      span: {
+        kind: "tool",
+        name: "tool.trace.read",
+        status: "success",
+        startedAt: "2026-05-29T00:00:01.000Z",
+        durationMs: 7,
+        eventIds: ["tool-call-redaction"],
+        metadata: {
+          toolId: "tool.trace.read",
+          toolCallId: "trace-tool-call-redaction",
+          phaseId: "evidence",
+          args: {
+            token: "sk_live_trace_scope_02_packet_03"
+          },
+          output: {
+            contents:
+              "TRACE_DATABASE_URL=postgres://scope-02-packet-03@example.invalid/specwright"
+          },
+          argsHash: "sha256:trace-args",
+          resultHash: "sha256:trace-result",
+          cacheStatus: "bypass",
+          policyStatus: "allow"
+        }
+      }
+    });
+
+    const report = await generateRunReport({
+      rootDir,
+      runId: "run-redacted-report",
+      profile: redactionProfile
+    });
+
+    expect(report.markdown).toContain(
+      "redaction profile: packet-03-test-profile"
+    );
+    expect(report.markdown).toContain(
+      "sha256:d8576b4d26ccf208a9372f9df7e7e9d6786fd8a292091fea2bc1e86a6a41b5d8"
+    );
+    expect(report.markdown).toContain(
+      "sha256:4b01f791f3caecd55bb6f23a443731846f66adef1d7bc0c1c8d817cf32603fbe"
+    );
+    expect(report.markdown).toContain(
+      "sha256:6d40eaf5353d46203a2663fe017bce6d4ba504ed166ed4f27711460e6867d306"
+    );
+    expect(report.markdown).toContain("sha256:trace-args");
+    expect(report.markdown).toContain("sha256:trace-result");
+    expect(report.markdown).not.toContain(
+      "sk_live_fixture_scope_02_packet_03"
+    );
+    expect(report.markdown).not.toContain("sk_live_trace_scope_02_packet_03");
+    expect(report.markdown).not.toContain("DATABASE_URL=");
+    expect(report.markdown).not.toContain("TRACE_DATABASE_URL=");
+    expect(report.markdown).toContain("source_fact/high/repo");
+    expect(report.markdown).toContain("1 source ref(s)");
   });
 
   test("writes summary.md under the run package", async () => {
