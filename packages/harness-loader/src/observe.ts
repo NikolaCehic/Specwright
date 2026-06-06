@@ -782,6 +782,15 @@ function stageForErrorCode(code: HarnessLoaderErrorCode): HarnessLoadStageKind {
       return "harness.grant_check";
     case "trust_rejected":
       return "harness.verify_trust";
+    case "resource_limit_exceeded":
+      return "harness.fetch";
+    case "cache_poisoned":
+    case "version_not_resolvable":
+      return "harness.freeze";
+    case "invalid_lifecycle_transition":
+    case "promotion_unapproved":
+    case "version_immutable":
+      return "harness.validate";
     case "invalid_loaded_at":
       return "harness.freeze";
     case "missing_harness_manifest":

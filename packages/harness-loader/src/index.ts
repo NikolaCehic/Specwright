@@ -83,7 +83,14 @@ import type {
 } from "./compatibility/admission";
 import type { CompatibilityMatrix } from "./compatibility/matrix";
 import type { MigrationDescriptor } from "./compatibility/migration";
+import { HarnessLoaderError } from "./errors";
+import type { HarnessLoaderErrorCode } from "./errors";
+import { createHarnessPackageReadLimiter, createLimitStageObserver } from "./limits";
+import type { HarnessLoaderLimitsInput, HarnessPackageReadLimiter } from "./limits";
 
+export {
+  HarnessLoaderError
+} from "./errors";
 export {
   AttestationSchema,
   HarnessTrustEventSchema,
@@ -190,6 +197,27 @@ export {
   hashHarnessLoadProvenance
 } from "./provenance";
 export { loadHarnessPackageObserved, verifySpecHash } from "./observe";
+export {
+  DEFAULT_HARNESS_LOADER_LIMITS,
+  HarnessLoaderLimitsSchema,
+  assertFetchedPackageWithinLimits,
+  createHarnessPackageReadLimiter,
+  createLimitStageObserver,
+  normalizeHarnessLoaderLimits
+} from "./limits";
+export { SnapshotCache, createSnapshotCache } from "./cache";
+export {
+  PromotionApprovalSchema,
+  RegistryLifecycleStateSchema,
+  assertLifecycleTransition
+} from "./lifecycle";
+export {
+  HarnessRegistry,
+  InMemoryRegistryStore
+} from "./registry";
+export type {
+  HarnessLoaderErrorCode
+} from "./errors";
 export type {
   Attestation,
   HarnessTrustEvent,
@@ -267,6 +295,36 @@ export type {
   LoadHarnessPackageObservedOptions,
   LoadHarnessPackageObservedResult
 } from "./observe";
+export type {
+  HarnessLoaderLimitViolation,
+  HarnessLoaderLimits,
+  HarnessLoaderLimitsInput,
+  HarnessPackageLimitSummary
+} from "./limits";
+export type {
+  SnapshotCacheComputeSpecHash,
+  SnapshotCacheEntry,
+  SnapshotCacheOptions
+} from "./cache";
+export type {
+  DryRunValidationEvidence,
+  LifecycleTransitionEvidence,
+  PromotionApproval,
+  RegistryLifecycleState
+} from "./lifecycle";
+export type {
+  HarnessRegistryLoader,
+  HarnessRegistryLoaderInput,
+  HarnessRegistryOptions,
+  PreparedPromotion,
+  PromoteInput,
+  RegistryLifecycleRecord,
+  RegistryPackageKey,
+  RegistryPromotedVersion,
+  RegistryStore,
+  RegistryStoredBytes,
+  StageCandidateInput
+} from "./registry";
 
 export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
@@ -308,6 +366,14 @@ export type LoadHarnessPackageOptions = {
   onLoadStage?: HarnessLoadStageObserver;
 };
 
+export type LoadHarnessPackageWithLimitsOptions = LoadHarnessPackageOptions & {
+  limits?: HarnessLoaderLimitsInput | undefined;
+};
+
+type LoadHarnessPackageInternalOptions = LoadHarnessPackageOptions & {
+  readLimiter?: HarnessPackageReadLimiter | undefined;
+};
+
 export type HarnessLoadRecord = {
   snapshot: HarnessSnapshot;
   loadedFiles: readonly SourceFile[];
@@ -316,49 +382,6 @@ export type HarnessLoadRecord = {
   compatibility: CompatibilityAdmission;
   trust?: TrustVerdict;
 };
-
-export type HarnessLoaderErrorCode =
-  | "compatibility_denied"
-  | "dependency_unresolved"
-  | "duplicate_id"
-  | "grant_denied"
-  | "invalid_artifact_schema"
-  | "invalid_definition"
-  | "invalid_graph"
-  | "invalid_loaded_at"
-  | "invalid_manifest"
-  | "invalid_prompt"
-  | "missing_harness_manifest"
-  | "missing_reference"
-  | "parse_error"
-  | "trust_rejected"
-  | "unsupported_schema_version";
-
-export class HarnessLoaderError extends Error {
-  readonly code: HarnessLoaderErrorCode;
-  readonly reason: string | undefined;
-  readonly details: Record<string, unknown> | undefined;
-
-  constructor(
-    code: HarnessLoaderErrorCode,
-    message: string,
-    cause?: unknown,
-    context: {
-      reason?: string;
-      details?: Record<string, unknown>;
-    } = {}
-  ) {
-    super(message);
-    this.name = "HarnessLoaderError";
-    this.code = code;
-    this.reason = context.reason;
-    this.details = context.details;
-
-    if (cause !== undefined) {
-      Object.assign(this, { cause });
-    }
-  }
-}
 
 export type SourceFile = {
   absolutePath: string;
@@ -396,6 +419,25 @@ export async function loadHarnessPackage(
   return record.snapshot;
 }
 
+export async function loadHarnessPackageWithLimits(
+  input: string | LoadHarnessPackageWithLimitsOptions
+): Promise<HarnessLoadRecord> {
+  const options =
+    typeof input === "string" ? { packageDir: input } : input;
+  const { limits, ...loadOptions } = options;
+  const readLimiter = createHarnessPackageReadLimiter(limits);
+  const limitedOptions: LoadHarnessPackageInternalOptions = {
+    ...loadOptions,
+    readLimiter,
+    onLoadStage: createLimitStageObserver({
+      limits,
+      observer: loadOptions.onLoadStage
+    })
+  };
+
+  return loadHarnessPackageWithRecord(limitedOptions);
+}
+
 export async function loadHarnessPackageWithRecord(
   input: string | LoadHarnessPackageOptions
 ): Promise<HarnessLoadRecord> {
@@ -413,11 +455,17 @@ export async function loadHarnessPackageWithRecord(
       transport: "file"
     },
     async () => {
+      const readLimiter = internalOptions(input)?.readLimiter;
       const manifestFile = await readRequiredFile(
         packageDir,
-        HARNESS_MANIFEST_FILE
+        HARNESS_MANIFEST_FILE,
+        readLimiter
       );
-      const [
+      const directoryFiles =
+        readLimiter === undefined
+          ? await readHarnessDirectories(packageDir)
+          : await readHarnessDirectoriesSerial(packageDir, readLimiter);
+      const {
         phaseFiles,
         gateFiles,
         policyFiles,
@@ -426,16 +474,7 @@ export async function loadHarnessPackageWithRecord(
         evalFiles,
         roleFiles,
         promptFiles
-      ] = await Promise.all([
-        readOptionalDirectory(packageDir, "phases", [".yaml", ".yml", ".json"]),
-        readOptionalDirectory(packageDir, "gates", [".yaml", ".yml", ".json"]),
-        readOptionalDirectory(packageDir, "policies", [".yaml", ".yml", ".json"]),
-        readOptionalDirectory(packageDir, "tools", [".yaml", ".yml", ".json"]),
-        readOptionalDirectory(packageDir, "artifact-schemas", [".json"]),
-        readOptionalDirectory(packageDir, "evals", [".yaml", ".yml", ".json"]),
-        readOptionalDirectory(packageDir, "roles", [".yaml", ".yml", ".json"]),
-        readOptionalDirectory(packageDir, "prompts", [".md"])
-      ]);
+      } = directoryFiles;
       const loadedFiles = [
         manifestFile,
         ...phaseFiles,
@@ -706,6 +745,14 @@ async function runLoadStage<TValue>(
   }
 
   return input.onLoadStage(stage, metadata, operation);
+}
+
+function internalOptions(
+  input: string | LoadHarnessPackageOptions
+): LoadHarnessPackageInternalOptions | undefined {
+  return typeof input === "string"
+    ? undefined
+    : (input as LoadHarnessPackageInternalOptions);
 }
 
 function definitionCounts(collections: {
@@ -1358,10 +1405,11 @@ function parseDataFile(file: SourceFile): unknown {
 
 async function readRequiredFile(
   packageDir: string,
-  relativePath: string
+  relativePath: string,
+  readLimiter?: HarnessPackageReadLimiter | undefined
 ): Promise<SourceFile> {
   try {
-    return await readSourceFile(packageDir, relativePath);
+    return await readSourceFile(packageDir, relativePath, readLimiter);
   } catch (error) {
     if (error instanceof HarnessLoaderError) {
       throw error;
@@ -1375,10 +1423,100 @@ async function readRequiredFile(
   }
 }
 
+async function readHarnessDirectories(packageDir: string) {
+  const [
+    phaseFiles,
+    gateFiles,
+    policyFiles,
+    toolFiles,
+    artifactSchemaFiles,
+    evalFiles,
+    roleFiles,
+    promptFiles
+  ] = await Promise.all([
+    readOptionalDirectory(packageDir, "phases", [".yaml", ".yml", ".json"]),
+    readOptionalDirectory(packageDir, "gates", [".yaml", ".yml", ".json"]),
+    readOptionalDirectory(packageDir, "policies", [".yaml", ".yml", ".json"]),
+    readOptionalDirectory(packageDir, "tools", [".yaml", ".yml", ".json"]),
+    readOptionalDirectory(packageDir, "artifact-schemas", [".json"]),
+    readOptionalDirectory(packageDir, "evals", [".yaml", ".yml", ".json"]),
+    readOptionalDirectory(packageDir, "roles", [".yaml", ".yml", ".json"]),
+    readOptionalDirectory(packageDir, "prompts", [".md"])
+  ]);
+
+  return {
+    phaseFiles,
+    gateFiles,
+    policyFiles,
+    toolFiles,
+    artifactSchemaFiles,
+    evalFiles,
+    roleFiles,
+    promptFiles
+  };
+}
+
+async function readHarnessDirectoriesSerial(
+  packageDir: string,
+  readLimiter: HarnessPackageReadLimiter
+) {
+  return {
+    phaseFiles: await readOptionalDirectory(
+      packageDir,
+      "phases",
+      [".yaml", ".yml", ".json"],
+      readLimiter
+    ),
+    gateFiles: await readOptionalDirectory(
+      packageDir,
+      "gates",
+      [".yaml", ".yml", ".json"],
+      readLimiter
+    ),
+    policyFiles: await readOptionalDirectory(
+      packageDir,
+      "policies",
+      [".yaml", ".yml", ".json"],
+      readLimiter
+    ),
+    toolFiles: await readOptionalDirectory(
+      packageDir,
+      "tools",
+      [".yaml", ".yml", ".json"],
+      readLimiter
+    ),
+    artifactSchemaFiles: await readOptionalDirectory(
+      packageDir,
+      "artifact-schemas",
+      [".json"],
+      readLimiter
+    ),
+    evalFiles: await readOptionalDirectory(
+      packageDir,
+      "evals",
+      [".yaml", ".yml", ".json"],
+      readLimiter
+    ),
+    roleFiles: await readOptionalDirectory(
+      packageDir,
+      "roles",
+      [".yaml", ".yml", ".json"],
+      readLimiter
+    ),
+    promptFiles: await readOptionalDirectory(
+      packageDir,
+      "prompts",
+      [".md"],
+      readLimiter
+    )
+  };
+}
+
 async function readOptionalDirectory(
   packageDir: string,
   dir: string,
-  extensions: readonly string[]
+  extensions: readonly string[],
+  readLimiter?: HarnessPackageReadLimiter | undefined
 ): Promise<SourceFile[]> {
   const absoluteDir = resolve(packageDir, dir);
   let entries: Awaited<ReturnType<typeof readdir>>;
@@ -1399,12 +1537,23 @@ async function readOptionalDirectory(
     .filter((path) => extensions.includes(extname(path)))
     .sort((a, b) => a.localeCompare(b));
 
-  return Promise.all(files.map((path) => readSourceFile(packageDir, path)));
+  if (readLimiter === undefined) {
+    return Promise.all(files.map((path) => readSourceFile(packageDir, path)));
+  }
+
+  const loaded: SourceFile[] = [];
+
+  for (const path of files) {
+    loaded.push(await readSourceFile(packageDir, path, readLimiter));
+  }
+
+  return loaded;
 }
 
 async function readSourceFile(
   packageDir: string,
-  relativePath: string
+  relativePath: string,
+  readLimiter?: HarnessPackageReadLimiter | undefined
 ): Promise<SourceFile> {
   const absolutePath = resolve(packageDir, relativePath);
   const root = resolve(packageDir);
@@ -1417,11 +1566,17 @@ async function readSourceFile(
     );
   }
 
-  return {
+  readLimiter?.reserveFile(normalizedRelative);
+
+  const file = {
     absolutePath,
     relativePath: normalizedRelative,
     raw: await readFile(absolutePath, "utf8")
   };
+
+  readLimiter?.observeFile(file);
+
+  return file;
 }
 
 function validateManifestReferences(
