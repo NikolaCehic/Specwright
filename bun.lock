@@ -51,6 +51,7 @@
       "name": "@specwright/harness-loader",
       "version": "0.0.0",
       "dependencies": {
+        "@specwright/run-store": "workspace:*",
         "@specwright/schemas": "workspace:*",
         "zod": "^3.22.4",
       },

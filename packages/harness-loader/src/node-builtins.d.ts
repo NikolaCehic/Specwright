@@ -11,6 +11,8 @@ declare module "node:crypto" {
     };
   };
 
+  export function randomUUID(): string;
+
   export function createPublicKey(
     key:
       | string

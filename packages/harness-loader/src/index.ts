@@ -160,6 +160,36 @@ export {
   parseMigrationDescriptor,
   verifyMigrationDescriptor
 } from "./compatibility/migration";
+export {
+  HARNESS_LOADER_EVENT_TYPES,
+  HarnessCompatibilityDecidedEventSchema,
+  HarnessDependenciesPinnedAuditEventSchema,
+  HarnessGrantEvaluatedAuditEventSchema,
+  HarnessLoadDeniedEventSchema,
+  HarnessLoadRequestedEventSchema,
+  HarnessLoaderAuditEventSchema,
+  HarnessRedactionAppliedEventSchema,
+  HarnessSnapshotFrozenEventSchema,
+  HarnessTrustRejectedAuditEventSchema,
+  HarnessTrustVerifiedAuditEventSchema,
+  HarnessValidatedEventSchema,
+  HarnessValidationFailedEventSchema,
+  assertHarnessLoaderAuditEvent,
+  buildHarnessLoaderAuditEvent
+} from "./events";
+export {
+  HARNESS_LOADER_VALIDATOR_BUILD_ID,
+  HarnessLoadProvenanceError,
+  HarnessLoadProvenanceSchema,
+  HarnessProvenanceDataClassSchema,
+  SpecHashDriftLedger,
+  assembleHarnessLoadProvenance,
+  assertRedactionEventsCoverSubstitutions,
+  assessHarnessRunAuditability,
+  createSpecHashDriftLedger,
+  hashHarnessLoadProvenance
+} from "./provenance";
+export { loadHarnessPackageObserved, verifySpecHash } from "./observe";
 export type {
   Attestation,
   HarnessTrustEvent,
@@ -213,10 +243,50 @@ export type {
   MigrationDescriptorSignature,
   MigrationResult
 } from "./compatibility/migration";
+export type {
+  HarnessDefinitionCounts,
+  HarnessLoaderAuditEvent,
+  HarnessLoaderAuditEventPayload,
+  HarnessLoaderEventType,
+  HarnessRedactionHashReference
+} from "./events";
+export type {
+  HarnessLoadProvenance,
+  HarnessLoadProvenanceErrorCode,
+  HarnessProvenanceDataClass,
+  HarnessRunAuditability,
+  SpecHashDriftSignal,
+  StringProvenanceValue,
+  UnknownProvenanceValue
+} from "./provenance";
+export type {
+  HarnessObservedRunContext,
+  HarnessRedactionRecording,
+  HarnessTraceRecorderLike,
+  HarnessTraceSpanInput,
+  LoadHarnessPackageObservedOptions,
+  LoadHarnessPackageObservedResult
+} from "./observe";
 
 export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
   "specwright.harness.v0";
+
+export type HarnessLoadStageKind =
+  | "harness.fetch"
+  | "harness.verify_trust"
+  | "harness.parse"
+  | "harness.validate"
+  | "harness.resolve_deps"
+  | "harness.compatibility"
+  | "harness.grant_check"
+  | "harness.freeze";
+
+export type HarnessLoadStageObserver = <TValue>(
+  stage: HarnessLoadStageKind,
+  metadata: Record<string, unknown>,
+  operation: () => TValue | Promise<TValue>
+) => Promise<TValue>;
 
 export type LoadHarnessPackageOptions = {
   packageDir: string;
@@ -235,10 +305,12 @@ export type LoadHarnessPackageOptions = {
   migrationDescriptor?: MigrationDescriptor;
   migrationTrustStore?: TrustStore;
   migrationNow?: Date | string;
+  onLoadStage?: HarnessLoadStageObserver;
 };
 
 export type HarnessLoadRecord = {
   snapshot: HarnessSnapshot;
+  loadedFiles: readonly SourceFile[];
   grant: GrantEvaluation;
   dependencies: DependencyResolution;
   compatibility: CompatibilityAdmission;
@@ -333,211 +405,328 @@ export async function loadHarnessPackageWithRecord(
   const loadedAt = normalizeLoadedAt(
     typeof input === "string" ? undefined : input.loadedAt
   );
-  let loadedFiles: SourceFile[] = [];
-  let manifestFile = await readRequiredFile(
-    packageDir,
-    HARNESS_MANIFEST_FILE
+  const fetched = await runLoadStage(
+    input,
+    "harness.fetch",
+    {
+      sourceUri: packageDir,
+      transport: "file"
+    },
+    async () => {
+      const manifestFile = await readRequiredFile(
+        packageDir,
+        HARNESS_MANIFEST_FILE
+      );
+      const [
+        phaseFiles,
+        gateFiles,
+        policyFiles,
+        toolFiles,
+        artifactSchemaFiles,
+        evalFiles,
+        roleFiles,
+        promptFiles
+      ] = await Promise.all([
+        readOptionalDirectory(packageDir, "phases", [".yaml", ".yml", ".json"]),
+        readOptionalDirectory(packageDir, "gates", [".yaml", ".yml", ".json"]),
+        readOptionalDirectory(packageDir, "policies", [".yaml", ".yml", ".json"]),
+        readOptionalDirectory(packageDir, "tools", [".yaml", ".yml", ".json"]),
+        readOptionalDirectory(packageDir, "artifact-schemas", [".json"]),
+        readOptionalDirectory(packageDir, "evals", [".yaml", ".yml", ".json"]),
+        readOptionalDirectory(packageDir, "roles", [".yaml", ".yml", ".json"]),
+        readOptionalDirectory(packageDir, "prompts", [".md"])
+      ]);
+      const loadedFiles = [
+        manifestFile,
+        ...phaseFiles,
+        ...gateFiles,
+        ...policyFiles,
+        ...toolFiles,
+        ...artifactSchemaFiles,
+        ...evalFiles,
+        ...roleFiles,
+        ...promptFiles
+      ];
+
+      return {
+        manifestFile,
+        phaseFiles,
+        gateFiles,
+        policyFiles,
+        toolFiles,
+        artifactSchemaFiles,
+        evalFiles,
+        roleFiles,
+        promptFiles,
+        loadedFiles
+      };
+    }
   );
-  loadedFiles.push(manifestFile);
+  let loadedFiles: SourceFile[] = [...fetched.loadedFiles];
+  let manifestFile = fetched.manifestFile;
   const rawManifest = parseDataFile(manifestFile);
 
-  const [
-    phaseFiles,
-    gateFiles,
-    policyFiles,
-    toolFiles,
-    artifactSchemaFiles,
-    evalFiles,
-    roleFiles,
-    promptFiles
-  ] = await Promise.all([
-    readOptionalDirectory(packageDir, "phases", [".yaml", ".yml", ".json"]),
-    readOptionalDirectory(packageDir, "gates", [".yaml", ".yml", ".json"]),
-    readOptionalDirectory(packageDir, "policies", [".yaml", ".yml", ".json"]),
-    readOptionalDirectory(packageDir, "tools", [".yaml", ".yml", ".json"]),
-    readOptionalDirectory(packageDir, "artifact-schemas", [".json"]),
-    readOptionalDirectory(packageDir, "evals", [".yaml", ".yml", ".json"]),
-    readOptionalDirectory(packageDir, "roles", [".yaml", ".yml", ".json"]),
-    readOptionalDirectory(packageDir, "prompts", [".md"])
-  ]);
-
-  loadedFiles.push(
-    ...phaseFiles,
-    ...gateFiles,
-    ...policyFiles,
-    ...toolFiles,
-    ...artifactSchemaFiles,
-    ...evalFiles,
-    ...roleFiles,
-    ...promptFiles
-  );
-
-  const compatibility = enforceCompatibilityAdmission({
+  const compatibility = await runLoadStage(
     input,
-    rawManifest,
-    loadedFiles
-  });
+    "harness.compatibility",
+    {},
+    () =>
+      enforceCompatibilityAdmission({
+        input,
+        rawManifest,
+        loadedFiles
+      })
+  );
   loadedFiles = compatibility.files;
   manifestFile = compatibility.manifestFile;
 
-  const manifest = parseManifest(manifestFile);
-  const manifestSchemaVersion = manifest.schemaVersion;
+  const parsed = await runLoadStage(input, "harness.parse", {}, () => {
+    const manifest = parseManifest(manifestFile);
+    const manifestSchemaVersion = manifest.schemaVersion;
 
-  if (manifestSchemaVersion !== SUPPORTED_HARNESS_SCHEMA_VERSION) {
-    throw new HarnessLoaderError(
-      "unsupported_schema_version",
-      `Unsupported harness schemaVersion ${manifestSchemaVersion}`
+    if (manifestSchemaVersion !== SUPPORTED_HARNESS_SCHEMA_VERSION) {
+      throw new HarnessLoaderError(
+        "unsupported_schema_version",
+        `Unsupported harness schemaVersion ${manifestSchemaVersion}`
+      );
+    }
+
+    const phases = orderDefinitions(
+      [
+        ...inlineDefinitions(
+          manifest.phases,
+          "phase",
+          HARNESS_MANIFEST_FILE,
+          parsePhaseDefinition
+        ),
+        ...fetched.phaseFiles.map((file) =>
+          parsePhaseDefinition(parseDataFile(file), file)
+        )
+      ],
+      manifestReferences(manifest.phases)
     );
-  }
+    const gates = orderDefinitions(
+      [
+        ...inlineDefinitions(
+          manifest.gates,
+          "gate",
+          HARNESS_MANIFEST_FILE,
+          parseGateDefinition
+        ),
+        ...fetched.gateFiles.map((file) =>
+          parseGateDefinition(parseDataFile(file), file)
+        )
+      ],
+      manifestReferences(manifest.gates)
+    );
+    const policies = orderDefinitions(
+      [
+        ...inlineDefinitions(
+          manifest.policies,
+          "policy",
+          HARNESS_MANIFEST_FILE,
+          parsePolicyBundle
+        ),
+        ...fetched.policyFiles.map((file) =>
+          parsePolicyBundle(parseDataFile(file), file)
+        )
+      ],
+      manifestReferences(manifest.policies)
+    );
+    const tools = orderDefinitions(
+      [
+        ...inlineToolDefinitions(manifest),
+        ...fetched.toolFiles.map((file) =>
+          parseToolDefinition(parseDataFile(file), file)
+        )
+      ],
+      manifestToolReferences(manifest)
+    );
+    const artifacts = orderDefinitions(
+      fetched.artifactSchemaFiles.map((file) => parseArtifactSchemaFile(file)),
+      [
+        ...manifestReferences(manifest.artifacts),
+        ...manifestReferences(manifest.artifactSchemas)
+      ]
+    );
+    const evals = orderDefinitions(
+      [
+        ...inlineDefinitions(
+          manifest.evals,
+          "eval",
+          HARNESS_MANIFEST_FILE,
+          parseEvalDefinition
+        ),
+        ...fetched.evalFiles.map((file) =>
+          parseEvalDefinition(parseDataFile(file), file)
+        )
+      ],
+      manifestReferences(manifest.evals)
+    );
+    const roles = orderDefinitions(
+      [
+        ...inlineDefinitions(
+          manifest.roles,
+          "role",
+          HARNESS_MANIFEST_FILE,
+          parseRoleDefinition
+        ),
+        ...fetched.roleFiles.map((file) =>
+          parseRoleDefinition(parseDataFile(file), file)
+        )
+      ],
+      manifestReferences(manifest.roles)
+    );
+    const prompts = orderDefinitions(
+      fetched.promptFiles.map((file) => parsePromptFile(file)),
+      manifestReferences(manifest.prompts)
+    );
 
-  const phases = orderDefinitions(
-    [
-      ...inlineDefinitions(
-        manifest.phases,
-        "phase",
-        HARNESS_MANIFEST_FILE,
-        parsePhaseDefinition
-      ),
-      ...phaseFiles.map((file) => parsePhaseDefinition(parseDataFile(file), file))
-    ],
-    manifestReferences(manifest.phases)
-  );
-  const gates = orderDefinitions(
-    [
-      ...inlineDefinitions(
-        manifest.gates,
-        "gate",
-        HARNESS_MANIFEST_FILE,
-        parseGateDefinition
-      ),
-      ...gateFiles.map((file) => parseGateDefinition(parseDataFile(file), file))
-    ],
-    manifestReferences(manifest.gates)
-  );
-  const policies = orderDefinitions(
-    [
-      ...inlineDefinitions(
-        manifest.policies,
-        "policy",
-        HARNESS_MANIFEST_FILE,
-        parsePolicyBundle
-      ),
-      ...policyFiles.map((file) => parsePolicyBundle(parseDataFile(file), file))
-    ],
-    manifestReferences(manifest.policies)
-  );
-  const tools = orderDefinitions(
-    [
-      ...inlineToolDefinitions(manifest),
-      ...toolFiles.map((file) => parseToolDefinition(parseDataFile(file), file))
-    ],
-    manifestToolReferences(manifest)
-  );
-  const artifacts = orderDefinitions(
-    artifactSchemaFiles.map((file) => parseArtifactSchemaFile(file)),
-    [
-      ...manifestReferences(manifest.artifacts),
-      ...manifestReferences(manifest.artifactSchemas)
-    ]
-  );
-  const evals = orderDefinitions(
-    [
-      ...inlineDefinitions(
-        manifest.evals,
-        "eval",
-        HARNESS_MANIFEST_FILE,
-        parseEvalDefinition
-      ),
-      ...evalFiles.map((file) => parseEvalDefinition(parseDataFile(file), file))
-    ],
-    manifestReferences(manifest.evals)
-  );
-  const roles = orderDefinitions(
-    [
-      ...inlineDefinitions(
-        manifest.roles,
-        "role",
-        HARNESS_MANIFEST_FILE,
-        parseRoleDefinition
-      ),
-      ...roleFiles.map((file) => parseRoleDefinition(parseDataFile(file), file))
-    ],
-    manifestReferences(manifest.roles)
-  );
-  const prompts = orderDefinitions(
-    promptFiles.map((file) => parsePromptFile(file)),
-    manifestReferences(manifest.prompts)
-  );
-
-  assertUniqueIds("phase", phases);
-  assertUniqueIds("gate", gates);
-  assertUniqueIds("policy", policies);
-  assertUniqueIds("tool", tools);
-  assertUniqueIds("artifact schema", artifacts);
-  assertUniqueIds("eval", evals);
-  assertUniqueIds("role", roles);
-  assertUniqueIds("prompt", prompts);
-
-  validateManifestReferences(manifest, {
-    phases,
-    gates,
-    policies,
-    tools,
-    artifacts,
-    evals,
-    roles,
-    prompts
+    return {
+      manifest,
+      phases,
+      gates,
+      policies,
+      tools,
+      artifacts,
+      evals,
+      roles,
+      prompts
+    };
   });
-  validateDefinitions({
-    manifest,
-    phases,
-    gates,
-    policies,
-    tools,
-    artifacts,
-    evals,
-    roles,
-    prompts
+  const counts = definitionCounts(parsed);
+
+  await runLoadStage(input, "harness.validate", { definitionCounts: counts }, () => {
+    assertUniqueIds("phase", parsed.phases);
+    assertUniqueIds("gate", parsed.gates);
+    assertUniqueIds("policy", parsed.policies);
+    assertUniqueIds("tool", parsed.tools);
+    assertUniqueIds("artifact schema", parsed.artifacts);
+    assertUniqueIds("eval", parsed.evals);
+    assertUniqueIds("role", parsed.roles);
+    assertUniqueIds("prompt", parsed.prompts);
+
+    validateManifestReferences(parsed.manifest, {
+      phases: parsed.phases,
+      gates: parsed.gates,
+      policies: parsed.policies,
+      tools: parsed.tools,
+      artifacts: parsed.artifacts,
+      evals: parsed.evals,
+      roles: parsed.roles,
+      prompts: parsed.prompts
+    });
+    validateDefinitions(parsed);
   });
 
-  const trust = await verifyTrustIfConfigured({ input, loadedFiles, manifest });
-  const grant = await enforceCapabilityGrant({
+  const trust = await runLoadStage(
     input,
-    manifest,
-    policies,
-    tools
-  });
-  const dependencies = await enforceDependencyResolution({
+    "harness.verify_trust",
+    {},
+    () =>
+      verifyTrustIfConfigured({
+        input,
+        loadedFiles,
+        manifest: parsed.manifest
+      })
+  );
+  const grant = await runLoadStage(
     input,
-    manifest
-  });
-  const specHash = computeSpecHash(loadedFiles, dependencies.resolved);
-  const snapshot = HarnessSnapshotSchema.parse({
-    id: manifest.id,
-    version: manifest.version,
-    schemaVersion: manifest.schemaVersion,
-    specHash,
-    loadedAt,
-    runtime: manifest.runtime,
-    phases,
-    gates,
-    policies,
-    tools,
-    artifacts,
-    evals,
-    roles,
-    prompts,
-    metadata: mergeTrustProvenance(manifest.metadata, trust)
-  });
+    "harness.grant_check",
+    {},
+    () =>
+      enforceCapabilityGrant({
+        input,
+        manifest: parsed.manifest,
+        policies: parsed.policies,
+        tools: parsed.tools
+      })
+  );
+  const dependencies = await runLoadStage(
+    input,
+    "harness.resolve_deps",
+    {},
+    () =>
+      enforceDependencyResolution({
+        input,
+        manifest: parsed.manifest
+      })
+  );
+  const frozen = await runLoadStage(
+    input,
+    "harness.freeze",
+    { definitionCounts: counts },
+    () => {
+      const specHash = computeSpecHash(loadedFiles, dependencies.resolved);
+      const snapshot = HarnessSnapshotSchema.parse({
+        id: parsed.manifest.id,
+        version: parsed.manifest.version,
+        schemaVersion: parsed.manifest.schemaVersion,
+        specHash,
+        loadedAt,
+        runtime: parsed.manifest.runtime,
+        phases: parsed.phases,
+        gates: parsed.gates,
+        policies: parsed.policies,
+        tools: parsed.tools,
+        artifacts: parsed.artifacts,
+        evals: parsed.evals,
+        roles: parsed.roles,
+        prompts: parsed.prompts,
+        metadata: mergeTrustProvenance(parsed.manifest.metadata, trust)
+      });
 
-  await emitDependencyEvent(input, manifest, specHash, dependencies);
+      return {
+        specHash,
+        snapshot
+      };
+    }
+  );
+
+  await emitDependencyEvent(input, parsed.manifest, frozen.specHash, dependencies);
 
   return {
-    snapshot: deepFreeze(snapshot),
+    snapshot: deepFreeze(frozen.snapshot),
+    loadedFiles,
     grant,
     dependencies,
     compatibility: compatibility.admission,
     ...(trust === undefined ? {} : { trust })
+  };
+}
+
+async function runLoadStage<TValue>(
+  input: string | LoadHarnessPackageOptions,
+  stage: HarnessLoadStageKind,
+  metadata: Record<string, unknown>,
+  operation: () => TValue | Promise<TValue>
+): Promise<TValue> {
+  if (typeof input === "string" || input.onLoadStage === undefined) {
+    return operation();
+  }
+
+  return input.onLoadStage(stage, metadata, operation);
+}
+
+function definitionCounts(collections: {
+  phases: readonly PhaseDefinition[];
+  gates: readonly GateDefinition[];
+  policies: readonly PolicyBundle[];
+  tools: readonly ToolDefinition[];
+  artifacts: readonly ArtifactSchemaRef[];
+  evals: readonly EvalDefinition[];
+  roles: readonly RoleDefinition[];
+  prompts: readonly PromptAssetRef[];
+}) {
+  return {
+    phases: collections.phases.length,
+    gates: collections.gates.length,
+    policies: collections.policies.length,
+    tools: collections.tools.length,
+    artifacts: collections.artifacts.length,
+    evals: collections.evals.length,
+    roles: collections.roles.length,
+    prompts: collections.prompts.length
   };
 }
 
