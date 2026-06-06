@@ -7,6 +7,7 @@ import {
   canonicalizeAttestation,
   loadHarnessPackage,
   type Attestation,
+  type LoadHarnessPackageOptions,
   type SignatureEnvelope,
   type TrustStoreData,
   type TrustStoreEntry
@@ -33,6 +34,7 @@ export type MakeSignedHarnessPackageOptions = {
   trustStoreEntries?: TrustStoreData["entries"];
   attestationOverrides?: Partial<Attestation>;
   envelopeOverrides?: Partial<Omit<SignatureEnvelope, "attestation">>;
+  loadOptions?: Omit<LoadHarnessPackageOptions, "packageDir">;
 };
 
 export async function makeSignedHarnessPackage(
@@ -54,7 +56,8 @@ export async function makeSignedHarnessPackage(
   });
   const snapshot = await loadHarnessPackage({
     packageDir,
-    loadedAt: "2026-05-29T00:00:00.000Z"
+    loadedAt: "2026-05-29T00:00:00.000Z",
+    ...(options.loadOptions ?? {})
   });
   const attestation: Attestation = {
     publisherId,

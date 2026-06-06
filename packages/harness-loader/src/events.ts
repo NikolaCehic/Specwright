@@ -32,6 +32,7 @@ export const HARNESS_LOADER_EVENT_TYPES = [
 export type HarnessLoaderEventType = (typeof HARNESS_LOADER_EVENT_TYPES)[number];
 
 const HarnessLoaderErrorCodeSchema = z.enum([
+  "cache_poisoned",
   "compatibility_denied",
   "dependency_unresolved",
   "duplicate_id",
@@ -39,14 +40,19 @@ const HarnessLoaderErrorCodeSchema = z.enum([
   "invalid_artifact_schema",
   "invalid_definition",
   "invalid_graph",
+  "invalid_lifecycle_transition",
   "invalid_loaded_at",
   "invalid_manifest",
   "invalid_prompt",
   "missing_harness_manifest",
   "missing_reference",
   "parse_error",
+  "promotion_unapproved",
+  "resource_limit_exceeded",
   "trust_rejected",
-  "unsupported_schema_version"
+  "unsupported_schema_version",
+  "version_immutable",
+  "version_not_resolvable"
 ] satisfies [HarnessLoaderErrorCode, ...HarnessLoaderErrorCode[]]);
 
 const retryabilitySchema = z.enum(["retryable", "not_retryable", "operator_action"]);
