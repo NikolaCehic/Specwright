@@ -20,6 +20,7 @@
     "test": "bun test src/index.test.ts src/trust.test.ts"
   },
   "dependencies": {
+    "@specwright/run-store": "workspace:*",
     "@specwright/schemas": "workspace:*",
     "zod": "^3.22.4"
   }

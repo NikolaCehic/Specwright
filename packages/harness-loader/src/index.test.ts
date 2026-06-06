@@ -12,12 +12,18 @@ import {
   detectCapabilitySurfaceWidening,
   evaluateGrant,
   HarnessLoaderError,
+  HarnessLoadProvenanceError,
   InMemoryTrustStore,
+  assertRedactionEventsCoverSubstitutions,
+  assessHarnessRunAuditability,
   loadCapabilityGrantRegistryFromFile,
   loadCompatibilityMatrixFromFile,
   loadDependencyRegistryFromFile,
   loadHarnessPackage,
+  loadHarnessPackageObserved,
   loadHarnessPackageWithRecord,
+  createSpecHashDriftLedger,
+  verifySpecHash,
   RegistryGrantSource,
   SUPPORTED_HARNESS_SCHEMA_VERSION
 } from "./index";
@@ -25,6 +31,8 @@ import type {
   CapabilityGrant,
   HarnessDependencyEvent,
   HarnessGrantEvent,
+  HarnessLoaderAuditEvent,
+  HarnessTraceSpanInput,
   MigrationDescriptor,
   MigrationDescriptorBody
 } from "./index";
@@ -857,6 +865,324 @@ phases:
     expect((error as HarnessLoaderError).reason).toBe("attestation_mismatch");
   });
 
+  test("observed load emits the full harness span tree and frozen audit anchor", async () => {
+    const packageDir = await writeHarnessPackage("observed-valid", validHarnessFiles());
+    const spans: HarnessTraceSpanInput[] = [];
+    const events: HarnessLoaderAuditEvent[] = [];
+
+    const result = await loadHarnessPackageObserved({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      loadedBy: "operator:test",
+      registryRef: "file://observed-valid",
+      now: fixedClock("2026-05-29T00:00:00.000Z"),
+      traceRecorder: {
+        recordSpan(span) {
+          spans.push(span);
+        }
+      },
+      onAuditEvent(event) {
+        events.push(event);
+      }
+    });
+
+    expect(spans.map((span) => span.kind).sort()).toEqual([
+      "harness.compatibility",
+      "harness.fetch",
+      "harness.freeze",
+      "harness.grant_check",
+      "harness.load",
+      "harness.parse",
+      "harness.resolve_deps",
+      "harness.validate",
+      "harness.verify_trust"
+    ]);
+    expect(
+      spans.every((span) => span.metadata?.traceId === result.traceId)
+    ).toBe(true);
+    expect(events.map((event) => event.type)).toContain(
+      "harness.snapshot.frozen"
+    );
+    expect(
+      events.find((event) => event.type === "harness.snapshot.frozen")?.payload
+    ).toMatchObject({
+      specHash: result.record.snapshot.specHash,
+      packageId: "specwright.default",
+      version: "0.1.0",
+      schemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      cacheStatus: "bypass"
+    });
+    expect(
+      JSON.parse(JSON.stringify(result.provenance))
+    ).toEqual(result.provenance);
+    expect(result.provenance).toMatchObject({
+      harnessId: "specwright.default",
+      version: "0.1.0",
+      registryRef: {
+        status: "known",
+        value: "file://observed-valid"
+      },
+      loadedBy: {
+        status: "known",
+        value: "operator:test"
+      },
+      assets: {
+        prompts: [
+          expect.objectContaining({
+            id: "planner.system",
+            contentHash: expect.stringMatching(/^sha256:/)
+          })
+        ]
+      }
+    });
+  });
+
+  test("observed failure spans and events carry the exact loader error code", async () => {
+    const packageDir = await writeHarnessPackage("observed-invalid", {
+      "harness.yaml": `
+version: 0.1.0
+schemaVersion: ${SUPPORTED_HARNESS_SCHEMA_VERSION}
+`
+    });
+    const spans: HarnessTraceSpanInput[] = [];
+    const events: HarnessLoaderAuditEvent[] = [];
+
+    const error = await captureError(() =>
+      loadHarnessPackageObserved({
+        packageDir,
+        now: fixedClock("2026-05-29T00:00:00.000Z"),
+        traceRecorder: {
+          recordSpan(span) {
+            spans.push(span);
+          }
+        },
+        onAuditEvent(event) {
+          events.push(event);
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("invalid_manifest");
+    expect(
+      spans.find((span) => span.kind === "harness.parse")?.metadata
+    ).toMatchObject({
+      errorCode: "invalid_manifest"
+    });
+    expect(
+      spans.find((span) => span.kind === "harness.load")?.metadata
+    ).toMatchObject({
+      errorCode: "invalid_manifest"
+    });
+    expect(
+      events.find((event) => event.type === "harness.validation.failed")?.payload
+    ).toMatchObject({
+      errorCode: "invalid_manifest"
+    });
+    expect(
+      events.find((event) => event.type === "harness.load.denied")?.payload
+    ).toMatchObject({
+      errorCode: "invalid_manifest",
+      failClosed: true
+    });
+  });
+
+  test("run-attached observed load persists the shared harness.loaded anchor", async () => {
+    const packageDir = await writeHarnessPackage("observed-run", validHarnessFiles());
+    const runStore = await loadRunStoreForTest();
+    const runId = "run-observed-harness-load";
+    const traceId = "trace-observed-harness-load";
+
+    await runStore.createRun({
+      rootDir,
+      runId,
+      traceId,
+      input: {
+        task: "Observe harness load",
+        harnessId: "specwright.default",
+        host: {
+          kind: "cli"
+        }
+      },
+      harness: {
+        id: "specwright.default",
+        version: "0.1.0",
+        specHash: `sha256:${"0".repeat(64)}`
+      },
+      timestamp: "2026-05-29T00:00:00.000Z"
+    });
+
+    const result = await loadHarnessPackageObserved({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      now: fixedClock("2026-05-29T00:00:01.000Z"),
+      runContext: {
+        rootDir,
+        runId,
+        traceId
+      }
+    });
+    const persistedEvents = await runStore.readEvents({ rootDir, runId });
+
+    expect(result.runStoreAnchorEvent?.type).toBe("harness.loaded");
+    expect(persistedEvents.map((event) => event.type)).toEqual([
+      "run.started",
+      "harness.loaded"
+    ]);
+    expect(
+      persistedEvents.find((event) => event.type === "harness.loaded")?.payload
+    ).toMatchObject({
+      harness: {
+        specHash: result.record.snapshot.specHash
+      }
+    });
+    expect(
+      assessHarnessRunAuditability({
+        specHash: result.record.snapshot.specHash,
+        events: persistedEvents
+      })
+    ).toMatchObject({
+      status: "auditable",
+      anchorType: "harness.loaded"
+    });
+    expect(
+      assessHarnessRunAuditability({
+        specHash: result.record.snapshot.specHash,
+        events: []
+      })
+    ).toEqual({
+      status: "non_auditable",
+      reason: "missing_harness_snapshot_anchor",
+      specHash: result.record.snapshot.specHash
+    });
+  });
+
+  test("redaction substitutions require a matching redaction audit event", async () => {
+    const packageDir = await writeHarnessPackage(
+      "observed-redaction",
+      validHarnessFiles()
+    );
+    const hashReference = {
+      fieldPath: "metadata.secretToken",
+      hashReference: `sha256:${"a".repeat(64)}`,
+      originalClass: "secret"
+    };
+
+    const result = await loadHarnessPackageObserved({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      redaction: {
+        profile: "model-safe",
+        hashReferences: [hashReference]
+      },
+      now: fixedClock("2026-05-29T00:00:00.000Z")
+    });
+
+    expect(
+      result.auditEvents.find((event) => event.type === "harness.redaction.applied")
+        ?.payload
+    ).toMatchObject({
+      redactionProfile: "model-safe",
+      redactedFieldPaths: ["metadata.secretToken"],
+      hashReferences: [hashReference]
+    });
+    expect(() =>
+      assertRedactionEventsCoverSubstitutions({
+        hashReferences: [hashReference],
+        events: []
+      })
+    ).toThrow(HarnessLoadProvenanceError);
+  });
+
+  test("specHash drift is returned as a typed signal without throwing the load path", async () => {
+    const ledger = createSpecHashDriftLedger();
+    const firstPackageDir = await writeHarnessPackage(
+      "observed-drift-a",
+      validHarnessFiles()
+    );
+    const secondPackageDir = await writeHarnessPackage("observed-drift-b", {
+      ...validHarnessFiles(),
+      "prompts/planner.system.md": `---
+id: planner.system
+description: Minimal planning prompt
+---
+Create source-bound plans only. Include a drift marker.
+`
+    });
+
+    const first = await loadHarnessPackageObserved({
+      packageDir: firstPackageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      driftLedger: ledger
+    });
+    const second = await loadHarnessPackageObserved({
+      packageDir: secondPackageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      driftLedger: ledger
+    });
+
+    expect(first.drift).toMatchObject({
+      status: "stable"
+    });
+    expect(second.drift).toMatchObject({
+      status: "drift",
+      packageId: "specwright.default",
+      version: "0.1.0",
+      previousSpecHashes: [first.record.snapshot.specHash],
+      observedSpecHash: second.record.snapshot.specHash
+    });
+  });
+
+  test("verifySpecHash fails closed when the snapshot cannot be re-proved", async () => {
+    const packageDir = await writeHarnessPackage(
+      "observed-reproof",
+      validHarnessFiles()
+    );
+    const record = await loadHarnessPackageWithRecord({
+      packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z"
+    });
+
+    expect(() =>
+      verifySpecHash(
+        {
+          ...record.snapshot,
+          specHash: `sha256:${"f".repeat(64)}`
+        },
+        record.loadedFiles,
+        record.dependencies.resolved
+      )
+    ).toThrow(HarnessLoadProvenanceError);
+  });
+
+  test("observability preserves CRLF/LF specHash and frozen snapshot determinism", async () => {
+    const lfPackageDir = await writeHarnessPackage(
+      "observed-lf",
+      validHarnessFiles()
+    );
+    const crlfPackageDir = await writeHarnessPackage(
+      "observed-crlf",
+      withCrlf(validHarnessFiles())
+    );
+
+    const lf = await loadHarnessPackageObserved({
+      packageDir: lfPackageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      now: fixedClock("2026-05-29T00:00:00.000Z")
+    });
+    const crlf = await loadHarnessPackageObserved({
+      packageDir: crlfPackageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      now: fixedClock("2026-05-29T00:00:00.000Z")
+    });
+
+    expect(lf.record.snapshot.specHash).toBe(crlf.record.snapshot.specHash);
+    expect(JSON.stringify(lf.record.snapshot)).toBe(
+      JSON.stringify(crlf.record.snapshot)
+    );
+  });
+
   test("evaluateGrant and grant events are deterministic", () => {
     const requested = {
       tools: ["fs.read", "shell.exec", "fs.read"],
@@ -1216,6 +1542,40 @@ async function writeHarnessPackage(
   }
 
   return packageDir;
+}
+
+function fixedClock(start: string) {
+  let tick = Date.parse(start);
+
+  return () => {
+    const value = new Date(tick).toISOString();
+    tick += 1;
+
+    return value;
+  };
+}
+
+function withCrlf(files: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(files).map(([path, contents]) => [
+      path,
+      contents.replace(/\r?\n/g, "\r\n")
+    ])
+  );
+}
+
+async function loadRunStoreForTest() {
+  const moduleName = "@specwright/run-store";
+
+  return (await import(moduleName)) as {
+    createRun(options: Record<string, unknown>): Promise<unknown>;
+    readEvents(options: Record<string, unknown>): Promise<
+      Array<{
+        type: string;
+        payload: unknown;
+      }>
+    >;
+  };
 }
 
 async function captureDependencyFixtureDenial(

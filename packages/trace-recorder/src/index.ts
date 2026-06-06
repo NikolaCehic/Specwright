@@ -12,7 +12,16 @@ export type TraceSpanKind =
   | "eval"
   | "gate"
   | "approval"
-  | "cache";
+  | "cache"
+  | "harness.load"
+  | "harness.fetch"
+  | "harness.verify_trust"
+  | "harness.parse"
+  | "harness.validate"
+  | "harness.resolve_deps"
+  | "harness.compatibility"
+  | "harness.grant_check"
+  | "harness.freeze";
 
 export type TraceSpanStatus =
   | "success"
@@ -39,6 +48,37 @@ export type TraceSpanMetadata = Record<string, unknown> & {
   cacheStatus?: CacheStatus;
   policyStatus?: string;
   errorCode?: string;
+  packageId?: string;
+  requestedVersion?: string;
+  resolvedPin?: string;
+  registryRef?: string;
+  specHash?: string;
+  contentDigest?: string;
+  byteCount?: number;
+  sourceUri?: string;
+  transport?: string;
+  resultStatus?: string;
+  definitionCounts?: Record<string, number>;
+  fileCount?: number;
+  fileListDigest?: string;
+  publisherId?: string;
+  signingKeyId?: string;
+  signatureAlgorithm?: string;
+  trustStoreVersion?: string;
+  trustVerdict?: string;
+  dependencyIds?: string[];
+  resolvedVersions?: string[];
+  pinnedHashes?: string[];
+  unpinnedCount?: number;
+  runtimeVersion?: string;
+  fromVersion?: string;
+  toVersion?: string;
+  compatibilityClass?: string;
+  compatibilityDecision?: string;
+  requestedCapabilities?: string[];
+  grantedScopes?: string[];
+  deniedCapabilities?: string[];
+  attestationId?: string;
 };
 
 export type TraceSpan = {
@@ -404,7 +444,16 @@ function parseSpanKind(value: unknown): TraceSpanKind {
     value === "eval" ||
     value === "gate" ||
     value === "approval" ||
-    value === "cache"
+    value === "cache" ||
+    value === "harness.load" ||
+    value === "harness.fetch" ||
+    value === "harness.verify_trust" ||
+    value === "harness.parse" ||
+    value === "harness.validate" ||
+    value === "harness.resolve_deps" ||
+    value === "harness.compatibility" ||
+    value === "harness.grant_check" ||
+    value === "harness.freeze"
   ) {
     return value;
   }
