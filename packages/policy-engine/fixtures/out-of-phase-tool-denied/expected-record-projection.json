@@ -1,0 +1,96 @@
+{
+  "sourceFixture": "out-of-phase-tool-denied",
+  "context": {
+    "eventIds": [
+      "event:policy:deny"
+    ],
+    "traceId": "trace:policy:deny",
+    "spanId": "span:policy:deny",
+    "parentSpanId": "span:parent:deny",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "bundleSetRef": "policy-bundle:fixture.fs-read",
+    "bundleVersions": [
+      "fixture.fs-read@unversioned"
+    ]
+  },
+  "eventPayload": {
+    "requestId": "req_out_of_phase_tool_denied",
+    "runId": "run_policy_fixture",
+    "phase": "synthesis",
+    "actionKind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "status": "deny",
+    "matchedRules": [
+      {
+        "ruleId": "tool.fs.read.phase",
+        "layer": "phase",
+        "effect": "deny",
+        "reason": "Tool fs.read is not allowed in phase synthesis"
+      },
+      {
+        "ruleId": "tool.fs.read.scope",
+        "layer": "capability",
+        "effect": "constrain",
+        "reason": "Tool fs.read scopes are within policy"
+      },
+      {
+        "ruleId": "tool.fs.read.default",
+        "layer": "capability",
+        "effect": "allow",
+        "reason": "fs.read is allowed for source and evidence discovery"
+      }
+    ],
+    "decidingLayer": "phase",
+    "constraints": [
+      {
+        "kind": "allowedScopes",
+        "value": [
+          "workspace:read",
+          "evidence:read"
+        ],
+        "sourceRuleId": "tool.fs.read.scope"
+      }
+    ],
+    "obligations": [],
+    "requestHash": "sha256:26dce2907c53cf252cab3386789a77740ec44807d54521cf3bddbd6218746ce9",
+    "policyBundleHash": "sha256:22ec68e526f9e2a84b59367f51435f37a12e6f2506e0b25c2db40b48071fdb78",
+    "decisionHash": "sha256:d3de5a879b240755bed2a595f99cbf61acaae418ebb1717776ad533a3f9ebf7b",
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "bundleSetRef": "policy-bundle:fixture.fs-read",
+    "bundleVersions": [
+      "fixture.fs-read@unversioned"
+    ]
+  },
+  "span": {
+    "spanId": "span:policy:deny",
+    "parentSpanId": "span:parent:deny",
+    "kind": "policy",
+    "name": "policy.deny.tool_call",
+    "status": "denied",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "eventIds": [
+      "event:policy:deny"
+    ],
+    "metadata": {
+      "requestId": "req_out_of_phase_tool_denied",
+      "runId": "run_policy_fixture",
+      "traceId": "trace:policy:deny",
+      "phase": "synthesis",
+      "actionKind": "tool_call",
+      "toolId": "fs.read",
+      "policyStatus": "deny",
+      "decisionHash": "sha256:d3de5a879b240755bed2a595f99cbf61acaae418ebb1717776ad533a3f9ebf7b",
+      "requestHash": "sha256:26dce2907c53cf252cab3386789a77740ec44807d54521cf3bddbd6218746ce9",
+      "policyBundleHash": "sha256:22ec68e526f9e2a84b59367f51435f37a12e6f2506e0b25c2db40b48071fdb78",
+      "decidingLayer": "phase",
+      "matchedRuleIds": [
+        "tool.fs.read.phase",
+        "tool.fs.read.scope",
+        "tool.fs.read.default"
+      ]
+    }
+  }
+}

@@ -1,0 +1,51 @@
+{
+  "id": "event:policy-evaluated",
+  "payload": {
+    "actionKind": "tool_call",
+    "approvalId": "approval:contract-registry",
+    "argsHash": "sha256:args-fixture",
+    "bundleSetRef": "policy-bundle:contract-registry",
+    "bundleVersions": [
+      "contract-registry@specwright.policy-bundle.v0"
+    ],
+    "constraints": [
+      {
+        "kind": "timeoutMs",
+        "sourceRuleId": "tool.shell.exec.default",
+        "value": 120000
+      }
+    ],
+    "decidingLayer": "capability",
+    "decisionHash": "sha256:policy-fixture",
+    "matchedRules": [
+      {
+        "effect": "approval_required",
+        "layer": "capability",
+        "reason": "Contract changes require compatibility review.",
+        "ruleId": "tool.shell.exec.default"
+      }
+    ],
+    "obligations": [
+      {
+        "kind": "record_event",
+        "params": {
+          "eventType": "policy.evaluated"
+        },
+        "sourceRuleId": "tool.shell.exec.default"
+      }
+    ],
+    "phase": "shared-schemas",
+    "policyBundleHash": "sha256:bundle-fixture",
+    "requestHash": "sha256:request-fixture",
+    "requestId": "req:contract-registry-policy",
+    "risk": "high",
+    "runId": "run:contract-registry",
+    "status": "approval_required",
+    "toolId": "shell.exec"
+  },
+  "runId": "run:contract-registry",
+  "sequence": 1,
+  "timestamp": "2026-06-05T00:00:00.000Z",
+  "traceId": "trace:contract-registry",
+  "type": "policy.evaluated"
+}

@@ -1,0 +1,117 @@
+{
+  "sourceFixture": "budget-exceeded-approval-required",
+  "context": {
+    "eventIds": [
+      "event:policy:approval_required"
+    ],
+    "traceId": "trace:policy:approval_required",
+    "spanId": "span:policy:approval_required",
+    "parentSpanId": "span:parent:approval_required",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "bundleSetRef": "policy-bundle:fixture.fs-read-budget",
+    "bundleVersions": [
+      "fixture.fs-read-budget@unversioned"
+    ]
+  },
+  "eventPayload": {
+    "requestId": "req_budget_exceeded_approval_required",
+    "runId": "run_policy_fixture",
+    "phase": "evidence",
+    "actionKind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "status": "approval_required",
+    "matchedRules": [
+      {
+        "ruleId": "budget.file_read_bytes.max",
+        "layer": "harness",
+        "effect": "approval_required",
+        "reason": "file read budget would exceed policy limit"
+      },
+      {
+        "ruleId": "tool.fs.read.phase",
+        "layer": "phase",
+        "effect": "allow",
+        "reason": "Tool fs.read is allowed in phase evidence"
+      },
+      {
+        "ruleId": "tool.fs.read.scope",
+        "layer": "capability",
+        "effect": "constrain",
+        "reason": "Tool fs.read scopes are within policy"
+      },
+      {
+        "ruleId": "tool.fs.read.default",
+        "layer": "capability",
+        "effect": "allow",
+        "reason": "fs.read is allowed for source and evidence discovery"
+      }
+    ],
+    "decidingLayer": "harness",
+    "constraints": [
+      {
+        "kind": "maxBytes",
+        "value": 1024,
+        "sourceRuleId": "budget.file_read_bytes.max"
+      },
+      {
+        "kind": "allowedScopes",
+        "value": [
+          "workspace:read",
+          "evidence:read"
+        ],
+        "sourceRuleId": "tool.fs.read.scope"
+      }
+    ],
+    "obligations": [
+      {
+        "kind": "request_human_review",
+        "params": {
+          "resource": "fileReadBytes"
+        },
+        "sourceRuleId": "budget.file_read_bytes.max"
+      }
+    ],
+    "approvalId": "appr_file_read_budget",
+    "requestHash": "sha256:be9179b330f15fe096c912caba36a7705b0686c3437828fd245289a901dccf23",
+    "policyBundleHash": "sha256:0aa183924fa5e1139837fa644f858e266dd8f5a2989fe320f70748bf617213f9",
+    "decisionHash": "sha256:9fa103459d44b24374d14f1d88663240ef0698c92a7ed509eec5d5d85d27d3e1",
+    "argsHash": "sha256:5f3122dae4b6422c536a58de7da1593978a3c536210e9caaa306b5c37658c1c5",
+    "bundleSetRef": "policy-bundle:fixture.fs-read-budget",
+    "bundleVersions": [
+      "fixture.fs-read-budget@unversioned"
+    ]
+  },
+  "span": {
+    "spanId": "span:policy:approval_required",
+    "parentSpanId": "span:parent:approval_required",
+    "kind": "policy",
+    "name": "policy.approval_required.tool_call",
+    "status": "approval_required",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "eventIds": [
+      "event:policy:approval_required"
+    ],
+    "metadata": {
+      "requestId": "req_budget_exceeded_approval_required",
+      "runId": "run_policy_fixture",
+      "traceId": "trace:policy:approval_required",
+      "phase": "evidence",
+      "actionKind": "tool_call",
+      "toolId": "fs.read",
+      "policyStatus": "approval_required",
+      "decisionHash": "sha256:9fa103459d44b24374d14f1d88663240ef0698c92a7ed509eec5d5d85d27d3e1",
+      "requestHash": "sha256:be9179b330f15fe096c912caba36a7705b0686c3437828fd245289a901dccf23",
+      "policyBundleHash": "sha256:0aa183924fa5e1139837fa644f858e266dd8f5a2989fe320f70748bf617213f9",
+      "decidingLayer": "harness",
+      "matchedRuleIds": [
+        "budget.file_read_bytes.max",
+        "tool.fs.read.phase",
+        "tool.fs.read.scope",
+        "tool.fs.read.default"
+      ]
+    }
+  }
+}

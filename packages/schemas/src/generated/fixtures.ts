@@ -148,6 +148,11 @@ export const contractFixtures = [
     "replay": "fixtures/replay/phase-transitioned-event-payload.replay.json"
   },
   {
+    "id": "specwright.event.policy-evaluated-event",
+    "negative": "fixtures/negative/policy-evaluated-event.negative.json",
+    "positive": "fixtures/conformance/policy-evaluated-event.positive.json"
+  },
+  {
     "id": "specwright.event.policy.evaluated",
     "negative": "fixtures/negative/policy-evaluated-event-payload.negative.json",
     "positive": "fixtures/conformance/policy-evaluated-event-payload.positive.json",

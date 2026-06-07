@@ -1,0 +1,264 @@
+{
+  "$id": "specwright.event.policy-evaluated-event",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "causationId": {
+      "type": "string"
+    },
+    "contractId": {
+      "type": "string"
+    },
+    "contractVersion": {
+      "type": "string"
+    },
+    "correlationId": {
+      "type": "string"
+    },
+    "id": {
+      "type": "string"
+    },
+    "integrity": {
+      "additionalProperties": false,
+      "properties": {
+        "algo": {
+          "type": "string"
+        },
+        "hash": {
+          "type": "string"
+        },
+        "prevHash": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "algo",
+        "hash",
+        "prevHash"
+      ],
+      "type": "object"
+    },
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "actionKind": {
+          "type": "string"
+        },
+        "approvalId": {
+          "type": "string"
+        },
+        "argsHash": {
+          "type": "string"
+        },
+        "bundleSetRef": {
+          "type": "string"
+        },
+        "bundleVersions": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "constraints": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string"
+              },
+              "sourceRuleId": {
+                "type": "string"
+              },
+              "value": {}
+            },
+            "required": [
+              "kind",
+              "sourceRuleId",
+              "value"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "decidingLayer": {
+          "enum": [
+            "runtime_invariant",
+            "host",
+            "workspace",
+            "harness",
+            "phase",
+            "capability",
+            "run_mode",
+            "approval"
+          ]
+        },
+        "decisionHash": {
+          "type": "string"
+        },
+        "matchedRules": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "effect": {
+                "enum": [
+                  "allow",
+                  "deny",
+                  "approval_required",
+                  "constrain",
+                  "obligate"
+                ]
+              },
+              "layer": {
+                "enum": [
+                  "runtime_invariant",
+                  "host",
+                  "workspace",
+                  "harness",
+                  "phase",
+                  "capability",
+                  "run_mode",
+                  "approval"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              },
+              "ruleId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "effect",
+              "layer",
+              "reason",
+              "ruleId"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "obligations": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "enum": [
+                  "record_event",
+                  "redact",
+                  "stage_write",
+                  "run_eval",
+                  "require_evidence",
+                  "attach_trace",
+                  "mark_external_source",
+                  "request_human_review"
+                ]
+              },
+              "params": {
+                "additionalProperties": {},
+                "type": "object"
+              },
+              "sourceRuleId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "sourceRuleId"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "policyBundleHash": {
+          "type": "string"
+        },
+        "requestHash": {
+          "type": "string"
+        },
+        "requestId": {
+          "type": "string"
+        },
+        "risk": {
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "critical"
+          ]
+        },
+        "runId": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "allow",
+            "deny",
+            "approval_required"
+          ]
+        },
+        "toolId": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionKind",
+        "argsHash",
+        "bundleSetRef",
+        "bundleVersions",
+        "constraints",
+        "decidingLayer",
+        "decisionHash",
+        "matchedRules",
+        "obligations",
+        "phase",
+        "policyBundleHash",
+        "requestHash",
+        "requestId",
+        "risk",
+        "runId",
+        "status"
+      ],
+      "type": "object"
+    },
+    "runId": {
+      "type": "string"
+    },
+    "schemaHash": {
+      "type": "string"
+    },
+    "sequence": {
+      "type": "number"
+    },
+    "timestamp": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "traceId": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "payload",
+    "runId",
+    "sequence",
+    "timestamp",
+    "traceId",
+    "type"
+  ],
+  "title": "PolicyEvaluatedEventSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:85567af33efc8bc97cccd9e8f94600f286751e8739e840a175d04983bbaeca80",
+    "id": "specwright.event.policy-evaluated-event",
+    "status": "public",
+    "version": "1"
+  }
+}

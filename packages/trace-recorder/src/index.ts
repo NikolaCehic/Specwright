@@ -9,6 +9,7 @@ export const TRACE_RECORDER_VERSION = "0.1.0";
 export type TraceSpanKind =
   | "phase"
   | "tool"
+  | "policy"
   | "eval"
   | "gate"
   | "approval"
@@ -47,6 +48,11 @@ export type TraceSpanMetadata = Record<string, unknown> & {
   approvalId?: string;
   cacheStatus?: CacheStatus;
   policyStatus?: string;
+  decisionHash?: string;
+  requestHash?: string;
+  policyBundleHash?: string;
+  decidingLayer?: string;
+  matchedRuleIds?: string[];
   errorCode?: string;
   packageId?: string;
   requestedVersion?: string;
@@ -441,6 +447,7 @@ function parseSpanKind(value: unknown): TraceSpanKind {
   if (
     value === "phase" ||
     value === "tool" ||
+    value === "policy" ||
     value === "eval" ||
     value === "gate" ||
     value === "approval" ||
