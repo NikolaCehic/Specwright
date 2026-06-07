@@ -1,116 +1,33 @@
-# Specwright Supervisor Protocol
+# Specwright Agent Instructions
 
 ## Project Identity
 
 This project is **Specwright**.
 
-Specwright is the successor project guided by the Obsidian vault at:
+Use this repository as the primary source of truth unless the user explicitly provides another source for the current task.
 
-```txt
-/Users/nikolacehic/Desktop/Archetype-Harness-Wiki
-```
+## Working Rules
 
-That vault is the source of truth for architecture, lifecycle, runtime boundaries, policies, gates, handoffs, evals, and roadmap decisions.
+- Keep changes scoped to the user's request.
+- Prefer existing repository patterns over new abstractions.
+- Do not import external project context unless the user supplies it in the task.
+- Treat generated model output as a proposal until it is validated by code, tests, schemas, or user approval.
+- Report changed files, checks run, skipped checks, assumptions, and open questions when completing scoped implementation work.
 
-## Supervisor Chat Role
+## Implementation Quality Bar
 
-The main Specwright chat acts as the orchestration and supervisor layer.
+- Do not treat application work as an MVP, v0, thin slice, slim vertical, demo, or happy-path-only implementation unless the user explicitly asks for that reduced scope.
+- Build for enterprise-grade use: reliable under realistic load, observable, secure by default, and explicit about operational boundaries.
+- Build for failure, not just one successful flow. Include error paths, degraded states, retry/recovery behavior, validation, malformed input handling, and permission or policy failures where relevant.
+- Keep implementations testable, maintainable, and scalable. Prefer clear module boundaries, deterministic behavior, focused tests, and code that can grow without becoming fragile.
+- Performance is part of correctness. Avoid unnecessary work, unbounded operations, avoidable memory growth, and designs that will obviously collapse under scale.
 
-It owns:
-
-- project-level continuity
-- interpretation of the vault
-- scope decomposition
-- handoff packet creation
-- review of scoped-chat completion reports
-- reconciliation of scoped work against the vault
-
-It does not blindly trust scoped chats. Handoffs are evaluated by observable outputs.
-
-## Scoped Chat Role
-
-A scoped chat receives one bounded task.
-
-It must:
-
-- read this file first
-- read only the vault pages named in its handoff packet
-- treat the vault as source truth
-- stay inside the assigned scope
-- avoid unrelated refactors
-- report changed files, checks, skipped checks, and unresolved questions
-
-Scoped chats should not search the web for Archetype-related context unless the supervisor explicitly permits it.
-
-## Source Truth Rule
-
-For Archetype and Specwright architecture, use only:
-
-- this repository
-- the supervisor-provided handoff packet
-- `/Users/nikolacehic/Desktop/Archetype-Harness-Wiki`
-
-If a claim is not supported by those sources, mark it as an assumption or ask the supervisor.
-
-## Handoff Packet Shape
-
-The supervisor should give scoped chats a compact packet:
-
-```txt
-Task:
-Goal:
-Non-goals:
-Allowed files:
-Forbidden files:
-Vault pages to read:
-Relevant decisions:
-Acceptance checks:
-Completion report required:
-```
-
-Packets should be small, explicit, and scoped to one piece of work.
-
-## Completion Report Shape
-
-Every scoped chat should return:
-
-```txt
-Status:
-Files changed:
-Vault pages used:
-Decisions followed:
-Checks run:
-Checks skipped:
-Assumptions:
-Open questions:
-```
-
-The supervisor uses this report to decide whether work is accepted, repaired, or split into another packet.
-
-## Non-Negotiables
+## Runtime Principles
 
 - Runtime owns lifecycle behavior.
 - Host adapters are thin runtime clients.
-- All external capabilities go through `ToolBroker`.
+- External capabilities go through `ToolBroker`.
 - `PolicyEngine` is deterministic and side-effect-free.
 - `GateEngine` controls lifecycle advancement.
 - Event logs are append-only source of truth.
 - Artifacts are schema-valid and evidence-bound.
-- Model output is proposal, not authority.
-- Human approval authorizes decisions but does not turn unsupported claims into source facts.
-
-## Initial Build Bias
-
-Prefer the vault roadmap:
-
-1. shared schemas
-2. file-first run store
-3. harness loader
-4. policy engine fixtures
-5. gate engine fixtures
-6. tool broker with `fs.list` and `fs.read`
-7. minimal eval runner
-8. CLI reference adapter
-9. MCP adapter
-
-Keep the first implementation narrow enough to prove runtime strictness before product ambition.
