@@ -1,0 +1,20 @@
+{
+  "id": "fixture.unsafe-pattern",
+  "rules": [
+    {
+      "id": "workspace.unsafe_pattern",
+      "layer": "workspace",
+      "effect": "deny",
+      "reason": "unsafe regex matcher should fail bundle load",
+      "match": {
+        "actionKind": "tool_call",
+        "args": [
+          {
+            "path": "command",
+            "pattern": "(a+)+$"
+          }
+        ]
+      }
+    }
+  ]
+}

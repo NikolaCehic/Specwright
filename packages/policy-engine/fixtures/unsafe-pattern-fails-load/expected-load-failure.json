@@ -1,0 +1,9 @@
+[
+  {
+    "code": "unsafe_pattern",
+    "reason": "Pattern contains nested unbounded quantifiers",
+    "bundleId": "fixture.unsafe-pattern",
+    "ruleId": "workspace.unsafe_pattern",
+    "path": "bundles.0.rules.0.match.args.0.pattern"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "code": "unsafe_pattern",
+    "reason": "Pattern contains unbounded alternation under a quantifier",
+    "bundleId": "fixture.caller-unsafe-pattern",
+    "ruleId": "workspace.caller.unsafe_pattern",
+    "path": "bundles.1.rules.0.match.args.0.pattern"
+  }
+]

@@ -1,0 +1,9 @@
+[
+  {
+    "code": "duplicate_rule_id",
+    "reason": "Rule id \"workspace.duplicate.rule\" appears 2 times across the bundle set",
+    "bundleId": "fixture.duplicate-rule-a",
+    "ruleId": "workspace.duplicate.rule",
+    "path": "bundles.0.rules.0.id"
+  }
+]

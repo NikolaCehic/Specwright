@@ -1,0 +1,8 @@
+[
+  {
+    "code": "invalid_schema",
+    "reason": "Expected rule layer to be one of runtime_invariant, host, workspace, harness, phase, capability, run_mode, approval",
+    "bundleId": "fixture.partial-invalid",
+    "path": "bundles.1.rules.0.layer"
+  }
+]

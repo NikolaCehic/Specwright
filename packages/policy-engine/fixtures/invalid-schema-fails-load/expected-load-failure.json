@@ -1,0 +1,20 @@
+[
+  {
+    "code": "invalid_schema",
+    "reason": "Expected budget max to be a finite number",
+    "bundleId": "fixture.invalid-authoring-shape",
+    "path": "bundles.0.budgetPolicy.0.max"
+  },
+  {
+    "code": "invalid_schema",
+    "reason": "Expected rule effect to be one of allow, deny, approval_required, constrain, obligate",
+    "bundleId": "fixture.invalid-authoring-shape",
+    "path": "bundles.0.rules.0.effect"
+  },
+  {
+    "code": "invalid_schema",
+    "reason": "Expected tool policy default to be one of allow, deny, approval_required",
+    "bundleId": "fixture.invalid-authoring-shape",
+    "path": "bundles.0.toolPolicy.fs.read.default"
+  }
+]

@@ -86,6 +86,9 @@
       },
       "type": "array"
     },
+    "schemaVersion": {
+      "type": "string"
+    },
     "scopes": {
       "items": {
         "type": "string"
@@ -122,7 +125,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "governance",
-    "hash": "sha256:a5aeb1a3079329f81d0df84b6971f0a3bdd3b2dfc539deba4220bb1f5b685558",
+    "hash": "sha256:4a35a3e0167a2bb6e71a8c31d5892bf90baf85d032d533040061530db5b9fd58",
     "id": "specwright.governance.policy-bundle",
     "status": "public",
     "version": "1"

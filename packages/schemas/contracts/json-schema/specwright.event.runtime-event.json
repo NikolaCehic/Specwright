@@ -2590,6 +2590,9 @@
                         },
                         "type": "array"
                       },
+                      "schemaVersion": {
+                        "type": "string"
+                      },
                       "scopes": {
                         "items": {
                           "type": "string"
@@ -2772,7 +2775,7 @@
           "type": "string"
         },
         "schemaHash": {
-          "const": "sha256:bf81a597052653e924e313dd53d7186f7fbc640f655c3ef1ac9dc3500ce8e17f"
+          "const": "sha256:84727b617e64f9c4970d28531fc8f4040fe11e52d382ccc8555983b2ee7de964"
         },
         "sequence": {
           "type": "number"
@@ -5002,7 +5005,7 @@
   "title": "RuntimeEventSchema",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:c6a528b1b0d1e639130fec19559fa6ad875ef8c42a9c30d26b794bacb377f546",
+    "hash": "sha256:3ad5ee116d240a40ad3c589c31ac93766b92c6d68f47ab03ae7e3410f48c74fb",
     "id": "specwright.event.runtime-event",
     "status": "public",
     "version": "1"

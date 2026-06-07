@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PolicyVerdictSchema } from "@specwright/schemas";
-import { evaluatePolicy } from "./index";
+import { evaluatePolicy, loadPolicyBundles } from "./index";
+import "./bundle-load.test";
+import "./pattern-safety.test";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
 
@@ -26,12 +28,23 @@ describe("policy engine fixtures", () => {
       const request = await readJson(join(fixtureDir, "request.json"));
       const policyBundle = await readJson(join(fixtureDir, "policy-bundle.json"));
       const expected = await readJson(join(fixtureDir, "expected-verdict.json"));
+      const loadResult = loadPolicyBundles(policyBundle);
 
-      const verdict = evaluatePolicy(request, policyBundle);
+      expect(loadResult).toEqual({
+        ok: true,
+        bundles: [policyBundle]
+      });
+
+      const verdict = evaluatePolicy(
+        request,
+        loadResult.ok ? loadResult.bundles : []
+      );
 
       expect(PolicyVerdictSchema.parse(verdict)).toEqual(verdict);
       expect(verdict).toEqual(expected);
-      expect(evaluatePolicy(request, policyBundle)).toEqual(verdict);
+      expect(evaluatePolicy(request, loadResult.ok ? loadResult.bundles : [])).toEqual(
+        verdict
+      );
     });
   }
 });

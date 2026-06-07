@@ -1,0 +1,25 @@
+{
+  "id": "fixture.invalid-authoring-shape",
+  "rules": [
+    {
+      "id": "workspace.invalid.effect",
+      "layer": "workspace",
+      "effect": "permit",
+      "reason": "invalid effect is rejected"
+    }
+  ],
+  "toolPolicy": {
+    "fs.read": {
+      "default": "maybe"
+    }
+  },
+  "budgetPolicy": [
+    {
+      "id": "budget.invalid",
+      "resource": "fileReadBytes",
+      "max": "1024",
+      "onExceeded": "deny",
+      "reason": "invalid max is rejected"
+    }
+  ]
+}

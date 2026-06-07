@@ -1,0 +1,32 @@
+[
+  {
+    "id": "fixture.partial-valid",
+    "toolPolicy": {
+      "fs.read": {
+        "default": "allow",
+        "risk": "low",
+        "reason": "valid subset would allow fs.read",
+        "allowedPhases": [
+          "evidence"
+        ],
+        "requiredScopes": [
+          "workspace:read"
+        ],
+        "allowedScopes": [
+          "workspace:read"
+        ]
+      }
+    }
+  },
+  {
+    "id": "fixture.partial-invalid",
+    "rules": [
+      {
+        "id": "workspace.partial.invalid",
+        "layer": "invalid_layer",
+        "effect": "deny",
+        "reason": "invalid layer rejects the whole set"
+      }
+    ]
+  }
+]
