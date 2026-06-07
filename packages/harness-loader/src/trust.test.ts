@@ -3,6 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  computeSpecHash,
   HarnessLoaderError,
   InMemoryTrustStore,
   loadHarnessPackage,
@@ -60,6 +61,7 @@ describe("harness package trust verification", () => {
         signingKeyId: fixture.signingKeyId,
         signatureRef: record.trust?.signatureRef,
         trustStoreVersion: fixture.trustStoreData.version,
+        specHash: record.snapshot.specHash,
         verdict: "verified"
       }
     });
@@ -75,6 +77,60 @@ describe("harness package trust verification", () => {
     expect(metadata.provenance?.author).toBe("loader-test");
     expect(metadata.provenance?.trust).toEqual(record.trust?.provenance);
     expect(Object.isFrozen(record.snapshot)).toBe(true);
+  });
+
+  test("binds trust attestation to the final dependency-folded specHash", async () => {
+    const files = dependencyBearingHarnessFiles();
+    const dependencyResolver = reviewedDependencyResolver();
+    const fixture = await makeSignedHarnessPackage(rootDir, {
+      name: "signed-with-dependency",
+      files,
+      loadOptions: {
+        dependencyResolver
+      }
+    });
+
+    const record = await loadHarnessPackageWithRecord({
+      packageDir: fixture.packageDir,
+      signature: fixture.signature,
+      trustStore: fixture.trustStore,
+      strict: true,
+      trustNow: "2026-05-29T00:00:00.000Z",
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      dependencyResolver
+    });
+
+    expect(record.dependencies.resolved).toHaveLength(1);
+    expect(record.trust?.specHash).toBe(record.snapshot.specHash);
+    expect(record.trust?.specHash).toBe(fixture.specHash);
+  });
+
+  test("rejects dependency packages signed only over local package files", async () => {
+    const files = dependencyBearingHarnessFiles();
+    const dependencyResolver = reviewedDependencyResolver();
+    const localFileOnlySpecHash = computeSpecHash(sourceFilesFromRecord(files));
+    const fixture = await makeSignedHarnessPackage(rootDir, {
+      name: "signed-with-local-only-hash",
+      files,
+      loadOptions: {
+        dependencyResolver
+      },
+      attestationOverrides: {
+        specHash: localFileOnlySpecHash
+      }
+    });
+
+    await expectTrustRejected(
+      {
+        packageDir: fixture.packageDir,
+        signature: fixture.signature,
+        trustStore: fixture.trustStore,
+        strict: true,
+        trustNow: "2026-05-29T00:00:00.000Z",
+        dependencyResolver
+      },
+      "spec_hash_mismatch"
+    );
   });
 
   test("rejects an unsigned package in strict trust mode", async () => {
@@ -369,4 +425,47 @@ async function captureError(operation: () => Promise<unknown>) {
   }
 
   throw new Error("Expected operation to fail");
+}
+
+function dependencyBearingHarnessFiles() {
+  const files = validHarnessFiles();
+
+  return {
+    ...files,
+    "harness.yaml": `${files["harness.yaml"].replace(
+      "metadata:\n  fixture: trust",
+      "metadata:\n  fixture: trust\n  trustTier: first-party"
+    )}
+dependencies:
+  - name: specwright.dep.alpha
+    versionRange: 1.0.0
+    pinnedHash: sha256:433c9d4f8f84eea4656559cb7cb3040fa74023a7fc0668f9b05d79fa4bf3dead
+    trustTier: first-party
+`
+  };
+}
+
+function reviewedDependencyResolver() {
+  return {
+    resolve() {
+      return [
+        {
+          name: "specwright.dep.alpha",
+          version: "1.0.0",
+          contentHash:
+            "sha256:433c9d4f8f84eea4656559cb7cb3040fa74023a7fc0668f9b05d79fa4bf3dead",
+          trustTier: "first-party" as const
+        }
+      ];
+    }
+  };
+}
+
+function sourceFilesFromRecord(files: Record<string, string>) {
+  return Object.entries(files)
+    .map(([relativePath, raw]) => ({
+      relativePath,
+      raw: raw.trimStart()
+    }))
+    .sort((left, right) => left.relativePath.localeCompare(right.relativePath));
 }

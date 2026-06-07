@@ -247,6 +247,59 @@ describe("run store", () => {
     );
   });
 
+  test("projects harness.loaded into the durable run state harness anchor", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-harness-loaded",
+      traceId: "trace-harness-loaded",
+      input: runInput,
+      harness,
+      timestamp: "2026-05-29T00:00:00.000Z"
+    });
+    const loadedHarness = {
+      id: "default",
+      version: "0.1.0",
+      schemaVersion: "specwright.harness.v0",
+      specHash: "sha256:loaded",
+      loadedAt: "2026-05-29T00:00:01.000Z",
+      phases: [],
+      gates: [],
+      policies: [],
+      tools: [],
+      artifacts: [],
+      evals: [],
+      roles: [],
+      prompts: []
+    };
+
+    await appendEvent({
+      rootDir,
+      runId: "run-harness-loaded",
+      type: "harness.loaded",
+      traceId: "trace-harness-loaded",
+      payload: {
+        harness: loadedHarness
+      },
+      timestamp: "2026-05-29T00:00:01.000Z"
+    });
+    const events = await readEvents({ rootDir, runId: "run-harness-loaded" });
+    const expectedHarness = {
+      id: loadedHarness.id,
+      version: loadedHarness.version,
+      specHash: loadedHarness.specHash
+    };
+
+    expect(projectRunState(events).harness).toEqual(expectedHarness);
+    expect(
+      (
+        await materializeRunState({
+          rootDir,
+          runId: "run-harness-loaded"
+        })
+      ).harness
+    ).toEqual(expectedHarness);
+  });
+
   test("rebuilds from checkpoints at sequence zero, middle, and tail exactly like full replay", async () => {
     await createRun({
       rootDir,

@@ -1,4 +1,6 @@
-import { HarnessSnapshotSchema } from "@specwright/schemas";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 import { HarnessLoaderError } from "./errors";
 import {
   assertLifecycleTransition,
@@ -40,9 +42,12 @@ export type RegistryLifecycleRecord = RegistryPackageKey & {
 export type RegistryPromotedVersion = RegistryPackageKey & {
   specHash: string;
   promotedAt: string;
+  packageDir: string;
   snapshot: HarnessSnapshot;
   files: readonly Pick<SourceFile, "relativePath" | "raw">[];
   dependencies: readonly ResolvedDependency[];
+  loadOptions?: Omit<LoadHarnessPackageOptions, "packageDir"> | undefined;
+  limits?: HarnessLoaderLimitsInput | undefined;
 };
 
 export type RegistryStore = {
@@ -54,6 +59,7 @@ export type RegistryStore = {
   getPromotedVersion(input: RegistryPackageKey): RegistryPromotedVersion | undefined;
   findPromotedBySpecHash(specHash: string): RegistryPromotedVersion | undefined;
   listPromoted(packageId: string): RegistryPromotedVersion[];
+  listAllPromoted(): RegistryPromotedVersion[];
 };
 
 export type HarnessRegistryLoaderInput = LoadHarnessPackageOptions & {
@@ -88,6 +94,8 @@ export type PreparedPromotion = {
   approval: PromotionApproval;
   dryRunValidation: DryRunValidationEvidence;
   packageDir: string;
+  loadOptions?: Omit<LoadHarnessPackageOptions, "packageDir"> | undefined;
+  limits?: HarnessLoaderLimitsInput | undefined;
 };
 
 export class InMemoryRegistryStore implements RegistryStore {
@@ -133,6 +141,15 @@ export class InMemoryRegistryStore implements RegistryStore {
       .filter((record) => record.packageId === packageId)
       .sort((left, right) => left.promotedAt.localeCompare(right.promotedAt));
   }
+
+  listAllPromoted() {
+    return [...this.promoted.values()].sort(
+      (left, right) =>
+        left.packageId.localeCompare(right.packageId) ||
+        left.version.localeCompare(right.version) ||
+        left.promotedAt.localeCompare(right.promotedAt)
+    );
+  }
 }
 
 export class HarnessRegistry {
@@ -140,6 +157,7 @@ export class HarnessRegistry {
   private readonly cache: SnapshotCache;
   private readonly loader: HarnessRegistryLoader;
   private readonly now: () => string;
+  private readonly dependentSpecHashesByDependencyName = new Map<string, Set<string>>();
 
   constructor(options: HarnessRegistryOptions) {
     this.store = options.store ?? new InMemoryRegistryStore();
@@ -149,16 +167,32 @@ export class HarnessRegistry {
   }
 
   stageCandidate(input: StageCandidateInput) {
+    const existing = this.store.getLifecycle(input);
+
+    if (existing?.state === "revoked") {
+      throw new HarnessLoaderError(
+        "invalid_lifecycle_transition",
+        `Revoked harness package ${registryKey(input)} cannot be staged again`,
+        undefined,
+        {
+          reason: "revoked_is_terminal"
+        }
+      );
+    }
+
     const stagedAt = this.now();
     this.store.putCandidate({
       ...input,
       stagedAt
     });
-    this.store.putLifecycle({
-      ...input,
-      state: "candidate",
-      updatedAt: stagedAt
-    });
+
+    if (existing === undefined || existing.state === "candidate") {
+      this.store.putLifecycle({
+        ...input,
+        state: "candidate",
+        updatedAt: stagedAt
+      });
+    }
 
     return this.store.getLifecycle(input);
   }
@@ -207,11 +241,12 @@ export class HarnessRegistry {
     if (record.specHash !== undefined) {
       this.cache.delete(record.specHash);
     }
+    this.purgeDependentCacheEntries(input.packageId);
 
     return record;
   }
 
-  resolveCurrentTrusted(packageId: string) {
+  async resolveCurrentTrusted(packageId: string) {
     const candidates = this.store
       .listPromoted(packageId)
       .filter(
@@ -237,7 +272,7 @@ export class HarnessRegistry {
     return this.resolveSnapshot(current.specHash);
   }
 
-  resolveSnapshot(specHash: string) {
+  async resolveSnapshot(specHash: string) {
     const cached = this.cache.get(specHash);
 
     if (cached !== undefined) {
@@ -260,31 +295,35 @@ export class HarnessRegistry {
       );
     }
 
-    const snapshot = HarnessSnapshotSchema.parse(retained.snapshot);
-    this.cache.put({
-      snapshot,
-      loadedFiles: retained.files.map((file) => ({
-        absolutePath: file.relativePath,
-        relativePath: file.relativePath,
-        raw: file.raw
-      })),
-      dependencies: {
-        declarations: [],
-        resolved: [...retained.dependencies]
-      },
-      grant: emptyGrantForRetainedSnapshot(),
-      compatibility: {
-        matrixId: "retained.registry",
-        matrixRowId: "retained.registry",
-        runtimeVersion: "retained",
-        declaredSchemaVersion: snapshot.schemaVersion,
-        targetSchemaVersion: snapshot.schemaVersion,
-        packageVersion: snapshot.version,
-        compatibilityClass: "content-stable",
-        loaderBehavior: "load"
-      }
-    });
+    const retainedPackageDir = await writeRetainedBytesToTempPackage(retained);
+    let record: HarnessLoadRecord;
 
+    try {
+      record = await this.loader({
+        packageDir: retainedPackageDir,
+        ...(retained.loadOptions ?? {}),
+        limits: retained.limits ?? DEFAULT_HARNESS_LOADER_LIMITS
+      });
+    } finally {
+      await rm(retainedPackageDir, { recursive: true, force: true });
+    }
+
+    if (record.snapshot.specHash !== specHash) {
+      throw new HarnessLoaderError(
+        "version_not_resolvable",
+        `Harness snapshot ${specHash} re-derived as ${record.snapshot.specHash}`,
+        undefined,
+        {
+          reason: "retained_bytes_hash_mismatch",
+          details: {
+            requestedSpecHash: specHash,
+            actualSpecHash: record.snapshot.specHash
+          }
+        }
+      );
+    }
+
+    this.cache.put(record);
     const verified = this.cache.get(specHash);
 
     if (verified === undefined) {
@@ -307,9 +346,8 @@ export class HarnessRegistry {
 
   private async preparePromotion(input: PromoteInput): Promise<PreparedPromotion> {
     const candidate = this.store.getCandidate(input);
-    const packageDir = input.packageDir ?? candidate?.packageDir;
 
-    if (packageDir === undefined) {
+    if (candidate === undefined) {
       throw new HarnessLoaderError(
         "version_not_resolvable",
         `Candidate ${registryKey(input)} has no package bytes staged`,
@@ -320,6 +358,25 @@ export class HarnessRegistry {
       );
     }
 
+    if (
+      input.packageDir !== undefined &&
+      input.packageDir !== candidate.packageDir
+    ) {
+      throw new HarnessLoaderError(
+        "invalid_lifecycle_transition",
+        `Promotion of ${registryKey(input)} must use explicitly staged package bytes`,
+        undefined,
+        {
+          reason: "staged_package_dir_mismatch",
+          details: {
+            stagedPackageDir: candidate.packageDir,
+            attemptedPackageDir: input.packageDir
+          }
+        }
+      );
+    }
+
+    const packageDir = candidate.packageDir;
     const approval = input.approval;
 
     if (approval === undefined) {
@@ -418,7 +475,9 @@ export class HarnessRegistry {
       record,
       approval,
       dryRunValidation,
-      packageDir
+      packageDir,
+      ...(input.loadOptions === undefined ? {} : { loadOptions: input.loadOptions }),
+      ...(input.limits === undefined ? {} : { limits: input.limits })
     };
   }
 
@@ -429,12 +488,17 @@ export class HarnessRegistry {
       version: prepared.key.version,
       specHash: prepared.record.snapshot.specHash,
       promotedAt,
+      packageDir: prepared.packageDir,
       snapshot: prepared.record.snapshot,
       files: prepared.record.loadedFiles.map((file) => ({
         relativePath: file.relativePath,
         raw: file.raw
       })),
-      dependencies: [...prepared.record.dependencies.resolved]
+      dependencies: [...prepared.record.dependencies.resolved],
+      ...(prepared.loadOptions === undefined
+        ? {}
+        : { loadOptions: prepared.loadOptions }),
+      ...(prepared.limits === undefined ? {} : { limits: prepared.limits })
     };
 
     this.store.putPromotedVersion(record);
@@ -446,6 +510,7 @@ export class HarnessRegistry {
       updatedAt: promotedAt
     });
     this.cache.put(prepared.record);
+    this.trackDependencyDependents(record);
   }
 
   private transition(
@@ -487,6 +552,39 @@ export class HarnessRegistry {
 
     return next;
   }
+
+  private trackDependencyDependents(record: RegistryPromotedVersion) {
+    for (const dependency of record.dependencies) {
+      const dependents =
+        this.dependentSpecHashesByDependencyName.get(dependency.name) ??
+        new Set<string>();
+      dependents.add(record.specHash);
+      this.dependentSpecHashesByDependencyName.set(dependency.name, dependents);
+    }
+  }
+
+  private purgeDependentCacheEntries(packageId: string) {
+    const dependentSpecHashes = new Set<string>();
+    const dependents = this.dependentSpecHashesByDependencyName.get(packageId);
+
+    for (const specHash of dependents ?? []) {
+      dependentSpecHashes.add(specHash);
+    }
+
+    for (const promoted of this.store.listAllPromoted()) {
+      if (
+        promoted.dependencies.some(
+          (dependency) => dependency.name === packageId
+        )
+      ) {
+        dependentSpecHashes.add(promoted.specHash);
+      }
+    }
+
+    for (const specHash of dependentSpecHashes) {
+      this.cache.delete(specHash);
+    }
+  }
 }
 
 function registryKey(input: RegistryPackageKey) {
@@ -497,35 +595,17 @@ function normalizeTimestamp(value: Date | string) {
   return value instanceof Date ? value.toISOString() : value;
 }
 
-function emptyGrantForRetainedSnapshot() {
-  return {
-    granted: true,
-    requested: {
-      tools: [],
-      requireApproval: [],
-      toolDefinitions: [],
-      policyEffects: [],
-      policyLayers: [],
-      runtimeInvariantToolIds: []
-    },
-    grantedCapabilities: {
-      tools: [],
-      requireApproval: [],
-      toolDefinitions: [],
-      policyEffects: [],
-      policyLayers: [],
-      runtimeInvariantToolIds: []
-    },
-    overGrant: {
-      tools: [],
-      requireApproval: [],
-      toolDefinitions: [],
-      policyEffects: [],
-      policyLayers: [],
-      runtimeInvariantToolIds: []
-    },
-    deniedCapabilities: [],
-    grant: undefined,
-    denialReason: undefined
-  };
+async function writeRetainedBytesToTempPackage(
+  retained: RegistryPromotedVersion
+) {
+  const packageDir = await mkdtemp(join(tmpdir(), "specwright-retained-harness-"));
+
+  for (const file of retained.files) {
+    const target = join(packageDir, file.relativePath);
+
+    await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, file.raw);
+  }
+
+  return packageDir;
 }

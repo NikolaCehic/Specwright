@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { generateKeyPairSync, sign } from "node:crypto";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,10 +29,12 @@ import {
 } from "./index";
 import type {
   CapabilityGrant,
+  CompatibilityMatrix,
   HarnessDependencyEvent,
   HarnessGrantEvent,
   HarnessLoaderAuditEvent,
   HarnessTraceSpanInput,
+  LoadHarnessPackageObservedOptions,
   MigrationDescriptor,
   MigrationDescriptorBody
 } from "./index";
@@ -140,6 +142,120 @@ phases:
 
     expect(error).toBeInstanceOf(HarnessLoaderError);
     expect((error as HarnessLoaderError).code).toBe("missing_reference");
+  });
+
+  test("fails closed when a package symlink resolves outside the root", async () => {
+    const packageDir = await writeHarnessPackage(
+      "symlink-escape",
+      validHarnessFiles()
+    );
+    const outsideTool = join(rootDir, "outside-fs-read.yaml");
+
+    await writeFile(outsideTool, validHarnessFiles()["tools/fs.read.yaml"].trimStart());
+    await rm(join(packageDir, "tools/fs.read.yaml"));
+    await symlink(outsideTool, join(packageDir, "tools/fs.read.yaml"));
+
+    const error = await captureError(() => loadHarnessPackage(packageDir));
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("parse_error");
+    expect((error as HarnessLoaderError).reason).toBe("path_escape");
+  });
+
+  test("fails closed when an optional package directory symlink resolves outside the root", async () => {
+    const packageDir = await writeHarnessPackage(
+      "directory-symlink-escape",
+      validHarnessFiles()
+    );
+    const outsideToolsDir = join(rootDir, "outside-tools-dir");
+
+    await mkdir(outsideToolsDir, { recursive: true });
+    await writeFile(join(outsideToolsDir, "README.txt"), "not a tool definition\n");
+    await rm(join(packageDir, "tools"), { recursive: true, force: true });
+    await symlink(outsideToolsDir, join(packageDir, "tools"));
+
+    const error = await captureError(() => loadHarnessPackage(packageDir));
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("parse_error");
+    expect((error as HarnessLoaderError).reason).toBe("path_escape");
+  });
+
+  test("rejects remote artifact schema refs while allowing internal refs", async () => {
+    const localRefPackageDir = await writeHarnessPackage("local-ref", {
+      ...validHarnessFiles(),
+      "artifact-schemas/run-input.json": JSON.stringify(
+        {
+          id: "run-input",
+          version: "0.1.0",
+          type: "object",
+          properties: {
+            task: {
+              $ref: "#/$defs/task"
+            }
+          },
+          $defs: {
+            task: {
+              type: "string"
+            }
+          }
+        },
+        null,
+        2
+      )
+    });
+    const local = await loadHarnessPackage(localRefPackageDir);
+
+    expect(local.artifacts[0]?.schema).toMatchObject({
+      properties: {
+        task: {
+          $ref: "#/$defs/task"
+        }
+      }
+    });
+
+    const deniedRefs = [
+      { keyword: "$ref", ref: "https://schemas.example.invalid/task.json" },
+      { keyword: "$ref", ref: "http://schemas.example.invalid/task.json" },
+      { keyword: "$ref", ref: "//schemas.example.invalid/task.json" },
+      { keyword: "$ref", ref: "../shared/task.json" },
+      { keyword: "$ref", ref: "file:///tmp/task.json" },
+      { keyword: "$dynamicRef", ref: "https://schemas.example.invalid/task.json" },
+      { keyword: "$recursiveRef", ref: "https://schemas.example.invalid/task.json" }
+    ];
+
+    for (const [index, denied] of deniedRefs.entries()) {
+      const remoteRefPackageDir = await writeHarnessPackage(`remote-ref-${index}`, {
+        ...validHarnessFiles(),
+        "artifact-schemas/run-input.json": JSON.stringify(
+          {
+            id: "run-input",
+            version: "0.1.0",
+            type: "object",
+            properties: {
+              task: {
+                [denied.keyword]: denied.ref
+              }
+            }
+          },
+          null,
+          2
+        )
+      });
+      const error = await captureError(() =>
+        loadHarnessPackage(remoteRefPackageDir)
+      );
+
+      expect(error, `${denied.keyword}:${denied.ref}`).toBeInstanceOf(
+        HarnessLoaderError
+      );
+      expect((error as HarnessLoaderError).code, denied.keyword).toBe(
+        "invalid_artifact_schema"
+      );
+      expect((error as HarnessLoaderError).reason, denied.keyword).toBe(
+        "remote_ref_denied"
+      );
+    }
   });
 
   test("computes a stable specHash from package contents", async () => {
@@ -744,6 +860,77 @@ phases:
     ).toBe("migration-required");
   });
 
+  test("enforces capability-surface widening on the load admission path", async () => {
+    const packageDir = await writeHarnessPackage(
+      "compatibility-widening-load-path",
+      overGrantToolFiles()
+    );
+    const error = await captureError(() =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        compatibilityMatrix: {
+          matrixId: "specwright.test.compatibility.widening",
+          rows: [
+            {
+              id: "unsafe-additive-load",
+              runtimeVersion: "current",
+              harnessSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+              packageVersionRange: "*",
+              supportClass: "additive-compatible",
+              loaderBehavior: "load",
+              sourceCapabilitySurface: {
+                tools: ["fs.read"],
+                requireApproval: [],
+                runtimeAuthority: {
+                  strict: true
+                }
+              }
+            }
+          ]
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
+    expect((error as HarnessLoaderError).reason).toBe(
+      "classifier_requires_migration"
+    );
+  });
+
+  test("fails closed when additive load admission omits a source capability surface", async () => {
+    const packageDir = await writeHarnessPackage(
+      "compatibility-widening-without-source-surface",
+      overGrantToolFiles()
+    );
+    const error = await captureError(() =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        compatibilityMatrix: {
+          matrixId: "specwright.test.compatibility.missing-source-surface",
+          rows: [
+            {
+              id: "unsafe-additive-load-without-source",
+              runtimeVersion: "current",
+              harnessSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+              packageVersionRange: "*",
+              supportClass: "additive-compatible",
+              loaderBehavior: "load"
+            }
+          ]
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
+    expect((error as HarnessLoaderError).reason).toBe(
+      "missing_source_capability_surface"
+    );
+  });
+
   test("loads a governed compatibility matrix fixture", async () => {
     const matrix = await compatibilityMatrixFromFixture();
 
@@ -794,6 +981,53 @@ phases:
     expect("compatibility" in first.snapshot).toBe(false);
   });
 
+  test("parses migrated non-manifest definitions from the migrated byte set", async () => {
+    const sourceFiles = fileBackedHistoricalHarnessFiles(
+      "specwright.harness.v0alpha",
+      "legacy-intake"
+    );
+    const migratedFiles = fileBackedHistoricalHarnessFiles(
+      SUPPORTED_HARNESS_SCHEMA_VERSION,
+      "intake"
+    );
+    const fixture = await makeMigrationFixture(
+      "compatibility-non-manifest-migrate",
+      undefined,
+      {
+        sourceFiles,
+        migratedFiles,
+        fileReplacements: [
+          {
+            relativePath: "harness.yaml",
+            from: "  - legacy-intake",
+            to: "  - intake"
+          },
+          {
+            relativePath: "phases/intake.yaml",
+            from: "id: legacy-intake",
+            to: "id: intake"
+          }
+        ]
+      }
+    );
+    const record = await loadHarnessPackageWithRecord({
+      packageDir: fixture.packageDir,
+      loadedAt: "2026-05-29T00:00:00.000Z",
+      grantSource: await grantSourceFromFixture("default-registry.json"),
+      compatibilityMatrix: await compatibilityMatrixFromFixture(),
+      migrationDescriptor: fixture.descriptor,
+      migrationTrustStore: fixture.trustStore,
+      migrationNow: "2026-05-29T00:00:00.000Z"
+    });
+
+    expect(record.snapshot.phases.map((phase) => phase.id)).toEqual(["intake"]);
+    expect(
+      record.loadedFiles.find((file) => file.relativePath === "phases/intake.yaml")
+        ?.raw
+    ).toContain("id: intake");
+    expect(record.snapshot.specHash).toBe(fixture.migratedSpecHash);
+  });
+
   test("fails closed when an older schema version has no migration descriptor", async () => {
     const packageDir = await writeHarnessPackage(
       "compatibility-missing-descriptor",
@@ -815,6 +1049,78 @@ phases:
     expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
     expect((error as HarnessLoaderError).reason).toBe(
       "missing_migration_descriptor"
+    );
+  });
+
+  test("enforces classifier-required migration on the load path", async () => {
+    const packageDir = await writeHarnessPackage(
+      "compatibility-widened-tool",
+      overGrantToolFiles()
+    );
+    const error = await captureError(() =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        compatibilityMatrix: compatibilityMatrixWithDowngradedWidening()
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
+    expect((error as HarnessLoaderError).reason).toBe(
+      "classifier_requires_migration"
+    );
+  });
+
+  test("enforces classifier-required migration for array-form tool widening", async () => {
+    const packageDir = await writeHarnessPackage(
+      "compatibility-array-widened-tool",
+      arrayFormWidenedToolFiles()
+    );
+    const error = await captureError(() =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        compatibilityMatrix: compatibilityMatrixWithDowngradedWidening()
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
+    expect((error as HarnessLoaderError).reason).toBe(
+      "classifier_requires_migration"
+    );
+  });
+
+  test("rejects load rows that the classifier determines are breaking", async () => {
+    const packageDir = await writeHarnessPackage(
+      "compatibility-breaking-load-row",
+      validHarnessFiles()
+    );
+    const error = await captureError(() =>
+      loadHarnessPackage({
+        packageDir,
+        loadedAt: "2026-05-29T00:00:00.000Z",
+        compatibilityMatrix: {
+          matrixId: "specwright.test.harness-loader.compatibility.breaking",
+          rows: [
+            {
+              id: "breaking-row-must-not-load",
+              runtimeVersion: "current",
+              harnessSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+              packageVersionRange: "*",
+              supportClass: "breaking",
+              loaderBehavior: "load"
+            }
+          ]
+        }
+      })
+    );
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("compatibility_denied");
+    expect((error as HarnessLoaderError).reason).toBe(
+      "classifier_breaking_transition"
     );
   });
 
@@ -988,6 +1294,189 @@ schemaVersion: ${SUPPORTED_HARNESS_SCHEMA_VERSION}
     });
   });
 
+  test("observed path escape records a security event and no run anchor", async () => {
+    const packageDir = await writeHarnessPackage(
+      "observed-symlink-escape",
+      validHarnessFiles()
+    );
+    const outsideTool = join(rootDir, "observed-outside-fs-read.yaml");
+    const runStore = await loadRunStoreForTest();
+    const runId = "run-observed-path-escape";
+    const traceId = "trace-observed-path-escape";
+    const events: HarnessLoaderAuditEvent[] = [];
+
+    await writeFile(outsideTool, validHarnessFiles()["tools/fs.read.yaml"].trimStart());
+    await rm(join(packageDir, "tools/fs.read.yaml"));
+    await symlink(outsideTool, join(packageDir, "tools/fs.read.yaml"));
+    await runStore.createRun({
+      rootDir,
+      runId,
+      traceId,
+      input: {
+        task: "Reject escaped harness package",
+        harnessId: "specwright.default",
+        host: {
+          kind: "cli"
+        }
+      },
+      harness: {
+        id: "specwright.default",
+        version: "0.1.0",
+        specHash: `sha256:${"0".repeat(64)}`
+      },
+      timestamp: "2026-05-29T00:00:00.000Z"
+    });
+
+    const error = await captureError(() =>
+      loadHarnessPackageObserved({
+        packageDir,
+        now: fixedClock("2026-05-29T00:00:00.000Z"),
+        runContext: {
+          rootDir,
+          runId,
+          traceId
+        },
+        onAuditEvent(event) {
+          events.push(event);
+        }
+      })
+    );
+    const persistedEvents = await runStore.readEvents({ rootDir, runId });
+
+    expect(error).toBeInstanceOf(HarnessLoaderError);
+    expect((error as HarnessLoaderError).code).toBe("parse_error");
+    expect((error as HarnessLoaderError).reason).toBe("path_escape");
+    expect(
+      events.find((event) => event.type === "harness.security.failed")?.payload
+    ).toMatchObject({
+      errorCode: "parse_error",
+      reason: "path_escape",
+      stage: "harness.parse",
+      failClosed: true,
+      severity: "critical"
+    });
+    expect(events.some((event) => event.type === "harness.snapshot.frozen")).toBe(
+      false
+    );
+    expect(persistedEvents.map((event) => event.type)).toEqual(["run.started"]);
+    expect(
+      assessHarnessRunAuditability({
+        specHash: `sha256:${"0".repeat(64)}`,
+        events: persistedEvents
+      })
+    ).toEqual({
+      status: "non_auditable",
+      reason: "missing_harness_snapshot_anchor",
+      specHash: `sha256:${"0".repeat(64)}`
+    });
+  });
+
+  test("observed denials propagate trust, grant, dependency, and compatibility codes", async () => {
+    const trustPackageDir = await writeHarnessPackage(
+      "observed-trust-denied",
+      validHarnessFiles()
+    );
+    const grantPackageDir = await writeHarnessPackage(
+      "observed-grant-denied",
+      overGrantToolFiles()
+    );
+    const compatibilityPackageDir = await writeHarnessPackage(
+      "observed-compatibility-denied",
+      historicalHarnessFiles()
+    );
+    const cases: Array<{
+      name: string;
+      code: HarnessLoaderError["code"];
+      stage: string;
+      options: LoadHarnessPackageObservedOptions;
+    }> = [
+      {
+        name: "trust",
+        code: "trust_rejected",
+        stage: "harness.verify_trust",
+        options: {
+          packageDir: trustPackageDir,
+          strict: true,
+          trustNow: "2026-05-29T00:00:00.000Z"
+        }
+      },
+      {
+        name: "grant",
+        code: "grant_denied",
+        stage: "harness.grant_check",
+        options: {
+          packageDir: grantPackageDir,
+          grantSource: await grantSourceFromFixture("over-grant-registry.json")
+        }
+      },
+      {
+        name: "dependency",
+        code: "dependency_unresolved",
+        stage: "harness.resolve_deps",
+        options: {
+          packageDir: dependencyFixturePackageDir("unresolved"),
+          grantSource: await grantSourceFromFixture("default-registry.json"),
+          dependencyResolver: await dependencyResolverFromFixture(
+            "reviewed-registry.json"
+          )
+        }
+      },
+      {
+        name: "compatibility",
+        code: "compatibility_denied",
+        stage: "harness.compatibility",
+        options: {
+          packageDir: compatibilityPackageDir,
+          compatibilityMatrix: await compatibilityMatrixFromFixture()
+        }
+      }
+    ];
+
+    for (const denial of cases) {
+      const spans: HarnessTraceSpanInput[] = [];
+      const events: HarnessLoaderAuditEvent[] = [];
+      const error = await captureError(() =>
+        loadHarnessPackageObserved({
+          ...denial.options,
+          now: fixedClock("2026-05-29T00:00:00.000Z"),
+          traceRecorder: {
+            recordSpan(span) {
+              spans.push(span);
+            }
+          },
+          onAuditEvent(event) {
+            events.push(event);
+          }
+        })
+      );
+
+      expect(error, denial.name).toBeInstanceOf(HarnessLoaderError);
+      expect((error as HarnessLoaderError).code, denial.name).toBe(denial.code);
+      expect(
+        spans.find((span) => span.kind === denial.stage)?.metadata,
+        denial.name
+      ).toMatchObject({
+        errorCode: denial.code
+      });
+      expect(
+        spans.find((span) => span.kind === "harness.load")?.status,
+        denial.name
+      ).toBe("denied");
+      expect(
+        events.find((event) => event.type === "harness.load.denied")?.payload,
+        denial.name
+      ).toMatchObject({
+        errorCode: denial.code,
+        stage: denial.stage,
+        failClosed: true
+      });
+      expect(
+        events.some((event) => event.type === "harness.snapshot.frozen"),
+        denial.name
+      ).toBe(false);
+    }
+  });
+
   test("run-attached observed load persists the shared harness.loaded anchor", async () => {
     const packageDir = await writeHarnessPackage("observed-run", validHarnessFiles());
     const runStore = await loadRunStoreForTest();
@@ -1033,6 +1522,17 @@ schemaVersion: ${SUPPORTED_HARNESS_SCHEMA_VERSION}
     expect(
       persistedEvents.find((event) => event.type === "harness.loaded")?.payload
     ).toMatchObject({
+      harness: {
+        specHash: result.record.snapshot.specHash
+      }
+    });
+    expect(
+      result.auditEvents.find((event) => event.type === "harness.snapshot.frozen")
+        ?.payload
+    ).toMatchObject({
+      specHash: result.record.snapshot.specHash
+    });
+    expect(result.runStoreAnchorEvent?.payload).toMatchObject({
       harness: {
         specHash: result.record.snapshot.specHash
       }
@@ -1366,6 +1866,33 @@ outputSchema:
   };
 }
 
+function arrayFormWidenedToolFiles() {
+  const files = packageFilesWithId("specwright.array-widened-tool");
+
+  return {
+    ...files,
+    "harness.yaml": files["harness.yaml"]
+      .replace(
+        "    - fs.read\nartifactSchemas:",
+        "    - fs.read\n    - shell.exec\nartifactSchemas:"
+      )
+      .replace(
+        "tools:\n  allow:\n    - fs.read\nartifactSchemas:",
+        "tools:\n  - fs.read\n  - shell.exec\nartifactSchemas:"
+      ),
+    "tools/shell.exec.yaml": `
+id: shell.exec
+version: 0.1.0
+inputSchema:
+  type: object
+  required:
+    - command
+outputSchema:
+  type: object
+`
+  };
+}
+
 function runtimeInvariantFiles() {
   const files = packageFilesWithId("specwright.runtime-invariant");
 
@@ -1436,14 +1963,70 @@ phases:
   };
 }
 
+function fileBackedHistoricalHarnessFiles(
+  schemaVersion = "specwright.harness.v0alpha",
+  phaseId = "legacy-intake"
+) {
+  return {
+    "harness.yaml": `
+id: specwright.test
+version: 0.1.0
+schemaVersion: ${schemaVersion}
+metadata:
+  fixture: compatibility
+runtime:
+  strict: true
+phases:
+  - ${phaseId}
+`,
+    "phases/intake.yaml": `
+id: ${phaseId}
+`
+  };
+}
+
+function compatibilityMatrixWithDowngradedWidening() {
+  return {
+    matrixId: "specwright.test.harness-loader.compatibility.downgrade",
+    rows: [
+      {
+        id: "current-v0-additive-load-widened",
+        runtimeVersion: "current",
+        harnessSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
+        packageVersionRange: "*",
+        supportClass: "additive-compatible",
+        loaderBehavior: "load",
+        sourceCapabilitySurface: {
+          tools: ["fs.read"],
+          requireApproval: [],
+          runtimeAuthority: {
+            strict: true
+          }
+        }
+      }
+    ]
+  } satisfies CompatibilityMatrix;
+}
+
 async function makeMigrationFixture(
   name: string,
-  expectedMigratedSpecHashOverride?: string
+  expectedMigratedSpecHashOverride?: string,
+  options: {
+    sourceFiles?: Record<string, string>;
+    migratedFiles?: Record<string, string>;
+    fileReplacements?: Array<{
+      relativePath: string;
+      from: string;
+      to: string;
+    }>;
+  } = {}
 ) {
   const sourceSchemaVersion = "specwright.harness.v0alpha";
   const targetSchemaVersion = SUPPORTED_HARNESS_SCHEMA_VERSION;
-  const sourceFiles = historicalHarnessFiles(sourceSchemaVersion);
-  const migratedFiles = historicalHarnessFiles(targetSchemaVersion);
+  const sourceFiles =
+    options.sourceFiles ?? historicalHarnessFiles(sourceSchemaVersion);
+  const migratedFiles =
+    options.migratedFiles ?? historicalHarnessFiles(targetSchemaVersion);
   const packageDir = await writeHarnessPackage(name, sourceFiles);
   const originalSpecHash = computeSpecHash(sourceFilesFromRecord(sourceFiles));
   const migratedSpecHash = computeSpecHash(sourceFilesFromRecord(migratedFiles));
@@ -1468,7 +2051,10 @@ async function makeMigrationFixture(
     transform: {
       operation: "replace-manifest-schema-version",
       from: sourceSchemaVersion,
-      to: targetSchemaVersion
+      to: targetSchemaVersion,
+      ...(options.fileReplacements === undefined
+        ? {}
+        : { fileReplacements: options.fileReplacements })
     },
     dataLoss: "none",
     authorityChanges: [],

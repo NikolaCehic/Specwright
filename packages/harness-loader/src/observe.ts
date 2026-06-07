@@ -281,6 +281,21 @@ export async function loadHarnessPackageObserved(
     }
 
     if (loaderError !== undefined) {
+      if (isSecurityFailure(loaderError)) {
+        await audit.emit("harness.security.failed", {
+          errorCode: loaderError.code,
+          stage: stageForErrorCode(loaderError.code),
+          message: loaderError.message,
+          reason: loaderError.reason ?? loaderError.code,
+          failClosed: true,
+          retryability: retryabilityForCode(loaderError.code),
+          severity: securitySeverity(loaderError),
+          ...(loaderError.details === undefined
+            ? {}
+            : { details: loaderError.details })
+        });
+      }
+
       await audit.emit("harness.load.denied", {
         errorCode: loaderError.code,
         stage: stageForErrorCode(loaderError.code),
@@ -470,6 +485,7 @@ async function emitSuccessEvents(
       algorithm: record.trust.algorithm,
       signatureRef: record.trust.signatureRef,
       trustStoreVersion: record.trust.trustStoreVersion,
+      specHash: record.trust.specHash,
       verdict: "verified"
     });
   }
@@ -523,6 +539,7 @@ async function emitTrustAuditEvent(
       algorithm: event.payload.algorithm,
       signatureRef: event.payload.signatureRef,
       trustStoreVersion: event.payload.trustStoreVersion,
+      specHash: event.payload.specHash,
       verdict: event.payload.verdict
     });
     return;
@@ -769,6 +786,25 @@ function hasEvent(audit: AuditEmitter, type: HarnessLoaderAuditEvent["type"]) {
 
 function isValidationErrorCode(code: HarnessLoaderErrorCode) {
   return !GOVERNANCE_DENIAL_CODES.has(code);
+}
+
+function isSecurityFailure(error: HarnessLoaderError) {
+  return (
+    error.code === "trust_rejected" ||
+    error.code === "grant_denied" ||
+    error.code === "cache_poisoned" ||
+    (error.code === "parse_error" && error.reason === "path_escape") ||
+    (error.code === "invalid_artifact_schema" &&
+      error.reason === "remote_ref_denied")
+  );
+}
+
+function securitySeverity(error: HarnessLoaderError) {
+  return error.code === "parse_error" ||
+    error.code === "invalid_artifact_schema" ||
+    error.code === "cache_poisoned"
+    ? ("critical" as const)
+    : ("high" as const);
 }
 
 function stageForErrorCode(code: HarnessLoaderErrorCode): HarnessLoadStageKind {
