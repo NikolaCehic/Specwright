@@ -1,0 +1,8 @@
+[
+  {
+    "code": "incompatible_version",
+    "reason": "Unsupported policy bundle schemaVersion \"specwright.policy-bundle.v99\"; supported version is \"specwright.policy-bundle.v0\"",
+    "bundleId": "fixture.incompatible-version",
+    "path": "bundles.0.schemaVersion"
+  }
+]

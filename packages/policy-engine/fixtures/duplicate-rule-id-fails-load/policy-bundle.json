@@ -1,0 +1,24 @@
+[
+  {
+    "id": "fixture.duplicate-rule-a",
+    "rules": [
+      {
+        "id": "workspace.duplicate.rule",
+        "layer": "workspace",
+        "effect": "deny",
+        "reason": "first duplicate rule"
+      }
+    ]
+  },
+  {
+    "id": "fixture.duplicate-rule-b",
+    "harnessRules": [
+      {
+        "id": "workspace.duplicate.rule",
+        "layer": "harness",
+        "effect": "allow",
+        "reason": "second duplicate rule"
+      }
+    ]
+  }
+]

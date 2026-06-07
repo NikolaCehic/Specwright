@@ -13,6 +13,7 @@ import {
   type PolicyVerdictStatus,
   type RunState
 } from "@specwright/schemas";
+import { policyPatternApplies } from "./bundle-load";
 
 export type {
   ApprovalDecision,
@@ -27,6 +28,16 @@ export type {
   PolicyVerdictStatus,
   RunState
 } from "@specwright/schemas";
+export {
+  loadPolicyBundles,
+  isReDoSUnsafe,
+  SUPPORTED_POLICY_BUNDLE_SCHEMA_VERSION
+} from "./bundle-load";
+export type {
+  BundleLoadErrorCode,
+  BundleLoadFailure,
+  LoadResult
+} from "./bundle-load";
 
 export type PolicyRisk = "low" | "medium" | "high" | "critical";
 
@@ -589,7 +600,7 @@ function argMatcherApplies(
 
   if (
     matcher.pattern !== undefined &&
-    (typeof value !== "string" || !new RegExp(matcher.pattern).test(value))
+    (typeof value !== "string" || !policyPatternApplies(matcher.pattern, value))
   ) {
     return false;
   }

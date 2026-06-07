@@ -513,6 +513,9 @@
             },
             "type": "array"
           },
+          "schemaVersion": {
+            "type": "string"
+          },
           "scopes": {
             "items": {
               "type": "string"
@@ -687,7 +690,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "harness",
-    "hash": "sha256:0d214ea5c9af582d5244356df0edeff49f78752801723986678d66ff96fe57d8",
+    "hash": "sha256:16c1f2c9c9e9ec7942bca7a806c0f524470389b1ab897e93363173844983d9a0",
     "id": "specwright.harness.harness-snapshot",
     "status": "public",
     "version": "1"

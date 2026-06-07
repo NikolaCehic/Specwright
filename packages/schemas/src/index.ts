@@ -459,6 +459,7 @@ export type GateDefinition = z.infer<typeof GateDefinitionSchema>;
 export const PolicyBundleSchema = z
   .object({
     id: nonEmptyString,
+    schemaVersion: nonEmptyString.optional(),
     description: nonEmptyString.optional(),
     scopes: z.array(nonEmptyString).optional(),
     rules: z.array(z.record(z.string(), z.unknown())).optional(),

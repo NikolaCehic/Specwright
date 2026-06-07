@@ -1,0 +1,5 @@
+{
+  "id": "fixture.incompatible-version",
+  "schemaVersion": "specwright.policy-bundle.v99",
+  "description": "Declares a policy bundle schema version this engine does not support."
+}

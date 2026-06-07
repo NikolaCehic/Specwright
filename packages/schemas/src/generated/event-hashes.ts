@@ -6,7 +6,7 @@ export const RUNTIME_EVENT_SCHEMA_HASHES = {
   "eval.completed": "sha256:862f2affbefc19ce675e2c8071e5356033ba92cbb0f2993679ce7b34320e830a",
   "evidence.recorded": "sha256:ebc6e8da5fc7e8996ccb7db3000e3d6c563ff0579bf2d4b25b31a67e0605444c",
   "gate.evaluated": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c",
-  "harness.loaded": "sha256:bf81a597052653e924e313dd53d7186f7fbc640f655c3ef1ac9dc3500ce8e17f",
+  "harness.loaded": "sha256:84727b617e64f9c4970d28531fc8f4040fe11e52d382ccc8555983b2ee7de964",
   "human.answer_recorded": "sha256:52471ec3cd37a589108ad5801588dbe00f1982ba22714388306e7ab2c9accdce",
   "human.input_requested": "sha256:20685e5ee3198602afcce33cf0b0eae911b8b6203d8e47eee0d1acf5dc6b7ab1",
   "phase.entered": "sha256:111f5b579d4a36b5dd06cd160287dc7c5d5ae6ee971134e9f680c743c6aefc37",

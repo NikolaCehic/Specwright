@@ -1,0 +1,7 @@
+{
+  "status": "deny",
+  "evaluatePolicyCalled": false,
+  "loadFailureCodes": [
+    "unsafe_pattern"
+  ]
+}

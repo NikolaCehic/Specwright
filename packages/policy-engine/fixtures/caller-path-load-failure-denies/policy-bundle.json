@@ -1,0 +1,41 @@
+[
+  {
+    "id": "fixture.caller-valid-subset",
+    "toolPolicy": {
+      "fs.read": {
+        "default": "allow",
+        "risk": "low",
+        "reason": "valid subset must never be evaluated after load failure",
+        "allowedPhases": [
+          "evidence"
+        ],
+        "requiredScopes": [
+          "workspace:read"
+        ],
+        "allowedScopes": [
+          "workspace:read"
+        ]
+      }
+    }
+  },
+  {
+    "id": "fixture.caller-unsafe-pattern",
+    "rules": [
+      {
+        "id": "workspace.caller.unsafe_pattern",
+        "layer": "workspace",
+        "effect": "deny",
+        "reason": "unsafe matcher rejects caller bundle set",
+        "match": {
+          "actionKind": "tool_call",
+          "args": [
+            {
+              "path": "command",
+              "pattern": "(a|aa)+$"
+            }
+          ]
+        }
+      }
+    ]
+  }
+]

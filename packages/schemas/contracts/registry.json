@@ -820,7 +820,7 @@
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `harness.loaded`. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:bf81a597052653e924e313dd53d7186f7fbc640f655c3ef1ac9dc3500ce8e17f",
+    "canonicalHash": "sha256:84727b617e64f9c4970d28531fc8f4040fe11e52d382ccc8555983b2ee7de964",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/harness-loaded-event-payload.positive.json",
@@ -1162,7 +1162,7 @@
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
     },
-    "canonicalHash": "sha256:c6a528b1b0d1e639130fec19559fa6ad875ef8c42a9c30d26b794bacb377f546",
+    "canonicalHash": "sha256:3ad5ee116d240a40ad3c589c31ac93766b92c6d68f47ab03ae7e3410f48c74fb",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event.positive.json",
@@ -2139,7 +2139,7 @@
       "ownerReviewGroup": "governance-contract-review",
       "semantics": "Declarative policy bundle. Durable posture: durable. Extension posture: metadata, passthrough."
     },
-    "canonicalHash": "sha256:a5aeb1a3079329f81d0df84b6971f0a3bdd3b2dfc539deba4220bb1f5b685558",
+    "canonicalHash": "sha256:4a35a3e0167a2bb6e71a8c31d5892bf90baf85d032d533040061530db5b9fd58",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/policy-bundle.positive.json",
@@ -2506,7 +2506,7 @@
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Loaded harness snapshot with `specHash`. Durable posture: durable. Extension posture: metadata, strict."
     },
-    "canonicalHash": "sha256:0d214ea5c9af582d5244356df0edeff49f78752801723986678d66ff96fe57d8",
+    "canonicalHash": "sha256:16c1f2c9c9e9ec7942bca7a806c0f524470389b1ab897e93363173844983d9a0",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/harness-snapshot.positive.json",
