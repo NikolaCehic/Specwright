@@ -1,6 +1,12 @@
 import { z } from "zod";
 import { type TrustStore } from "../trust";
 import {
+  CapabilitySurfaceSchema,
+  classifyTransition,
+  type CapabilitySurface,
+  type CompatibilityClass
+} from "./classify";
+import {
   DEFAULT_COMPATIBILITY_MATRIX,
   DEFAULT_RUNTIME_VERSION,
   CompatibilityMatrixError,
@@ -117,6 +123,26 @@ export function admitHarnessCompatibility(
     runtimeVersion,
     harnessSchemaVersion: manifest.schemaVersion,
     packageVersion: manifest.version
+  });
+  const classified = classifyAdmission({
+    rawManifest: options.rawManifest,
+    manifest,
+    matrixRowId: matrixRow.id,
+    targetSchemaVersion: options.targetSchemaVersion,
+    runtimeVersion,
+    matrixSupportClass: matrixRow.supportClass,
+    matrixLoaderBehavior: matrixRow.loaderBehavior,
+    sourceCapabilitySurface: matrixRow.sourceCapabilitySurface,
+    targetCapabilitySurface: matrixRow.targetCapabilitySurface
+  });
+
+  rejectMatrixClassifierMismatch({
+    matrixRowId: matrixRow.id,
+    matrixSupportClass: matrixRow.supportClass,
+    matrixLoaderBehavior: matrixRow.loaderBehavior,
+    classified,
+    declaredSchemaVersion: manifest.schemaVersion,
+    targetSchemaVersion: options.targetSchemaVersion
   });
 
   if (
@@ -252,6 +278,162 @@ function lookupMatrix(
       error.details
     );
   }
+}
+
+function classifyAdmission(input: {
+  rawManifest: unknown;
+  manifest: CompatibilityManifestEnvelope;
+  matrixRowId: string;
+  targetSchemaVersion: string;
+  runtimeVersion: string;
+  matrixSupportClass: CompatibilityClass;
+  matrixLoaderBehavior: "load" | "migrate" | "deny";
+  sourceCapabilitySurface: unknown;
+  targetCapabilitySurface: unknown;
+}) {
+  const sourceCapabilitySurface =
+    !isRecord(input.sourceCapabilitySurface)
+      ? undefined
+      : CapabilitySurfaceSchema.parse(input.sourceCapabilitySurface);
+  if (
+    input.matrixLoaderBehavior === "load" &&
+    requiresExplicitSourceCapabilitySurface(input.matrixSupportClass) &&
+    sourceCapabilitySurface === undefined
+  ) {
+    throw new CompatibilityAdmissionError(
+      "compatibility_denied",
+      "missing_source_capability_surface",
+      `Compatibility matrix row ${input.matrixRowId} must declare a source capability surface for ${input.matrixSupportClass} load admission`,
+      {
+        matrixRowId: input.matrixRowId,
+        supportClass: input.matrixSupportClass,
+        loaderBehavior: input.matrixLoaderBehavior,
+        declaredSchemaVersion: input.manifest.schemaVersion,
+        targetSchemaVersion: input.targetSchemaVersion
+      }
+    );
+  }
+
+  const targetCapabilitySurface =
+    (isRecord(input.targetCapabilitySurface)
+      ? CapabilitySurfaceSchema.parse(input.targetCapabilitySurface)
+      : undefined) ??
+    (sourceCapabilitySurface === undefined
+      ? undefined
+      : capabilitySurfaceFromManifest(input.rawManifest));
+
+  return classifyTransition({
+    declaredSchemaVersion: input.manifest.schemaVersion,
+    targetSchemaVersion: input.targetSchemaVersion,
+    packageVersion: input.manifest.version,
+    runtimeVersion: input.runtimeVersion,
+    normalizedContentEqual: input.matrixSupportClass === "content-stable",
+    metadataOnly: input.matrixSupportClass === "patch-compatible",
+    additiveOnly: input.matrixSupportClass === "additive-compatible",
+    replayVerified: input.matrixSupportClass === "replay-compatible",
+    schemaVersionChanged:
+      input.manifest.schemaVersion !== input.targetSchemaVersion,
+    interpretable: input.matrixSupportClass !== "breaking",
+    ...(sourceCapabilitySurface === undefined
+      ? {}
+      : { sourceCapabilitySurface }),
+    ...(targetCapabilitySurface === undefined ? {} : { targetCapabilitySurface })
+  });
+}
+
+function requiresExplicitSourceCapabilitySurface(value: CompatibilityClass) {
+  return value === "additive-compatible" || value === "replay-compatible";
+}
+
+function rejectMatrixClassifierMismatch(input: {
+  matrixRowId: string;
+  matrixSupportClass: CompatibilityClass;
+  matrixLoaderBehavior: "load" | "migrate" | "deny";
+  classified: CompatibilityClass;
+  declaredSchemaVersion: string;
+  targetSchemaVersion: string;
+}) {
+  if (
+    input.classified === "migration-required" &&
+    (input.matrixSupportClass !== "migration-required" ||
+      input.matrixLoaderBehavior !== "migrate")
+  ) {
+    throw new CompatibilityAdmissionError(
+      "compatibility_denied",
+      "classifier_requires_migration",
+      `Compatibility classifier requires migration for matrix row ${input.matrixRowId}`,
+      input
+    );
+  }
+
+  if (
+    input.classified === "breaking" &&
+    input.matrixLoaderBehavior !== "deny"
+  ) {
+    throw new CompatibilityAdmissionError(
+      "compatibility_denied",
+      "classifier_breaking_transition",
+      `Compatibility classifier rejected matrix row ${input.matrixRowId} as breaking`,
+      input
+    );
+  }
+}
+
+function capabilitySurfaceFromManifest(rawManifest: unknown): CapabilitySurface {
+  const record = isRecord(rawManifest) ? rawManifest : {};
+  const tools = isRecord(record.tools) ? record.tools : undefined;
+  const runtime = isRecord(record.runtime) ? record.runtime : {};
+
+  return {
+    tools: Array.isArray(record.tools)
+      ? refsFrom(record.tools)
+      : stringArray(tools?.allow),
+    requireApproval: stringArray(tools?.requireApproval),
+    runtimeAuthority: {
+      ...(typeof runtime.strict === "boolean" ? { strict: runtime.strict } : {}),
+      ...(typeof runtime.failClosed === "boolean"
+        ? { failClosed: runtime.failClosed }
+        : {}),
+      ...(typeof runtime.modelOutputAuthority === "string"
+        ? { modelOutputAuthority: runtime.modelOutputAuthority }
+        : {})
+    }
+  };
+}
+
+function stringArray(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function refsFrom(value: readonly unknown[]) {
+  return value.map(referenceId).filter((id): id is string => id !== undefined);
+}
+
+function referenceId(value: unknown): string | undefined {
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  return (
+    stringValue(value.id) ??
+    stringValue(value.ref) ??
+    stringValue(value.tool) ??
+    stringValue(value.toolId)
+  );
+}
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function parseDescriptor(input: unknown) {

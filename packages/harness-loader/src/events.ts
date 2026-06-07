@@ -25,6 +25,7 @@ export const HARNESS_LOADER_EVENT_TYPES = [
   "harness.compatibility.decided",
   "harness.grant.evaluated",
   "harness.snapshot.frozen",
+  "harness.security.failed",
   "harness.load.denied",
   "harness.redaction.applied"
 ] as const;
@@ -133,6 +134,7 @@ const trustVerifiedPayloadSchema = z
     algorithm: nonEmptyString,
     signatureRef: nonEmptyString,
     trustStoreVersion: nonEmptyString,
+    specHash: sha256String,
     verdict: z.literal("verified")
   })
   .strict();
@@ -234,6 +236,19 @@ const snapshotFrozenPayloadSchema = z
   })
   .strict();
 
+const securityFailedPayloadSchema = z
+  .object({
+    errorCode: HarnessLoaderErrorCodeSchema,
+    stage: nonEmptyString,
+    message: nonEmptyString,
+    reason: nonEmptyString,
+    failClosed: z.literal(true),
+    retryability: retryabilitySchema,
+    severity: z.enum(["high", "critical"]),
+    details: metadataSchema.optional()
+  })
+  .strict();
+
 const loadDeniedPayloadSchema = z
   .object({
     errorCode: HarnessLoaderErrorCodeSchema,
@@ -297,6 +312,10 @@ export const HarnessSnapshotFrozenEventSchema = envelopeSchema(
   "harness.snapshot.frozen",
   snapshotFrozenPayloadSchema
 );
+export const HarnessSecurityFailedAuditEventSchema = envelopeSchema(
+  "harness.security.failed",
+  securityFailedPayloadSchema
+);
 export const HarnessLoadDeniedEventSchema = envelopeSchema(
   "harness.load.denied",
   loadDeniedPayloadSchema
@@ -316,6 +335,7 @@ export const HarnessLoaderAuditEventSchema = z.discriminatedUnion("type", [
   HarnessCompatibilityDecidedEventSchema,
   HarnessGrantEvaluatedAuditEventSchema,
   HarnessSnapshotFrozenEventSchema,
+  HarnessSecurityFailedAuditEventSchema,
   HarnessLoadDeniedEventSchema,
   HarnessRedactionAppliedEventSchema
 ]);

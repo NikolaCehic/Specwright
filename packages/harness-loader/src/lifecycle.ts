@@ -47,6 +47,10 @@ export function assertLifecycleTransition(input: {
     return;
   }
 
+  if (input.from === "revoked") {
+    throwInvalidTransition(input.from, input.to);
+  }
+
   if (input.to === "quarantined" || input.to === "revoked") {
     return;
   }

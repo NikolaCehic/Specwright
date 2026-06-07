@@ -54,10 +54,27 @@ declare module "node:fs/promises" {
     name: string;
     isFile(): boolean;
     isDirectory(): boolean;
+    isSymbolicLink(): boolean;
   }
 
+  export interface Stats {
+    isSymbolicLink(): boolean;
+  }
+
+  export function lstat(path: string): Promise<Stats>;
+  export function mkdir(
+    path: string,
+    options?: { recursive?: boolean }
+  ): Promise<void>;
+  export function mkdtemp(prefix: string): Promise<string>;
   export function readFile(path: string, encoding: "utf8"): Promise<string>;
+  export function realpath(path: string): Promise<string>;
+  export function rm(
+    path: string,
+    options?: { recursive?: boolean; force?: boolean }
+  ): Promise<void>;
   export function writeFile(path: string, data: string): Promise<void>;
+  export function symlink(target: string, path: string): Promise<void>;
   export function readdir(
     path: string,
     options?: { withFileTypes?: false }
@@ -75,6 +92,10 @@ declare module "node:path" {
   export function join(...paths: string[]): string;
   export function relative(from: string, to: string): string;
   export function resolve(...paths: string[]): string;
+}
+
+declare module "node:os" {
+  export function tmpdir(): string;
 }
 
 declare module "node:url" {

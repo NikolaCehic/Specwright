@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { z } from "zod";
 import {
+  CapabilitySurfaceSchema,
   CompatibilityClassSchema,
   type CompatibilityClass
 } from "./classify";
@@ -17,7 +18,9 @@ export const CompatibilityMatrixRowSchema = z
     harnessSchemaVersion: nonEmptyString,
     packageVersionRange: nonEmptyString,
     supportClass: CompatibilityClassSchema,
-    loaderBehavior: LoaderBehaviorSchema
+    loaderBehavior: LoaderBehaviorSchema,
+    sourceCapabilitySurface: CapabilitySurfaceSchema.optional(),
+    targetCapabilitySurface: CapabilitySurfaceSchema.optional()
   })
   .strict();
 

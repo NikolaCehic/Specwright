@@ -43,7 +43,18 @@ const MigrationTransformSchema = z
   .object({
     operation: z.literal("replace-manifest-schema-version"),
     from: nonEmptyString,
-    to: nonEmptyString
+    to: nonEmptyString,
+    fileReplacements: z
+      .array(
+        z
+          .object({
+            relativePath: nonEmptyString,
+            from: nonEmptyString,
+            to: z.string()
+          })
+          .strict()
+      )
+      .optional()
   })
   .strict();
 
@@ -286,6 +297,71 @@ function applyDeterministicTransform(
         migrationId: descriptor.migrationId,
         from: transform.from,
         to: transform.to
+      }
+    );
+  }
+
+  return applyFileReplacements(descriptor, migrated);
+}
+
+function applyFileReplacements(
+  descriptor: MigrationDescriptor,
+  files: readonly MigrationSourceFile[]
+): MigrationSourceFile[] {
+  const replacements = descriptor.transform.fileReplacements ?? [];
+
+  if (replacements.length === 0) {
+    return [...files];
+  }
+
+  const replacedPaths = new Set<string>();
+  const migrated = files.map((file) => {
+    const fileReplacements = replacements.filter(
+      (replacement) => replacement.relativePath === file.relativePath
+    );
+
+    if (fileReplacements.length === 0) {
+      return {
+        relativePath: file.relativePath,
+        raw: file.raw
+      };
+    }
+
+    let raw = file.raw;
+
+    for (const replacement of fileReplacements) {
+      if (!raw.includes(replacement.from)) {
+        throw new MigrationDescriptorError(
+          "transform_failed",
+          `Migration ${descriptor.migrationId} did not find replacement text in ${replacement.relativePath}`,
+          {
+            migrationId: descriptor.migrationId,
+            path: replacement.relativePath
+          }
+        );
+      }
+
+      raw = raw.replace(replacement.from, replacement.to);
+      replacedPaths.add(replacement.relativePath);
+    }
+
+    return {
+      relativePath: file.relativePath,
+      raw
+    };
+  });
+
+  const missingPaths = replacements
+    .map((replacement) => replacement.relativePath)
+    .filter((path) => !replacedPaths.has(path));
+
+  if (missingPaths.length > 0) {
+    throw new MigrationDescriptorError(
+      "transform_failed",
+      `Migration ${descriptor.migrationId} did not find replacement file ${missingPaths[0]}`,
+      {
+        migrationId: descriptor.migrationId,
+        path: missingPaths[0]
       }
     );
   }

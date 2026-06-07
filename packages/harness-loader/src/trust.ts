@@ -94,6 +94,7 @@ const HarnessTrustVerifiedPayloadSchema = z
     algorithm: z.literal("ed25519"),
     signatureRef: nonEmptyString,
     trustStoreVersion: nonEmptyString,
+    specHash: specHashString,
     verdict: z.literal("verified")
   })
   .strict();
@@ -138,11 +139,6 @@ export type TrustStore = {
   hasPublisher?(publisherId: string): boolean;
 };
 
-export type SpecHashSourceFile = {
-  relativePath: string;
-  raw: string;
-};
-
 export type TrustVerdict = {
   status: "verified";
   publisherId: string;
@@ -155,13 +151,12 @@ export type TrustVerdict = {
 };
 
 export type VerifyPackageTrustOptions = {
-  loadedFiles: readonly SpecHashSourceFile[];
   manifest: HarnessManifest;
   envelope?: unknown;
   trustStore?: TrustStore;
   strict?: boolean;
   now?: Date | string;
-  computeSpecHash(files: readonly SpecHashSourceFile[]): string;
+  expectedSpecHash: string;
 };
 
 type TrustRejectionContext = {
@@ -368,7 +363,7 @@ export function verifyPackageTrust(
     );
   }
 
-  const specHash = options.computeSpecHash(options.loadedFiles);
+  const specHash = options.expectedSpecHash;
 
   if (envelope.attestation.specHash !== specHash) {
     throw new TrustRejectedError(
@@ -414,6 +409,7 @@ export function buildTrustVerifiedEvent(verdict: TrustVerdict) {
       algorithm: verdict.algorithm,
       signatureRef: verdict.signatureRef,
       trustStoreVersion: verdict.trustStoreVersion,
+      specHash: verdict.specHash,
       verdict: verdict.status
     }
   });

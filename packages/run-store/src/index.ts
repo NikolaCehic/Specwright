@@ -3998,6 +3998,10 @@ function reduceEvent(state: RunState, event: RuntimeEvent) {
   switch (event.type) {
     case "run.started":
       return;
+    case "harness.loaded": {
+      state.harness = parseHarnessLoadedPayload(event.payload);
+      return;
+    }
     case "phase.entered":
     case "phase.transitioned": {
       const phase = getPayloadString(event.payload, [
@@ -4087,6 +4091,17 @@ function reduceEvent(state: RunState, event: RuntimeEvent) {
     default:
       return;
   }
+}
+
+function parseHarnessLoadedPayload(payload: unknown) {
+  if (!isRecord(payload)) {
+    throw new RunStoreError(
+      "invalid_event",
+      "harness.loaded payload must be an object"
+    );
+  }
+
+  return assertHarnessSnapshot(payload.harness);
 }
 
 function parseEventLine(

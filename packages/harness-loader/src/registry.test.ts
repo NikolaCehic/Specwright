@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readdir, rm } from "node:fs/promises";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   HarnessLoaderError,
   HarnessRegistry,
+  InMemoryRegistryStore,
   assertLifecycleTransition,
   computeSpecHash,
   createSnapshotCache,
@@ -78,9 +79,52 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
     expect(promoted.specHash).toBe(fixture.specHash);
     expect(registry.getLifecycle(key)?.state).toBe("trusted");
     expect(cache.has(fixture.specHash)).toBe(true);
-    expect(registry.resolveCurrentTrusted(packageId).specHash).toBe(
+    expect((await registry.resolveCurrentTrusted(packageId)).specHash).toBe(
       fixture.specHash
     );
+  });
+
+  test("rejects promotion that was not explicitly staged", async () => {
+    const { registry } = createRegistry();
+    const fixture = await makeSignedHarnessPackage(rootDir);
+    const error = await expectHarnessError(
+      () =>
+        registry.promote({
+          packageId,
+          version: "0.1.0",
+          packageDir: fixture.packageDir,
+          approval: approval("approval-unstaged"),
+          loadOptions: signedLoadOptions(fixture)
+        }),
+      "version_not_resolvable"
+    );
+
+    expect(error.reason).toBe("candidate_not_staged");
+  });
+
+  test("rejects promotion from a package directory different than the staged bytes", async () => {
+    const { registry } = createRegistry();
+    const staged = await stageSignedFixture(registry, "0.1.0", "staged-dir");
+    const attempted = await makeSignedHarnessPackage(rootDir, {
+      name: "attempted-other-dir",
+      files: harnessFiles("0.1.0", "attempted-other-dir"),
+      loadOptions: {
+        grantSource: testGrantSource
+      }
+    });
+    const error = await expectHarnessError(
+      () =>
+        registry.promote({
+          packageId,
+          version: "0.1.0",
+          packageDir: attempted.packageDir,
+          approval: approval("approval-staged-dir-mismatch"),
+          loadOptions: signedLoadOptions(staged)
+        }),
+      "invalid_lifecycle_transition"
+    );
+
+    expect(error.reason).toBe("staged_package_dir_mismatch");
   });
 
   test("rejects unlisted lifecycle transitions", async () => {
@@ -99,11 +143,65 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
     expect(error.reason).toBe("transition_not_allowed");
   });
 
+  test("treats revoked as terminal except idempotent revocation", async () => {
+    const { registry } = createRegistry();
+    await promoteSignedFixture(registry, "0.1.0", "terminal-revoke");
+
+    registry.revoke({
+      packageId,
+      version: "0.1.0",
+      reason: "key-compromise"
+    });
+    registry.revoke({
+      packageId,
+      version: "0.1.0",
+      reason: "repeat-key-compromise"
+    });
+
+    const error = await expectHarnessError(
+      () =>
+        registry.quarantine({
+          packageId,
+          version: "0.1.0",
+          reason: "post-revocation-quarantine"
+        }),
+      "invalid_lifecycle_transition"
+    );
+
+    expect(error.reason).toBe("transition_not_allowed");
+    expect(registry.getLifecycle({ packageId, version: "0.1.0" })?.state).toBe(
+      "revoked"
+    );
+  });
+
+  test("rejects staging a revoked package version", async () => {
+    const { registry } = createRegistry();
+    const fixture = await promoteSignedFixture(registry, "0.1.0", "revoked-restage");
+
+    registry.revoke({
+      packageId,
+      version: "0.1.0",
+      reason: "key-compromise"
+    });
+
+    const error = await expectHarnessError(
+      () =>
+        registry.stageCandidate({
+          packageId,
+          version: "0.1.0",
+          packageDir: fixture.packageDir
+        }),
+      "invalid_lifecycle_transition"
+    );
+
+    expect(error.reason).toBe("revoked_is_terminal");
+  });
+
   test("rejects every over-limit package before parse or validate completes", async () => {
     const packageDir = await writeHarnessPackage(
       rootDir,
       "over-limit",
-      validHarnessFiles()
+      overLimitHarnessFiles()
     );
     const cases: Array<{
       name: string;
@@ -144,6 +242,16 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
         name: "artifact depth",
         limits: { maxArtifactSchemaDepth: 1 },
         reason: "maxArtifactSchemaDepth"
+      },
+      {
+        name: "dependency depth",
+        limits: { maxDependencyDepth: 1 },
+        reason: "maxDependencyDepth"
+      },
+      {
+        name: "dependency fanout",
+        limits: { maxDependencyFanout: 1 },
+        reason: "maxDependencyFanout"
       }
     ];
 
@@ -206,7 +314,7 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
     const first = await promoteSignedFixture(registry, "0.1.0", "first");
     const second = await promoteSignedFixture(registry, "0.2.0", "second");
 
-    expect(registry.resolveCurrentTrusted(packageId).specHash).toBe(
+    expect((await registry.resolveCurrentTrusted(packageId)).specHash).toBe(
       second.specHash
     );
 
@@ -216,10 +324,10 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
       reason: "bad-promotion"
     });
 
-    expect(registry.resolveCurrentTrusted(packageId).specHash).toBe(
+    expect((await registry.resolveCurrentTrusted(packageId)).specHash).toBe(
       first.specHash
     );
-    expect(registry.resolveSnapshot(second.specHash).specHash).toBe(
+    expect((await registry.resolveSnapshot(second.specHash)).specHash).toBe(
       second.specHash
     );
   });
@@ -235,12 +343,17 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
       }
     });
 
+    registry.stageCandidate({
+      packageId,
+      version: "0.1.0",
+      packageDir: changed.packageDir
+    });
+
     const overwrite = await expectHarnessError(
       () =>
         registry.promote({
           packageId,
           version: "0.1.0",
-          packageDir: changed.packageDir,
           approval: approval("approval-overwrite"),
           loadOptions: signedLoadOptions(changed)
         }),
@@ -248,7 +361,7 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
     );
 
     expect(overwrite.reason).toBe("promoted_bytes_changed");
-    expect(registry.resolveSnapshot(fixture.specHash).specHash).toBe(
+    expect((await registry.resolveSnapshot(fixture.specHash)).specHash).toBe(
       fixture.specHash
     );
 
@@ -271,10 +384,99 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
     });
 
     expect(cache.has(fixture.specHash)).toBe(false);
-    expect(registry.resolveSnapshot(fixture.specHash).specHash).toBe(
+    expect((await registry.resolveSnapshot(fixture.specHash)).specHash).toBe(
       fixture.specHash
     );
     expect(cache.has(fixture.specHash)).toBe(true);
+  });
+
+  test("revocation purges dependent cache entries and forces dependent re-verification", async () => {
+    let loadCount = 0;
+    const loader: HarnessRegistryLoader = async (input) => {
+      loadCount += 1;
+
+      return loadHarnessPackageWithLimits(input);
+    };
+    const { registry, cache, store } = createRegistry({ loader });
+    const dependency = await makeSignedHarnessPackage(rootDir, {
+      name: "dependency-alpha",
+      files: minimalHarnessFiles("specwright.dep.alpha", "1.0.0"),
+      loadOptions: {
+        grantSource: grantSourceForPackage("specwright.dep.alpha")
+      }
+    });
+    const dependencyKey = {
+      packageId: "specwright.dep.alpha",
+      version: "1.0.0"
+    };
+    registry.stageCandidate({
+      ...dependencyKey,
+      packageDir: dependency.packageDir
+    });
+    await registry.promote({
+      ...dependencyKey,
+      approval: approval("approval-dependency-alpha"),
+      loadOptions: {
+        ...signedTrustOnlyOptions(dependency),
+        grantSource: grantSourceForPackage("specwright.dep.alpha")
+      }
+    });
+
+    const dependencyResolver = {
+      resolve() {
+        return [
+          {
+            name: "specwright.dep.alpha",
+            version: "1.0.0",
+            contentHash: dependency.specHash,
+            trustTier: "first-party"
+          }
+        ];
+      }
+    };
+    const dependent = await makeSignedHarnessPackage(rootDir, {
+      name: "dependent-on-alpha",
+      files: dependentHarnessFiles(dependency.specHash),
+      loadOptions: {
+        dependencyResolver
+      }
+    });
+    registry.stageCandidate({
+      packageId,
+      version: "0.1.0",
+      packageDir: dependent.packageDir
+    });
+    await registry.promote({
+      packageId,
+      version: "0.1.0",
+      approval: approval("approval-dependent-alpha"),
+      loadOptions: {
+        ...signedTrustOnlyOptions(dependent),
+        dependencyResolver
+      }
+    });
+
+    expect(cache.has(dependent.specHash)).toBe(true);
+    expect(loadCount).toBe(2);
+
+    const freshRegistry = new HarnessRegistry({
+      store,
+      cache,
+      loader,
+      now: createClock()
+    });
+
+    freshRegistry.revoke({
+      ...dependencyKey,
+      reason: "dependency-compromised"
+    });
+
+    expect(cache.has(dependent.specHash)).toBe(false);
+    expect((await freshRegistry.resolveSnapshot(dependent.specHash)).specHash).toBe(
+      dependent.specHash
+    );
+    expect(loadCount).toBe(3);
+    expect(cache.has(dependent.specHash)).toBe(true);
   });
 
   test("promotes batches atomically", async () => {
@@ -319,7 +521,7 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
 
       return loadHarnessPackageWithLimits(input);
     };
-    const { registry } = createRegistry({ loader });
+    const { registry, cache } = createRegistry({ loader });
     const fixture = await promoteSignedFixture(
       registry,
       "0.1.0",
@@ -327,13 +529,22 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
     );
 
     expect(loadCount).toBe(1);
-    expect(registry.resolveSnapshot(fixture.specHash).specHash).toBe(
+    expect((await registry.resolveSnapshot(fixture.specHash)).specHash).toBe(
       fixture.specHash
     );
-    expect(registry.resolveSnapshot(fixture.specHash).specHash).toBe(
+    expect((await registry.resolveSnapshot(fixture.specHash)).specHash).toBe(
       fixture.specHash
     );
     expect(loadCount).toBe(1);
+    expect(cache.delete(fixture.specHash)).toBe(true);
+    await writeFile(
+      join(fixture.packageDir, "prompts/planner.system.md"),
+      "tampered after promotion\n"
+    );
+    expect((await registry.resolveSnapshot(fixture.specHash)).specHash).toBe(
+      fixture.specHash
+    );
+    expect(loadCount).toBe(2);
 
     const lfPackage = await writeHarnessPackage(
       rootDir,
@@ -358,6 +569,89 @@ describe("harness registry lifecycle, limits, cache, and runbooks", () => {
 
     expect(lf.snapshot.specHash).toBe(crlf.snapshot.specHash);
     expect(computeSpecHash(lf.loadedFiles)).toBe(lf.snapshot.specHash);
+  });
+
+  test("fails closed when retained-byte replay re-derives a different hash", async () => {
+    let loadCount = 0;
+    const replaySpecHash = `sha256:${"f".repeat(64)}`;
+    const loader: HarnessRegistryLoader = async (input) => {
+      loadCount += 1;
+      const record = await loadHarnessPackageWithLimits(input);
+
+      if (loadCount === 2) {
+        return {
+          ...record,
+          snapshot: {
+            ...record.snapshot,
+            specHash: replaySpecHash
+          }
+        };
+      }
+
+      return record;
+    };
+    const { registry, cache } = createRegistry({ loader });
+    const fixture = await promoteSignedFixture(
+      registry,
+      "0.1.0",
+      "retained-mismatch"
+    );
+
+    cache.delete(fixture.specHash);
+    const error = await expectHarnessError(
+      () => registry.resolveSnapshot(fixture.specHash),
+      "version_not_resolvable"
+    );
+
+    expect(error.reason).toBe("retained_bytes_hash_mismatch");
+    expect(error.details).toMatchObject({
+      requestedSpecHash: fixture.specHash,
+      actualSpecHash: replaySpecHash
+    });
+  });
+
+  test("fails closed when retained registry bytes are corrupted", async () => {
+    const { registry, cache, store } = createRegistry();
+    const fixture = await promoteSignedFixture(
+      registry,
+      "0.1.0",
+      "retained-corrupt"
+    );
+    const promoted = store.getPromotedVersion({
+      packageId,
+      version: "0.1.0"
+    });
+
+    if (promoted === undefined) {
+      throw new Error("Expected promoted registry record");
+    }
+
+    store.putPromotedVersion({
+      ...promoted,
+      files: promoted.files.map((file) =>
+        file.relativePath === "prompts/planner.system.md"
+          ? {
+              ...file,
+              raw: `${file.raw}\ncorrupted retained bytes\n`
+            }
+          : file
+      ),
+      loadOptions: {
+        loadedAt,
+        grantSource: testGrantSource
+      }
+    });
+    cache.delete(fixture.specHash);
+
+    const error = await expectHarnessError(
+      () => registry.resolveSnapshot(fixture.specHash),
+      "version_not_resolvable"
+    );
+
+    expect(error.reason).toBe("retained_bytes_hash_mismatch");
+    expect(error.details).toMatchObject({
+      requestedSpecHash: fixture.specHash
+    });
   });
 
   test("documents every operator runbook action", async () => {
@@ -419,10 +713,13 @@ async function promoteSignedFixture(
 function createRegistry(input: {
   limits?: HarnessLoaderLimitsInput;
   loader?: HarnessRegistryLoader;
+  store?: InMemoryRegistryStore;
 } = {}) {
   const cache = createSnapshotCache(computeSpecHash, input.limits);
   const clock = createClock();
+  const store = input.store ?? new InMemoryRegistryStore();
   const registry = new HarnessRegistry({
+    store,
     cache,
     loader: input.loader ?? loadHarnessPackageWithLimits,
     now: clock
@@ -430,7 +727,8 @@ function createRegistry(input: {
 
   return {
     cache,
-    registry
+    registry,
+    store
   };
 }
 
@@ -447,12 +745,18 @@ function createClock() {
 
 function signedLoadOptions(fixture: SignedHarnessPackageFixture) {
   return {
+    ...signedTrustOnlyOptions(fixture),
+    grantSource: testGrantSource
+  };
+}
+
+function signedTrustOnlyOptions(fixture: SignedHarnessPackageFixture) {
+  return {
     signature: fixture.signature,
     trustStore: fixture.trustStore,
     strict: true,
     trustNow: loadedAt,
-    loadedAt,
-    grantSource: testGrantSource
+    loadedAt
   };
 }
 
@@ -480,6 +784,32 @@ const testGrantSource: GrantSource = {
   }
 };
 
+function grantSourceForPackage(grantedPackageId: string): GrantSource {
+  return {
+    resolveGrant(resolvedPackageId, version) {
+      if (resolvedPackageId !== grantedPackageId) {
+        return undefined;
+      }
+
+      return {
+        grantId: `grant.${resolvedPackageId}.${version}`,
+        packageId: resolvedPackageId,
+        versionPins: [version],
+        allowedTools: [],
+        allowedRequireApproval: [],
+        allowedToolDefinitions: [],
+        allowedPolicyEffects: [],
+        allowedPolicyLayers: [],
+        allowedRuntimeInvariantToolIds: [],
+        issuer: {
+          registryId: "specwright.test.capability-grants",
+          authorityId: "specwright.registry.test"
+        }
+      };
+    }
+  };
+}
+
 function approval(approvalId: string): PromotionApproval {
   return {
     approvalId,
@@ -500,6 +830,57 @@ function harnessFiles(version: string, marker: string) {
     `${files["prompts/planner.system.md"]}\nMarker: ${marker}\n`;
 
   return files;
+}
+
+function minimalHarnessFiles(resolvedPackageId: string, version: string) {
+  return {
+    "harness.yaml": `
+id: ${resolvedPackageId}
+version: ${version}
+schemaVersion: specwright.harness.v0
+metadata:
+  trustTier: first-party
+phases:
+  - id: intake
+`
+  };
+}
+
+function dependentHarnessFiles(dependencySpecHash: string) {
+  return {
+    "harness.yaml": `
+id: ${packageId}
+version: 0.1.0
+schemaVersion: specwright.harness.v0
+metadata:
+  trustTier: first-party
+phases:
+  - id: intake
+dependencies:
+  - name: specwright.dep.alpha
+    versionRange: 1.0.0
+    pinnedHash: ${dependencySpecHash}
+    trustTier: first-party
+`
+  };
+}
+
+function overLimitHarnessFiles() {
+  const files = validHarnessFiles();
+
+  return {
+    ...files,
+    "harness.yaml": `${files["harness.yaml"]}
+dependencies:
+  - name: specwright.dep.alpha
+    versionRange: 1.0.0
+    pinnedHash: sha256:${"a".repeat(64)}
+  - group:
+      - name: specwright.dep.beta
+        versionRange: 1.0.0
+        pinnedHash: sha256:${"b".repeat(64)}
+`
+  };
 }
 
 function crlfFiles(files: Record<string, string>) {

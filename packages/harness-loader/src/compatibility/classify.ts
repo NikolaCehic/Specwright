@@ -13,7 +13,7 @@ export const CompatibilityClassSchema = z.enum([
 
 export type CompatibilityClass = z.infer<typeof CompatibilityClassSchema>;
 
-const CapabilitySurfaceSchema = z
+export const CapabilitySurfaceSchema = z
   .object({
     tools: z.array(nonEmptyString).default([]),
     requireApproval: z.array(nonEmptyString).default([]),

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, realpath } from "node:fs/promises";
 import { basename, extname, join, relative, resolve } from "node:path";
 import {
   ArtifactSchemaRefSchema,
@@ -176,6 +176,7 @@ export {
   HarnessLoadRequestedEventSchema,
   HarnessLoaderAuditEventSchema,
   HarnessRedactionAppliedEventSchema,
+  HarnessSecurityFailedAuditEventSchema,
   HarnessSnapshotFrozenEventSchema,
   HarnessTrustRejectedAuditEventSchema,
   HarnessTrustVerifiedAuditEventSchema,
@@ -389,6 +390,19 @@ export type SourceFile = {
   raw: string;
 };
 
+type FetchedHarnessFiles = {
+  manifestFile: SourceFile;
+  phaseFiles: SourceFile[];
+  gateFiles: SourceFile[];
+  policyFiles: SourceFile[];
+  toolFiles: SourceFile[];
+  artifactSchemaFiles: SourceFile[];
+  evalFiles: SourceFile[];
+  roleFiles: SourceFile[];
+  promptFiles: SourceFile[];
+  loadedFiles: SourceFile[];
+};
+
 type DefinitionWithSource = {
   id: string;
   sourcePath?: unknown;
@@ -502,7 +516,8 @@ export async function loadHarnessPackageWithRecord(
     }
   );
   let loadedFiles: SourceFile[] = [...fetched.loadedFiles];
-  let manifestFile = fetched.manifestFile;
+  let activeFiles = splitLoadedFiles(loadedFiles);
+  let manifestFile = activeFiles.manifestFile;
   const rawManifest = parseDataFile(manifestFile);
 
   const compatibility = await runLoadStage(
@@ -517,7 +532,8 @@ export async function loadHarnessPackageWithRecord(
       })
   );
   loadedFiles = compatibility.files;
-  manifestFile = compatibility.manifestFile;
+  activeFiles = splitLoadedFiles(loadedFiles);
+  manifestFile = activeFiles.manifestFile;
 
   const parsed = await runLoadStage(input, "harness.parse", {}, () => {
     const manifest = parseManifest(manifestFile);
@@ -538,7 +554,7 @@ export async function loadHarnessPackageWithRecord(
           HARNESS_MANIFEST_FILE,
           parsePhaseDefinition
         ),
-        ...fetched.phaseFiles.map((file) =>
+        ...activeFiles.phaseFiles.map((file) =>
           parsePhaseDefinition(parseDataFile(file), file)
         )
       ],
@@ -552,7 +568,7 @@ export async function loadHarnessPackageWithRecord(
           HARNESS_MANIFEST_FILE,
           parseGateDefinition
         ),
-        ...fetched.gateFiles.map((file) =>
+        ...activeFiles.gateFiles.map((file) =>
           parseGateDefinition(parseDataFile(file), file)
         )
       ],
@@ -566,7 +582,7 @@ export async function loadHarnessPackageWithRecord(
           HARNESS_MANIFEST_FILE,
           parsePolicyBundle
         ),
-        ...fetched.policyFiles.map((file) =>
+        ...activeFiles.policyFiles.map((file) =>
           parsePolicyBundle(parseDataFile(file), file)
         )
       ],
@@ -575,14 +591,14 @@ export async function loadHarnessPackageWithRecord(
     const tools = orderDefinitions(
       [
         ...inlineToolDefinitions(manifest),
-        ...fetched.toolFiles.map((file) =>
+        ...activeFiles.toolFiles.map((file) =>
           parseToolDefinition(parseDataFile(file), file)
         )
       ],
       manifestToolReferences(manifest)
     );
     const artifacts = orderDefinitions(
-      fetched.artifactSchemaFiles.map((file) => parseArtifactSchemaFile(file)),
+      activeFiles.artifactSchemaFiles.map((file) => parseArtifactSchemaFile(file)),
       [
         ...manifestReferences(manifest.artifacts),
         ...manifestReferences(manifest.artifactSchemas)
@@ -596,7 +612,7 @@ export async function loadHarnessPackageWithRecord(
           HARNESS_MANIFEST_FILE,
           parseEvalDefinition
         ),
-        ...fetched.evalFiles.map((file) =>
+        ...activeFiles.evalFiles.map((file) =>
           parseEvalDefinition(parseDataFile(file), file)
         )
       ],
@@ -610,14 +626,14 @@ export async function loadHarnessPackageWithRecord(
           HARNESS_MANIFEST_FILE,
           parseRoleDefinition
         ),
-        ...fetched.roleFiles.map((file) =>
+        ...activeFiles.roleFiles.map((file) =>
           parseRoleDefinition(parseDataFile(file), file)
         )
       ],
       manifestReferences(manifest.roles)
     );
     const prompts = orderDefinitions(
-      fetched.promptFiles.map((file) => parsePromptFile(file)),
+      activeFiles.promptFiles.map((file) => parsePromptFile(file)),
       manifestReferences(manifest.prompts)
     );
 
@@ -658,17 +674,6 @@ export async function loadHarnessPackageWithRecord(
     validateDefinitions(parsed);
   });
 
-  const trust = await runLoadStage(
-    input,
-    "harness.verify_trust",
-    {},
-    () =>
-      verifyTrustIfConfigured({
-        input,
-        loadedFiles,
-        manifest: parsed.manifest
-      })
-  );
   const grant = await runLoadStage(
     input,
     "harness.grant_check",
@@ -691,17 +696,28 @@ export async function loadHarnessPackageWithRecord(
         manifest: parsed.manifest
       })
   );
+  const finalSpecHash = computeSpecHash(loadedFiles, dependencies.resolved);
+  const trust = await runLoadStage(
+    input,
+    "harness.verify_trust",
+    {},
+    () =>
+      verifyTrustIfConfigured({
+        input,
+        manifest: parsed.manifest,
+        expectedSpecHash: finalSpecHash
+      })
+  );
   const frozen = await runLoadStage(
     input,
     "harness.freeze",
     { definitionCounts: counts },
     () => {
-      const specHash = computeSpecHash(loadedFiles, dependencies.resolved);
       const snapshot = HarnessSnapshotSchema.parse({
         id: parsed.manifest.id,
         version: parsed.manifest.version,
         schemaVersion: parsed.manifest.schemaVersion,
-        specHash,
+        specHash: finalSpecHash,
         loadedAt,
         runtime: parsed.manifest.runtime,
         phases: parsed.phases,
@@ -716,7 +732,7 @@ export async function loadHarnessPackageWithRecord(
       });
 
       return {
-        specHash,
+        specHash: finalSpecHash,
         snapshot
       };
     }
@@ -842,10 +858,43 @@ function sourceFileFromCompatibilityFile(
   };
 }
 
+function splitLoadedFiles(files: readonly SourceFile[]) {
+  const manifestFile = files.find(
+    (file) => file.relativePath === HARNESS_MANIFEST_FILE
+  );
+
+  if (manifestFile === undefined) {
+    throw new HarnessLoaderError(
+      "missing_harness_manifest",
+      `Missing required ${HARNESS_MANIFEST_FILE}`
+    );
+  }
+
+  return {
+    manifestFile,
+    phaseFiles: filesForDirectory(files, "phases"),
+    gateFiles: filesForDirectory(files, "gates"),
+    policyFiles: filesForDirectory(files, "policies"),
+    toolFiles: filesForDirectory(files, "tools"),
+    artifactSchemaFiles: filesForDirectory(files, "artifact-schemas"),
+    evalFiles: filesForDirectory(files, "evals"),
+    roleFiles: filesForDirectory(files, "roles"),
+    promptFiles: filesForDirectory(files, "prompts")
+  };
+}
+
+function filesForDirectory(files: readonly SourceFile[], directory: string) {
+  const prefix = `${directory}/`;
+
+  return files
+    .filter((file) => file.relativePath.startsWith(prefix))
+    .sort((left, right) => left.relativePath.localeCompare(right.relativePath));
+}
+
 async function verifyTrustIfConfigured(context: {
   input: string | LoadHarnessPackageOptions;
-  loadedFiles: readonly SourceFile[];
   manifest: HarnessManifest;
+  expectedSpecHash: string;
 }) {
   if (typeof context.input === "string") {
     return undefined;
@@ -862,10 +911,9 @@ async function verifyTrustIfConfigured(context: {
 
   try {
     const trust = verifyPackageTrust({
-      loadedFiles: context.loadedFiles,
       manifest: context.manifest,
       strict: context.input.strict ?? true,
-      computeSpecHash,
+      expectedSpecHash: context.expectedSpecHash,
       ...(context.input.signature === undefined
         ? {}
         : { envelope: context.input.signature }),
@@ -1258,6 +1306,8 @@ function parseArtifactSchemaFile(file: SourceFile): ArtifactSchemaRef {
     );
   }
 
+  assertLocalArtifactSchemaRefs(schema, file);
+
   const id = stringValue(schema.id) ?? stringValue(schema.$id);
   const version = stringValue(schema.version);
 
@@ -1291,6 +1341,65 @@ function parseArtifactSchemaFile(file: SourceFile): ArtifactSchemaRef {
   }
 
   return parsed.data;
+}
+
+function assertLocalArtifactSchemaRefs(schema: unknown, file: SourceFile) {
+  const remoteRef = findNonLocalJsonSchemaRef(schema);
+
+  if (remoteRef === undefined) {
+    return;
+  }
+
+  throw new HarnessLoaderError(
+    "invalid_artifact_schema",
+    `Artifact schema ${file.relativePath} contains non-local $ref ${remoteRef}`,
+    undefined,
+    {
+      reason: "remote_ref_denied",
+      details: {
+        path: file.relativePath,
+        ref: remoteRef
+      }
+    }
+  );
+}
+
+const JSON_SCHEMA_REF_KEYS = ["$ref", "$dynamicRef", "$recursiveRef"] as const;
+
+function findNonLocalJsonSchemaRef(value: unknown): string | undefined {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findNonLocalJsonSchemaRef(item);
+
+      if (found !== undefined) {
+        return found;
+      }
+    }
+
+    return undefined;
+  }
+
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  for (const key of JSON_SCHEMA_REF_KEYS) {
+    const ref = value[key];
+
+    if (typeof ref === "string" && !ref.startsWith("#")) {
+      return ref;
+    }
+  }
+
+  for (const item of Object.values(value)) {
+    const found = findNonLocalJsonSchemaRef(item);
+
+    if (found !== undefined) {
+      return found;
+    }
+  }
+
+  return undefined;
 }
 
 function parsePromptFile(file: SourceFile): PromptAssetRef {
@@ -1519,9 +1628,11 @@ async function readOptionalDirectory(
   readLimiter?: HarnessPackageReadLimiter | undefined
 ): Promise<SourceFile[]> {
   const absoluteDir = resolve(packageDir, dir);
+  const root = resolve(packageDir);
   let entries: Awaited<ReturnType<typeof readdir>>;
 
   try {
+    await assertResolvedPathInsidePackage(root, absoluteDir, dir);
     entries = await readdir(absoluteDir, { withFileTypes: true });
   } catch (error) {
     if (getErrorCode(error) === "ENOENT") {
@@ -1532,7 +1643,7 @@ async function readOptionalDirectory(
   }
 
   const files = entries
-    .filter((entry) => entry.isFile())
+    .filter((entry) => entry.isFile() || entry.isSymbolicLink())
     .map((entry) => join(dir, entry.name))
     .filter((path) => extensions.includes(extname(path)))
     .sort((a, b) => a.localeCompare(b));
@@ -1566,6 +1677,8 @@ async function readSourceFile(
     );
   }
 
+  await assertResolvedPathInsidePackage(root, absolutePath, normalizedRelative);
+
   readLimiter?.reserveFile(normalizedRelative);
 
   const file = {
@@ -1577,6 +1690,38 @@ async function readSourceFile(
   readLimiter?.observeFile(file);
 
   return file;
+}
+
+async function assertResolvedPathInsidePackage(
+  root: string,
+  absolutePath: string,
+  relativePath: string
+) {
+  const [realRoot, realTarget] = await Promise.all([
+    realpath(root),
+    realpath(absolutePath)
+  ]);
+  const normalizedRealRelative = normalizeRelativePath(
+    relative(realRoot, realTarget)
+  );
+
+  if (
+    normalizedRealRelative === ".." ||
+    normalizedRealRelative.startsWith("../")
+  ) {
+    throw new HarnessLoaderError(
+      "parse_error",
+      `Refusing to load ${relativePath} outside harness package`,
+      undefined,
+      {
+        reason: "path_escape",
+        details: {
+          path: relativePath,
+          target: realTarget
+        }
+      }
+    );
+  }
 }
 
 function validateManifestReferences(
