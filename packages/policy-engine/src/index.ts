@@ -275,7 +275,7 @@ export type PolicyRecordContext = {
   endedAt?: Date | string | undefined;
   bundleSetRef: string;
   bundleVersions: readonly string[];
-  policyBundles?: FixturePolicyBundle | readonly FixturePolicyBundle[] | undefined;
+  policyBundles: readonly FixturePolicyBundle[];
 };
 
 export type PolicyEvaluatedRecord = {
@@ -288,6 +288,7 @@ export type PolicyRecordErrorCode =
   | "missing_decision_hash"
   | "missing_event_ids"
   | "missing_policy_bundle_hash"
+  | "mismatched_policy_bundle_hash"
   | "missing_deciding_rule"
   | "malformed_matched_rule"
   | "unknown_obligation_kind"
@@ -422,22 +423,45 @@ function policyBundleHashFor(
   verdict: PolicyVerdict,
   context: PolicyRecordContext
 ) {
+  const policyBundles = requirePolicyBundleSet(
+    (context as { policyBundles?: unknown }).policyBundles
+  );
+  const computedPolicyBundleHash = hashJson(policyBundles);
+
   if (verdict.policyBundleHash !== undefined) {
-    return requireNonEmpty(
+    const verdictPolicyBundleHash = requireNonEmpty(
       verdict.policyBundleHash,
       "missing_policy_bundle_hash",
       "Policy verdict policyBundleHash must be non-empty when supplied"
     );
+
+    if (verdictPolicyBundleHash !== computedPolicyBundleHash) {
+      throw new PolicyRecordError(
+        "mismatched_policy_bundle_hash",
+        "Policy verdict policyBundleHash does not match the recording context bundle set"
+      );
+    }
   }
 
-  if (context.policyBundles === undefined) {
+  return computedPolicyBundleHash;
+}
+
+function requirePolicyBundleSet(value: unknown) {
+  if (value === undefined) {
     throw new PolicyRecordError(
       "missing_policy_bundle_hash",
-      "Policy record context must carry policyBundles when the verdict has no policyBundleHash"
+      "Policy record context must carry policyBundles"
     );
   }
 
-  return hashJson(normalizePolicyBundles(context.policyBundles));
+  if (!Array.isArray(value) || value.some((bundle) => !isRecord(bundle))) {
+    throw new PolicyRecordError(
+      "invalid_policy_record",
+      "Policy record context policyBundles must be an array of bundle objects"
+    );
+  }
+
+  return value as FixturePolicyBundle[];
 }
 
 function validateRuleMatch(match: RuleMatch) {

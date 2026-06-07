@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   PolicyEvaluatedEventPayloadSchema,
-  PolicyVerdictSchema
+  PolicyVerdictSchema,
+  type PolicyEvaluatedEventPayload
 } from "@specwright/schemas";
 import {
   PolicyRecordError,
@@ -93,6 +94,9 @@ describe("policy evaluated record projection", () => {
       );
       expect(record.eventPayload.decisionHash).toBe(verdict.decisionHash);
       expect(record.span.eventIds).toEqual(expected.context.eventIds);
+      expect(record.span.metadata?.policyBundleHash).toBe(
+        record.eventPayload.policyBundleHash
+      );
       expect(record.eventPayload.requestHash).toMatch(/^sha256:[0-9a-f]{64}$/);
       expect(record.eventPayload.policyBundleHash).toMatch(
         /^sha256:[0-9a-f]{64}$/
@@ -209,12 +213,66 @@ describe("policy evaluated record projection", () => {
       )
     ).toThrow(PolicyRecordError);
   });
+
+  test("requires context bundles and checks future verdict bundle hashes", async () => {
+    const { request, policyBundle, expected, verdict } = await projectionInputs(
+      "fs-read-allowed-in-evidence"
+    );
+    const context = {
+      ...expected.context,
+      policyBundles: policyBundle
+    };
+    const recordWithMatchingVerdictHash = toPolicyEvaluatedRecord(
+      request,
+      {
+        ...verdict,
+        policyBundleHash: expected.eventPayload.policyBundleHash
+      } as PolicyVerdict,
+      context
+    );
+
+    expect(recordWithMatchingVerdictHash.eventPayload.policyBundleHash).toBe(
+      expected.eventPayload.policyBundleHash
+    );
+    expect(
+      recordWithMatchingVerdictHash.span.metadata?.policyBundleHash
+    ).toBe(expected.eventPayload.policyBundleHash);
+
+    expect(() =>
+      toPolicyEvaluatedRecord(
+        request,
+        verdict,
+        expected.context as unknown as PolicyRecordContext
+      )
+    ).toThrow(PolicyRecordError);
+    expect(() =>
+      toPolicyEvaluatedRecord(
+        request,
+        verdict,
+        {
+          ...expected.context,
+          policyBundles: [null]
+        } as unknown as PolicyRecordContext
+      )
+    ).toThrow(PolicyRecordError);
+    expect(() =>
+      toPolicyEvaluatedRecord(
+        request,
+        {
+          ...verdict,
+          policyBundleHash:
+            "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+        } as PolicyVerdict,
+        context
+      )
+    ).toThrow(PolicyRecordError);
+  });
 });
 
 type ExpectedRecordProjection = {
   sourceFixture: string;
   context: Omit<PolicyRecordContext, "policyBundles">;
-  eventPayload: unknown;
+  eventPayload: PolicyEvaluatedEventPayload;
   span: unknown;
 };
 
