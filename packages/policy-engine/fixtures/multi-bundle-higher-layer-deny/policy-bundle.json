@@ -1,0 +1,34 @@
+[
+  {
+    "id": "fixture.multi-bundle-harness-allow",
+    "description": "Lower-layer harness bundle allows fs.read.",
+    "harnessRules": [
+      {
+        "id": "harness.fs_read.allow",
+        "layer": "harness",
+        "effect": "allow",
+        "reason": "harness bundle allows fs.read",
+        "match": {
+          "actionKind": "tool_call",
+          "toolId": "fs.read"
+        }
+      }
+    ]
+  },
+  {
+    "id": "fixture.multi-bundle-workspace-deny",
+    "description": "Higher-layer workspace bundle denies fs.read.",
+    "workspaceRules": [
+      {
+        "id": "workspace.fs_read.denied",
+        "layer": "workspace",
+        "effect": "deny",
+        "reason": "workspace bundle denies fs.read",
+        "match": {
+          "actionKind": "tool_call",
+          "toolId": "fs.read"
+        }
+      }
+    ]
+  }
+]

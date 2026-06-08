@@ -1,0 +1,23 @@
+{
+  "requestId": "req_missing_required_scope_denied",
+  "runId": "run_policy_fixture",
+  "phase": "evidence",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "args": {
+      "path": "src/index.ts"
+    },
+    "requestedScopes": [
+      "evidence:read"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "status": "deny",
+  "reasons": [
+    "workspace policy denies git.push"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "workspace.git_push.denied",
+      "layer": "workspace",
+      "effect": "deny",
+      "reason": "workspace policy denies git.push"
+    },
+    {
+      "ruleId": "harness.git_push.allow",
+      "layer": "harness",
+      "effect": "allow",
+      "reason": "harness policy allows git.push"
+    }
+  ],
+  "decisionHash": "sha256:c01b71acc2472c269462cdd962123dee448b76aaa4ad5c820e2ac6eb06b452be"
+}

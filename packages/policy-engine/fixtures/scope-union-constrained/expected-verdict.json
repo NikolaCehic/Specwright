@@ -1,0 +1,41 @@
+{
+  "status": "allow",
+  "reasons": [
+    "Tool fs.read is allowed in phase evidence",
+    "Tool fs.read scopes are within policy",
+    "fs.read is allowed when scope union covers the request"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "workspace:read",
+        "evidence:read",
+        "agent:observe"
+      ],
+      "sourceRuleId": "tool.fs.read.scope"
+    }
+  ],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool fs.read scopes are within policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed when scope union covers the request"
+    }
+  ],
+  "decisionHash": "sha256:d6f872c41a8581f350c725b2787c65032931a66d275629b9b376a25280621575"
+}

@@ -1,0 +1,51 @@
+{
+  "status": "deny",
+  "reasons": [
+    "file read budget would exceed deny limit"
+  ],
+  "constraints": [
+    {
+      "kind": "budget.max",
+      "value": {
+        "resource": "fileReadBytes",
+        "max": 1000
+      },
+      "sourceRuleId": "budget.file_read_bytes.deny_max"
+    },
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "workspace:read"
+      ],
+      "sourceRuleId": "tool.fs.read.scope"
+    }
+  ],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "budget.file_read_bytes.deny_max",
+      "layer": "harness",
+      "effect": "deny",
+      "reason": "file read budget would exceed deny limit"
+    },
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool fs.read scopes are within policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed while budget remains available"
+    }
+  ],
+  "decisionHash": "sha256:0366c0b32ca2e9822eb3f8d13b9ef20e6b0af14d2d0517e80d82f32c383740fa"
+}

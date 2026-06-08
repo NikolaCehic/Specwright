@@ -1,0 +1,30 @@
+{
+  "requestId": "req_budget_within_limit_allowed",
+  "runId": "run_policy_fixture",
+  "phase": "evidence",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "args": {
+      "path": "src/index.ts"
+    },
+    "requestedScopes": [
+      "workspace:read"
+    ],
+    "budgetCosts": {
+      "fileReadBytes": 100
+    }
+  },
+  "snapshots": {
+    "budgets": {
+      "fileReadBytes": {
+        "used": 300
+      }
+    },
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

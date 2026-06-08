@@ -17,6 +17,8 @@ import {
   type PolicyVerdict
 } from "./index";
 import "./bundle-load.test";
+import "./conformance.test";
+import "./mutation.test";
 import "./pattern-safety.test";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
@@ -30,7 +32,16 @@ const fixtureCases = [
   "approval-cannot-override-deny",
   "out-of-phase-tool-denied",
   "scope-exceeded-denied",
+  "workspace-deny-overrides-harness-allow",
+  "multi-bundle-higher-layer-deny",
+  "missing-required-scope-denied",
+  "scope-union-constrained",
   "budget-exceeded-approval-required",
+  "budget-missing-policy-denied",
+  "budget-overrun-denied",
+  "budget-within-limit-allowed",
+  "run-mode-local-dev-allowed",
+  "run-mode-ci-denied",
   "host-deny-wins"
 ];
 const recordProjectionCases = [
@@ -60,10 +71,13 @@ describe("policy engine fixtures", () => {
       const policyBundle = await readJson(join(fixtureDir, "policy-bundle.json"));
       const expected = await readJson(join(fixtureDir, "expected-verdict.json"));
       const loadResult = loadPolicyBundles(policyBundle);
+      const expectedBundles = Array.isArray(policyBundle)
+        ? policyBundle
+        : [policyBundle];
 
       expect(loadResult).toEqual({
         ok: true,
-        bundles: [policyBundle]
+        bundles: expectedBundles
       });
 
       const verdict = evaluatePolicy(

@@ -1,0 +1,29 @@
+{
+  "id": "fixture.budget-overrun-denied",
+  "description": "Denies fs.read when the file-read budget would be exceeded.",
+  "toolPolicy": {
+    "fs.read": {
+      "default": "allow",
+      "risk": "low",
+      "reason": "fs.read is allowed while budget remains available",
+      "allowedPhases": [
+        "evidence"
+      ],
+      "requiredScopes": [
+        "workspace:read"
+      ],
+      "allowedScopes": [
+        "workspace:read"
+      ]
+    }
+  },
+  "budgetPolicy": [
+    {
+      "id": "budget.file_read_bytes.deny_max",
+      "resource": "fileReadBytes",
+      "max": 1000,
+      "onExceeded": "deny",
+      "reason": "file read budget would exceed deny limit"
+    }
+  ]
+}

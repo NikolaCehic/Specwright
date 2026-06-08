@@ -1,0 +1,20 @@
+{
+  "requestId": "req_multi_bundle_higher_layer_deny",
+  "runId": "run_policy_fixture",
+  "phase": "evidence",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "args": {
+      "path": "src/index.ts"
+    }
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

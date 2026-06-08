@@ -1,0 +1,23 @@
+{
+  "status": "deny",
+  "reasons": [
+    "ci run mode denies prompt generation"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "harness.model_prompt.allow",
+      "layer": "harness",
+      "effect": "allow",
+      "reason": "harness allows prompt generation outside CI"
+    },
+    {
+      "ruleId": "run_mode.ci.model_prompt.denied",
+      "layer": "run_mode",
+      "effect": "deny",
+      "reason": "ci run mode denies prompt generation"
+    }
+  ],
+  "decisionHash": "sha256:21feb96c5f58af5e319f8327dd810a45c82d0aea1add12b4cf065bbe34e919bd"
+}

@@ -1,0 +1,17 @@
+{
+  "status": "allow",
+  "reasons": [
+    "harness allows prompt generation outside CI"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "harness.model_prompt.allow",
+      "layer": "harness",
+      "effect": "allow",
+      "reason": "harness allows prompt generation outside CI"
+    }
+  ],
+  "decisionHash": "sha256:e4e465ec10a8ed4bcba13556e3557a79093161ac7c463b846db0c7436338e459"
+}

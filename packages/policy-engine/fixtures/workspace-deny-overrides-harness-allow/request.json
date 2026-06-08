@@ -1,0 +1,21 @@
+{
+  "requestId": "req_workspace_deny_overrides_harness_allow",
+  "runId": "run_policy_fixture",
+  "phase": "release",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "git.push",
+    "risk": "high",
+    "args": {
+      "remote": "origin",
+      "branch": "main"
+    }
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}
