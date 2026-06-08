@@ -1,0 +1,28 @@
+{
+  "id": "fixture.workspace-deny-overrides-harness-allow",
+  "description": "Workspace denial narrows a harness allow for the same action.",
+  "workspaceRules": [
+    {
+      "id": "workspace.git_push.denied",
+      "layer": "workspace",
+      "effect": "deny",
+      "reason": "workspace policy denies git.push",
+      "match": {
+        "actionKind": "tool_call",
+        "toolId": "git.push"
+      }
+    }
+  ],
+  "harnessRules": [
+    {
+      "id": "harness.git_push.allow",
+      "layer": "harness",
+      "effect": "allow",
+      "reason": "harness policy allows git.push",
+      "match": {
+        "actionKind": "tool_call",
+        "toolId": "git.push"
+      }
+    }
+  ]
+}

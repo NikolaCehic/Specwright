@@ -1,0 +1,20 @@
+{
+  "id": "fixture.missing-required-scope",
+  "description": "Requires workspace read scope before fs.read can proceed.",
+  "toolPolicy": {
+    "fs.read": {
+      "default": "allow",
+      "risk": "low",
+      "reason": "fs.read is allowed when required scopes are present",
+      "allowedPhases": [
+        "evidence"
+      ],
+      "requiredScopes": [
+        "workspace:read"
+      ],
+      "allowedScopes": [
+        "evidence:read"
+      ]
+    }
+  }
+}

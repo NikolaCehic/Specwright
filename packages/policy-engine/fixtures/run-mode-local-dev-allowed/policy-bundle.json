@@ -1,0 +1,31 @@
+{
+  "id": "fixture.run-mode-tightening",
+  "description": "Allows prompt generation in local development and denies it in CI.",
+  "harnessRules": [
+    {
+      "id": "harness.model_prompt.allow",
+      "layer": "harness",
+      "effect": "allow",
+      "reason": "harness allows prompt generation outside CI",
+      "match": {
+        "actionKind": "tool_call",
+        "toolId": "model.prompt"
+      }
+    }
+  ],
+  "runModeRules": [
+    {
+      "id": "run_mode.ci.model_prompt.denied",
+      "layer": "run_mode",
+      "effect": "deny",
+      "reason": "ci run mode denies prompt generation",
+      "match": {
+        "actionKind": "tool_call",
+        "toolId": "model.prompt",
+        "runModes": [
+          "ci"
+        ]
+      }
+    }
+  ]
+}

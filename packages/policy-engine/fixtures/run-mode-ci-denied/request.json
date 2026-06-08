@@ -1,0 +1,21 @@
+{
+  "requestId": "req_run_mode_ci_denied",
+  "runId": "run_policy_fixture",
+  "phase": "synthesis",
+  "runMode": "ci",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "model.prompt",
+    "risk": "medium",
+    "args": {
+      "promptRef": "prompts/synthesis.md"
+    }
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

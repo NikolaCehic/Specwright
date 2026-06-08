@@ -1,0 +1,20 @@
+{
+  "id": "fixture.budget-missing-policy",
+  "description": "Allows fs.read but intentionally omits a budget policy for a positive costed resource.",
+  "toolPolicy": {
+    "fs.read": {
+      "default": "allow",
+      "risk": "low",
+      "reason": "fs.read is allowed for budget missing policy proof",
+      "allowedPhases": [
+        "evidence"
+      ],
+      "requiredScopes": [
+        "workspace:read"
+      ],
+      "allowedScopes": [
+        "workspace:read"
+      ]
+    }
+  }
+}

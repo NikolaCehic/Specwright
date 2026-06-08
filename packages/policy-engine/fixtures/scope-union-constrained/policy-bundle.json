@@ -1,0 +1,23 @@
+{
+  "id": "fixture.scope-union-constrained",
+  "description": "Allows scopes drawn from bundle scopes, tool allowed scopes, and tool required scopes.",
+  "scopes": [
+    "workspace:read"
+  ],
+  "toolPolicy": {
+    "fs.read": {
+      "default": "allow",
+      "risk": "low",
+      "reason": "fs.read is allowed when scope union covers the request",
+      "allowedPhases": [
+        "evidence"
+      ],
+      "requiredScopes": [
+        "agent:observe"
+      ],
+      "allowedScopes": [
+        "evidence:read"
+      ]
+    }
+  }
+}

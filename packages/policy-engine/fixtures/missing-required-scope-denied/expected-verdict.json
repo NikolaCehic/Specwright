@@ -1,0 +1,29 @@
+{
+  "status": "deny",
+  "reasons": [
+    "Tool fs.read is missing required scope workspace:read"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "deny",
+      "reason": "Tool fs.read is missing required scope workspace:read"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed when required scopes are present"
+    }
+  ],
+  "decisionHash": "sha256:3e301070a298f888a3c0c87e88aa5fccd1113546e6a6b579881af8236092b892"
+}

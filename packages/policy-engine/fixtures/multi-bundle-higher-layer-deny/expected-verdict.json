@@ -1,0 +1,23 @@
+{
+  "status": "deny",
+  "reasons": [
+    "workspace bundle denies fs.read"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "workspace.fs_read.denied",
+      "layer": "workspace",
+      "effect": "deny",
+      "reason": "workspace bundle denies fs.read"
+    },
+    {
+      "ruleId": "harness.fs_read.allow",
+      "layer": "harness",
+      "effect": "allow",
+      "reason": "harness bundle allows fs.read"
+    }
+  ],
+  "decisionHash": "sha256:e18230183b5e7dd8fe21735c9606db354ad067301f3fedbe3e0f67e866e63ce2"
+}
