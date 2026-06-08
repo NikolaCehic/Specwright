@@ -61,6 +61,7 @@
       "version": "0.0.0",
       "dependencies": {
         "@specwright/schemas": "workspace:*",
+        "@specwright/trace-recorder": "workspace:*",
       },
     },
     "packages/run-reports": {

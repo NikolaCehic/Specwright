@@ -269,6 +269,8 @@ export const PolicyRuleEffectSchema = z.enum([
 ]);
 export type PolicyRuleEffect = z.infer<typeof PolicyRuleEffectSchema>;
 
+const PolicyRiskSchema = z.enum(["low", "medium", "high", "critical"]);
+
 export const PolicyRuleMatchSchema = z
   .object({
     ruleId: nonEmptyString,
@@ -1551,12 +1553,28 @@ export type RunFailedEventPayload = z.infer<
   typeof RunFailedEventPayloadSchema
 >;
 
+export const POLICY_EVALUATED_EVENT_TYPE = "policy.evaluated";
+
 export const PolicyEvaluatedEventPayloadSchema = z
   .object({
-    request: PolicyRequestSchema.optional(),
-    verdict: PolicyVerdictSchema,
-    approval: ApprovalRequestSchema.optional(),
-    approvalRequest: ApprovalRequestSchema.optional()
+    requestId: nonEmptyString,
+    runId: nonEmptyString,
+    phase: nonEmptyString,
+    actionKind: nonEmptyString,
+    toolId: nonEmptyString.optional(),
+    risk: PolicyRiskSchema,
+    status: PolicyVerdictStatusSchema,
+    matchedRules: z.array(PolicyRuleMatchSchema),
+    decidingLayer: PolicyRuleLayerSchema,
+    constraints: z.array(PolicyConstraintSchema),
+    obligations: z.array(PolicyObligationSchema),
+    approvalId: nonEmptyString.optional(),
+    requestHash: nonEmptyString,
+    policyBundleHash: nonEmptyString,
+    decisionHash: nonEmptyString,
+    argsHash: nonEmptyString,
+    bundleSetRef: nonEmptyString,
+    bundleVersions: z.array(nonEmptyString)
   })
   .strict();
 export type PolicyEvaluatedEventPayload = z.infer<
@@ -1809,6 +1827,10 @@ export function runtimeEventSchema<TPayloadSchema extends ZodTypeAny>(
     payload: payloadSchema
   });
 }
+
+export const PolicyEvaluatedEventSchema = runtimeEventSchema(
+  PolicyEvaluatedEventPayloadSchema
+);
 
 function assertNever(value: never): never {
   throw new Error(`Unhandled contract value: ${String(value)}`);

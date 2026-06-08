@@ -1022,6 +1022,48 @@ const validPolicyVerdict = {
   decisionHash: "sha256:policy-fixture"
 };
 
+const validPolicyEvaluatedEventPayload = {
+  requestId: "req:contract-registry-policy",
+  runId: "run:contract-registry",
+  phase: "shared-schemas",
+  actionKind: "tool_call",
+  toolId: "shell.exec",
+  risk: "high",
+  status: "approval_required",
+  matchedRules: [
+    {
+      ruleId: "tool.shell.exec.default",
+      layer: "capability",
+      effect: "approval_required",
+      reason: "Contract changes require compatibility review."
+    }
+  ],
+  decidingLayer: "capability",
+  constraints: [
+    {
+      kind: "timeoutMs",
+      value: 120000,
+      sourceRuleId: "tool.shell.exec.default"
+    }
+  ],
+  obligations: [
+    {
+      kind: "record_event",
+      params: {
+        eventType: "policy.evaluated"
+      },
+      sourceRuleId: "tool.shell.exec.default"
+    }
+  ],
+  approvalId: "approval:contract-registry",
+  requestHash: "sha256:request-fixture",
+  policyBundleHash: "sha256:bundle-fixture",
+  decisionHash: "sha256:policy-fixture",
+  argsHash: "sha256:args-fixture",
+  bundleSetRef: "policy-bundle:contract-registry",
+  bundleVersions: ["contract-registry@specwright.policy-bundle.v0"]
+};
+
 const validGateVerdict = {
   gateId: "contract.registry",
   phase: "shared-schemas",
@@ -1258,12 +1300,15 @@ const positiveOverrides: Record<string, unknown> = {
     toPhase: "registry",
     reason: "registry generation"
   },
-  PolicyEvaluatedEventPayloadSchema: {
-    verdict: validPolicyVerdict,
-    approvalRequest: {
-      approvalId: "approval:contract-registry",
-      reason: "Contract changes require review."
-    }
+  PolicyEvaluatedEventPayloadSchema: validPolicyEvaluatedEventPayload,
+  PolicyEvaluatedEventSchema: {
+    id: "event:policy-evaluated",
+    runId: "run:contract-registry",
+    timestamp: "2026-06-05T00:00:00.000Z",
+    sequence: 1,
+    traceId: "trace:contract-registry",
+    type: "policy.evaluated",
+    payload: validPolicyEvaluatedEventPayload
   },
   PolicyVerdictSchema: validPolicyVerdict,
   RepairTaskSchema: {

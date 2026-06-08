@@ -298,15 +298,24 @@
       "unsupportedWithoutMigration": false
     },
     {
+      "classification": "additive-compatible",
+      "currentHash": "sha256:85567af33efc8bc97cccd9e8f94600f286751e8739e840a175d04983bbaeca80",
+      "currentVersion": "1",
+      "exportName": "PolicyEvaluatedEventSchema",
+      "id": "specwright.event.policy-evaluated-event",
+      "reason": "New registered contract; old records remain readable.",
+      "unsupportedWithoutMigration": false
+    },
+    {
       "baselineHash": "sha256:e6019e6428a7efa2241353501b44ef8837508a4e3a27b0d5947e55dbae57834a",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:e6019e6428a7efa2241353501b44ef8837508a4e3a27b0d5947e55dbae57834a",
+      "classification": "migration-required",
+      "currentHash": "sha256:db18b2fc84ce98c2600ee9d96e96268d9f0621bcb543d8b02ba5740127725434",
       "currentVersion": "1",
       "exportName": "PolicyEvaluatedEventPayloadSchema",
       "id": "specwright.event.policy.evaluated",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:e37ba0c18b1d30ea8da7b9a082f2ed3cac18ac6cde717b101699ecd99d704528",
@@ -345,7 +354,7 @@
       "baselineHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
       "baselineVersion": "1",
       "classification": "migration-required",
-      "currentHash": "sha256:3ad5ee116d240a40ad3c589c31ac93766b92c6d68f47ab03ae7e3410f48c74fb",
+      "currentHash": "sha256:868293cd2d6101cc7aa48a8bb9cfcb705d892951d511bfd9ef8cd5d11c93bede",
       "currentVersion": "1",
       "exportName": "RuntimeEventSchema",
       "id": "specwright.event.runtime-event",
@@ -1095,6 +1104,8 @@
   "releasePolicy": {
     "auditExportChanges": [
       "specwright.event.harness.loaded",
+      "specwright.event.policy-evaluated-event",
+      "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
@@ -1102,6 +1113,8 @@
     ],
     "changedContractIds": [
       "specwright.event.harness.loaded",
+      "specwright.event.policy-evaluated-event",
+      "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
@@ -1135,7 +1148,8 @@
       "specwright.event.human.input_requested": "unchanged",
       "specwright.event.phase.entered": "unchanged",
       "specwright.event.phase.transitioned": "unchanged",
-      "specwright.event.policy.evaluated": "unchanged",
+      "specwright.event.policy-evaluated-event": "additive-compatible",
+      "specwright.event.policy.evaluated": "migration-required",
       "specwright.event.run.completed": "unchanged",
       "specwright.event.run.failed": "unchanged",
       "specwright.event.run.started": "unchanged",
@@ -1212,6 +1226,8 @@
     "contractRegistryVersion": "scope-01.packet-05",
     "generatedSdkSurfaceChanges": [
       "specwright.event.harness.loaded",
+      "specwright.event.policy-evaluated-event",
+      "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
@@ -1219,14 +1235,18 @@
     ],
     "migrationRequirements": [
       "specwright.event.harness.loaded",
+      "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot"
     ],
-    "redactionChanges": [],
+    "redactionChanges": [
+      "specwright.event.policy-evaluated-event"
+    ],
     "unsupportedHistoricalVersions": [
       "specwright.event.harness.loaded@1",
+      "specwright.event.policy.evaluated@1",
       "specwright.event.runtime-event@1",
       "specwright.event.runtime-event-envelope@1",
       "specwright.governance.policy-bundle@1",
@@ -1234,12 +1254,12 @@
     ]
   },
   "summary": {
-    "additive-compatible": 0,
+    "additive-compatible": 1,
     "backward-compatible": 0,
     "breaking": 0,
     "forward-compatible": 0,
-    "migration-required": 5,
+    "migration-required": 6,
     "patch-compatible": 0,
-    "unchanged": 94
+    "unchanged": 93
   }
 }

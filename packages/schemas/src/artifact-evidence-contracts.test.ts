@@ -3,7 +3,14 @@ import {
   ArtifactClaimSchema,
   ArtifactRecordSchema,
   EvidenceRecordSchema,
+  POLICY_EVALUATED_EVENT_TYPE,
+  PolicyEvaluatedEventPayloadSchema,
+  PolicyEvaluatedEventSchema,
+  PolicyRuleEffectSchema,
+  PolicyRuleLayerSchema,
+  PolicyVerdictStatusSchema,
   RedactionClassSchema,
+  RuntimeEventSchema,
   SourceRefSchema,
   claimLevelRequiresEvidence,
   evidenceClassRequiresSourceRefs,
@@ -15,11 +22,58 @@ import {
   type ArtifactRecord,
   type EvidenceRecord
 } from "./index";
+import {
+  POLICY_RISKS,
+  POLICY_RULE_EFFECTS,
+  POLICY_RULE_LAYERS,
+  POLICY_VERDICT_STATUSES
+} from "@specwright/policy-engine";
 import validArtifactRecordFixture from "../test/fixtures/valid-artifact-record.json";
 import validSourceFactEvidenceFixture from "../test/fixtures/valid-source-fact-evidence.json";
 
 const validEvidence = validSourceFactEvidenceFixture as EvidenceRecord;
 const validArtifact = validArtifactRecordFixture as ArtifactRecord;
+const validPolicyEvaluatedPayload = {
+  requestId: "req:policy-contract",
+  runId: "run:policy-contract",
+  phase: "verification",
+  actionKind: "tool_call",
+  toolId: "shell.exec",
+  risk: "high",
+  status: "approval_required",
+  matchedRules: [
+    {
+      ruleId: "tool.shell.exec.default",
+      layer: "capability",
+      effect: "approval_required",
+      reason: "shell.exec requires explicit approval"
+    }
+  ],
+  decidingLayer: "capability",
+  constraints: [
+    {
+      kind: "timeoutMs",
+      value: 120000,
+      sourceRuleId: "tool.shell.exec.default"
+    }
+  ],
+  obligations: [
+    {
+      kind: "record_event",
+      params: {
+        eventType: "policy.evaluated"
+      },
+      sourceRuleId: "tool.shell.exec.default"
+    }
+  ],
+  approvalId: "appr_shell_exec_tests",
+  requestHash: "sha256:request-fixture",
+  policyBundleHash: "sha256:bundle-fixture",
+  decisionHash: "sha256:decision-fixture",
+  argsHash: "sha256:args-fixture",
+  bundleSetRef: "policy-bundle:fixture",
+  bundleVersions: ["fixture.shell-exec@specwright.policy-bundle.v0"]
+};
 
 describe("artifact and evidence authority contracts", () => {
   test("accepts a source fact with trusted source refs and redaction labels", () => {
@@ -262,6 +316,92 @@ describe("artifact and evidence authority contracts", () => {
     if (!first.success && !second.success) {
       expect(first.error.issues).toEqual(second.error.issues);
     }
+  });
+});
+
+describe("policy evaluated event contract", () => {
+  test("accepts a redaction-safe policy evaluated payload", () => {
+    expect(
+      PolicyEvaluatedEventPayloadSchema.parse(validPolicyEvaluatedPayload)
+    ).toEqual(validPolicyEvaluatedPayload);
+  });
+
+  test("rejects raw action args and missing hashes", () => {
+    expect(
+      PolicyEvaluatedEventPayloadSchema.safeParse({
+        ...validPolicyEvaluatedPayload,
+        args: {
+          command: "bun test packages/policy-engine/src/index.test.ts"
+        }
+      }).success
+    ).toBe(false);
+
+    const { decisionHash: _decisionHash, ...missingDecisionHash } =
+      validPolicyEvaluatedPayload;
+
+    expect(
+      PolicyEvaluatedEventPayloadSchema.safeParse(missingDecisionHash).success
+    ).toBe(false);
+
+    const { requestHash: _requestHash, ...missingRequestHash } =
+      validPolicyEvaluatedPayload;
+
+    expect(
+      PolicyEvaluatedEventPayloadSchema.safeParse(missingRequestHash).success
+    ).toBe(false);
+
+    const { policyBundleHash: _policyBundleHash, ...missingBundleHash } =
+      validPolicyEvaluatedPayload;
+
+    expect(
+      PolicyEvaluatedEventPayloadSchema.safeParse(missingBundleHash).success
+    ).toBe(false);
+
+    const { argsHash: _argsHash, ...missingArgsHash } =
+      validPolicyEvaluatedPayload;
+
+    expect(
+      PolicyEvaluatedEventPayloadSchema.safeParse(missingArgsHash).success
+    ).toBe(false);
+  });
+
+  test("validates a full policy evaluated event envelope", () => {
+    const event = {
+      id: "event:policy-evaluated",
+      runId: "run:policy-contract",
+      timestamp: "2026-06-07T00:00:00.000Z",
+      sequence: 1,
+      traceId: "trace:policy-contract",
+      type: POLICY_EVALUATED_EVENT_TYPE,
+      payload: validPolicyEvaluatedPayload
+    };
+
+    expect(PolicyEvaluatedEventSchema.parse(event)).toEqual(event);
+    expect(RuntimeEventSchema.parse(event).type).toBe(POLICY_EVALUATED_EVENT_TYPE);
+  });
+
+  test("keeps mirrored policy enums in lockstep with policy-engine exports", () => {
+    expect(PolicyVerdictStatusSchema.options).toEqual([
+      ...POLICY_VERDICT_STATUSES
+    ]);
+    expect(PolicyRuleLayerSchema.options).toEqual([...POLICY_RULE_LAYERS]);
+    expect(PolicyRuleEffectSchema.options).toEqual([...POLICY_RULE_EFFECTS]);
+
+    for (const risk of POLICY_RISKS) {
+      expect(
+        PolicyEvaluatedEventPayloadSchema.safeParse({
+          ...validPolicyEvaluatedPayload,
+          risk
+        }).success
+      ).toBe(true);
+    }
+
+    expect(
+      PolicyEvaluatedEventPayloadSchema.safeParse({
+        ...validPolicyEvaluatedPayload,
+        risk: "unknown"
+      }).success
+    ).toBe(false);
   });
 });
 

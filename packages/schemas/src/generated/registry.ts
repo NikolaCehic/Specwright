@@ -77,6 +77,7 @@ import {
   PolicyBundleSchema,
   PolicyConstraintSchema,
   PolicyEvaluatedEventPayloadSchema,
+  PolicyEvaluatedEventSchema,
   PolicyObligationSchema,
   PolicyRuleEffectSchema,
   PolicyRuleLayerSchema,
@@ -1118,9 +1119,46 @@ const contractRegistryData = [
   {
     "authority": {
       "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Composed runtime event envelope for `policy.evaluated`. Durable posture: durable. Extension posture: strict envelope."
+    },
+    "canonicalHash": "sha256:85567af33efc8bc97cccd9e8f94600f286751e8739e840a175d04983bbaeca80",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/policy-evaluated-event.positive.json",
+      "fixtures/negative/policy-evaluated-event.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "PolicyEvaluatedEventSchema",
+    "extensionPoints": [
+      "strict envelope"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/policy-evaluated-event.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.policy-evaluated-event.json",
+      "negativeFixture": "fixtures/negative/policy-evaluated-event.negative.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.policy-evaluated-event",
+    "migrationDescriptors": [],
+    "notes": "Composed runtime event envelope for `policy.evaluated`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `policy.evaluated`. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:e6019e6428a7efa2241353501b44ef8837508a4e3a27b0d5947e55dbae57834a",
+    "canonicalHash": "sha256:db18b2fc84ce98c2600ee9d96e96268d9f0621bcb543d8b02ba5740127725434",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/policy-evaluated-event-payload.positive.json",
@@ -1272,7 +1310,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
     },
-    "canonicalHash": "sha256:3ad5ee116d240a40ad3c589c31ac93766b92c6d68f47ab03ae7e3410f48c74fb",
+    "canonicalHash": "sha256:868293cd2d6101cc7aa48a8bb9cfcb705d892951d511bfd9ef8cd5d11c93bede",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event.positive.json",
@@ -3831,6 +3869,7 @@ const validators = new Map<string, ZodTypeAny>([
   [contractRegistryKey("specwright.event.human.input_requested", "1"), HumanInputRequestedEventPayloadSchema],
   [contractRegistryKey("specwright.event.phase.entered", "1"), PhaseEnteredEventPayloadSchema],
   [contractRegistryKey("specwright.event.phase.transitioned", "1"), PhaseTransitionedEventPayloadSchema],
+  [contractRegistryKey("specwright.event.policy-evaluated-event", "1"), PolicyEvaluatedEventSchema],
   [contractRegistryKey("specwright.event.policy.evaluated", "1"), PolicyEvaluatedEventPayloadSchema],
   [contractRegistryKey("specwright.event.run.completed", "1"), RunCompletedEventPayloadSchema],
   [contractRegistryKey("specwright.event.run.failed", "1"), RunFailedEventPayloadSchema],

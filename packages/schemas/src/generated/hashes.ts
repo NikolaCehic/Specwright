@@ -192,8 +192,15 @@ export const contractHashManifest = [
   },
   {
     "compatibilityClass": "forward-compatible",
+    "exportName": "PolicyEvaluatedEventSchema",
+    "hash": "sha256:85567af33efc8bc97cccd9e8f94600f286751e8739e840a175d04983bbaeca80",
+    "id": "specwright.event.policy-evaluated-event",
+    "version": "1"
+  },
+  {
+    "compatibilityClass": "forward-compatible",
     "exportName": "PolicyEvaluatedEventPayloadSchema",
-    "hash": "sha256:e6019e6428a7efa2241353501b44ef8837508a4e3a27b0d5947e55dbae57834a",
+    "hash": "sha256:db18b2fc84ce98c2600ee9d96e96268d9f0621bcb543d8b02ba5740127725434",
     "id": "specwright.event.policy.evaluated",
     "version": "1"
   },
@@ -221,7 +228,7 @@ export const contractHashManifest = [
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "RuntimeEventSchema",
-    "hash": "sha256:3ad5ee116d240a40ad3c589c31ac93766b92c6d68f47ab03ae7e3410f48c74fb",
+    "hash": "sha256:868293cd2d6101cc7aa48a8bb9cfcb705d892951d511bfd9ef8cd5d11c93bede",
     "id": "specwright.event.runtime-event",
     "version": "1"
   },

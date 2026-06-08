@@ -1,0 +1,113 @@
+{
+  "sourceFixture": "fs-read-allowed-in-evidence",
+  "context": {
+    "eventIds": [
+      "event:policy:allow"
+    ],
+    "traceId": "trace:policy:allow",
+    "spanId": "span:policy:allow",
+    "parentSpanId": "span:parent:allow",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "bundleSetRef": "policy-bundle:fixture.fs-read",
+    "bundleVersions": [
+      "fixture.fs-read@unversioned"
+    ]
+  },
+  "eventPayload": {
+    "requestId": "req_fs_read_evidence",
+    "runId": "run_policy_fixture",
+    "phase": "evidence",
+    "actionKind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "status": "allow",
+    "matchedRules": [
+      {
+        "ruleId": "tool.fs.read.phase",
+        "layer": "phase",
+        "effect": "allow",
+        "reason": "Tool fs.read is allowed in phase evidence"
+      },
+      {
+        "ruleId": "tool.fs.read.scope",
+        "layer": "capability",
+        "effect": "constrain",
+        "reason": "Tool fs.read scopes are within policy"
+      },
+      {
+        "ruleId": "tool.fs.read.default",
+        "layer": "capability",
+        "effect": "allow",
+        "reason": "fs.read is allowed for source and evidence discovery"
+      }
+    ],
+    "decidingLayer": "capability",
+    "constraints": [
+      {
+        "kind": "allowedScopes",
+        "value": [
+          "workspace:read",
+          "evidence:read"
+        ],
+        "sourceRuleId": "tool.fs.read.scope"
+      },
+      {
+        "kind": "maxBytes",
+        "value": 65536,
+        "sourceRuleId": "tool.fs.read.default"
+      }
+    ],
+    "obligations": [
+      {
+        "kind": "record_event",
+        "params": {
+          "eventType": "tool.authorized"
+        },
+        "sourceRuleId": "tool.fs.read.default"
+      },
+      {
+        "kind": "require_evidence",
+        "sourceRuleId": "tool.fs.read.default"
+      }
+    ],
+    "requestHash": "sha256:8a7146cd676565093cdb2bd2d6854dbe6dae1ef13ddf7223692def46c7b87a77",
+    "policyBundleHash": "sha256:2830278d1b90b893c21e5395e2eec046237f40ebb9000510bd5547772062d37e",
+    "decisionHash": "sha256:88fa070ebab11cd19497b511450a74c16f4dcd774bb915499ac0866d5640ece9",
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "bundleSetRef": "policy-bundle:fixture.fs-read",
+    "bundleVersions": [
+      "fixture.fs-read@unversioned"
+    ]
+  },
+  "span": {
+    "spanId": "span:policy:allow",
+    "parentSpanId": "span:parent:allow",
+    "kind": "policy",
+    "name": "policy.allow.tool_call",
+    "status": "success",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "eventIds": [
+      "event:policy:allow"
+    ],
+    "metadata": {
+      "requestId": "req_fs_read_evidence",
+      "runId": "run_policy_fixture",
+      "traceId": "trace:policy:allow",
+      "phase": "evidence",
+      "actionKind": "tool_call",
+      "toolId": "fs.read",
+      "policyStatus": "allow",
+      "decisionHash": "sha256:88fa070ebab11cd19497b511450a74c16f4dcd774bb915499ac0866d5640ece9",
+      "requestHash": "sha256:8a7146cd676565093cdb2bd2d6854dbe6dae1ef13ddf7223692def46c7b87a77",
+      "policyBundleHash": "sha256:2830278d1b90b893c21e5395e2eec046237f40ebb9000510bd5547772062d37e",
+      "decidingLayer": "capability",
+      "matchedRuleIds": [
+        "tool.fs.read.phase",
+        "tool.fs.read.scope",
+        "tool.fs.read.default"
+      ]
+    }
+  }
+}

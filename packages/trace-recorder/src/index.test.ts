@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRun, getRunStorePaths, type HarnessSnapshot } from "@specwright/run-store";
 import type { RunInput } from "@specwright/schemas";
 import {
   TraceRecorder,
+  TraceRecorderError,
   readTrace,
   recordTraceSpan,
   writeTrace
@@ -142,6 +143,114 @@ describe("trace recorder", () => {
           status: "pass"
         }
       ]
+    });
+  });
+
+  test("records and reads a policy span with linked event ids", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-policy-trace",
+      traceId: "trace-policy",
+      input: runInput,
+      harness
+    });
+
+    const span = await recordTraceSpan({
+      rootDir,
+      runId: "run-policy-trace",
+      traceId: "trace-policy",
+      span: {
+        spanId: "span-policy-shell",
+        parentSpanId: "span-tool-shell",
+        kind: "policy",
+        name: "policy.approval_required.tool_call",
+        status: "approval_required",
+        startedAt: "2026-06-07T00:00:00.000Z",
+        endedAt: "2026-06-07T00:00:00.025Z",
+        eventIds: ["event-policy-evaluated"],
+        metadata: {
+          requestId: "req-shell",
+          runId: "run-policy-trace",
+          phase: "verification",
+          policyStatus: "approval_required",
+          decisionHash: "sha256:decision",
+          requestHash: "sha256:request",
+          policyBundleHash: "sha256:bundle",
+          decidingLayer: "capability",
+          matchedRuleIds: ["tool.shell.exec.default"]
+        }
+      }
+    });
+    const trace = await readTrace({
+      rootDir,
+      runId: "run-policy-trace"
+    });
+
+    expect(span).toMatchObject({
+      kind: "policy",
+      status: "approval_required",
+      eventIds: ["event-policy-evaluated"],
+      metadata: {
+        policyStatus: "approval_required",
+        decisionHash: "sha256:decision",
+        requestHash: "sha256:request",
+        policyBundleHash: "sha256:bundle",
+        decidingLayer: "capability",
+        matchedRuleIds: ["tool.shell.exec.default"]
+      }
+    });
+    expect(trace.spans[0]).toEqual(span);
+  });
+
+  test("rejects unknown span kinds", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-invalid-kind",
+      traceId: "trace-invalid-kind",
+      input: runInput,
+      harness
+    });
+    const paths = getRunStorePaths(rootDir, "run-invalid-kind");
+
+    await writeFile(
+      paths.tracePath,
+      `${JSON.stringify(
+        {
+          runId: "run-invalid-kind",
+          traceId: "trace-invalid-kind",
+          spans: [
+            {
+              runId: "run-invalid-kind",
+              traceId: "trace-invalid-kind",
+              spanId: "span-invalid",
+              kind: "not-a-real-kind",
+              name: "invalid",
+              status: "success",
+              startedAt: "2026-06-07T00:00:00.000Z",
+              metadata: {}
+            }
+          ],
+          metadata: {}
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+
+    await expect(
+      readTrace({
+        rootDir,
+        runId: "run-invalid-kind"
+      })
+    ).rejects.toThrow(TraceRecorderError);
+    await expect(
+      readTrace({
+        rootDir,
+        runId: "run-invalid-kind"
+      })
+    ).rejects.toMatchObject({
+      code: "invalid_trace"
     });
   });
 });

@@ -1,17 +1,43 @@
 {
-  "approvalRequest": {
-    "approvalId": "approval:contract-registry",
-    "reason": "Contract changes require review."
-  },
-  "verdict": {
-    "approvalId": "approval:contract-registry",
-    "constraints": [],
-    "decisionHash": "sha256:policy-fixture",
-    "matchedRules": [],
-    "obligations": [],
-    "reasons": [
-      "Contract changes require compatibility review."
-    ],
-    "status": "approval_required"
-  }
+  "actionKind": "tool_call",
+  "approvalId": "approval:contract-registry",
+  "argsHash": "sha256:args-fixture",
+  "bundleSetRef": "policy-bundle:contract-registry",
+  "bundleVersions": [
+    "contract-registry@specwright.policy-bundle.v0"
+  ],
+  "constraints": [
+    {
+      "kind": "timeoutMs",
+      "sourceRuleId": "tool.shell.exec.default",
+      "value": 120000
+    }
+  ],
+  "decidingLayer": "capability",
+  "decisionHash": "sha256:policy-fixture",
+  "matchedRules": [
+    {
+      "effect": "approval_required",
+      "layer": "capability",
+      "reason": "Contract changes require compatibility review.",
+      "ruleId": "tool.shell.exec.default"
+    }
+  ],
+  "obligations": [
+    {
+      "kind": "record_event",
+      "params": {
+        "eventType": "policy.evaluated"
+      },
+      "sourceRuleId": "tool.shell.exec.default"
+    }
+  ],
+  "phase": "shared-schemas",
+  "policyBundleHash": "sha256:bundle-fixture",
+  "requestHash": "sha256:request-fixture",
+  "requestId": "req:contract-registry-policy",
+  "risk": "high",
+  "runId": "run:contract-registry",
+  "status": "approval_required",
+  "toolId": "shell.exec"
 }

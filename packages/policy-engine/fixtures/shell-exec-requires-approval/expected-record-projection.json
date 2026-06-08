@@ -1,0 +1,114 @@
+{
+  "sourceFixture": "shell-exec-requires-approval",
+  "context": {
+    "eventIds": [
+      "event:policy:redaction"
+    ],
+    "traceId": "trace:policy:redaction",
+    "spanId": "span:policy:redaction",
+    "parentSpanId": "span:parent:redaction",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "bundleSetRef": "policy-bundle:fixture.shell-exec",
+    "bundleVersions": [
+      "fixture.shell-exec@unversioned"
+    ]
+  },
+  "eventPayload": {
+    "requestId": "req_shell_exec_requires_approval",
+    "runId": "run_policy_fixture",
+    "phase": "verification",
+    "actionKind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "status": "approval_required",
+    "matchedRules": [
+      {
+        "ruleId": "tool.shell.exec.phase",
+        "layer": "phase",
+        "effect": "allow",
+        "reason": "Tool shell.exec is allowed in phase verification"
+      },
+      {
+        "ruleId": "tool.shell.exec.scope",
+        "layer": "capability",
+        "effect": "constrain",
+        "reason": "Tool shell.exec scopes are within policy"
+      },
+      {
+        "ruleId": "tool.shell.exec.default",
+        "layer": "capability",
+        "effect": "approval_required",
+        "reason": "shell.exec requires explicit approval"
+      }
+    ],
+    "decidingLayer": "capability",
+    "constraints": [
+      {
+        "kind": "allowedScopes",
+        "value": [
+          "shell:exec"
+        ],
+        "sourceRuleId": "tool.shell.exec.scope"
+      },
+      {
+        "kind": "timeoutMs",
+        "value": 120000,
+        "sourceRuleId": "tool.shell.exec.default"
+      },
+      {
+        "kind": "network",
+        "value": "disabled",
+        "sourceRuleId": "tool.shell.exec.default"
+      }
+    ],
+    "obligations": [
+      {
+        "kind": "record_event",
+        "params": {
+          "eventType": "policy.evaluated"
+        },
+        "sourceRuleId": "tool.shell.exec.default"
+      }
+    ],
+    "approvalId": "appr_shell_exec_tests",
+    "requestHash": "sha256:e58cd050f69f3dffdb50183ac6c7e9f737115f89dc15e3e933875860d6e28c5f",
+    "policyBundleHash": "sha256:87f9f02716e3231beb8609b05a6ce64f824a62ebc60c0d1842b22a1e17483bd8",
+    "decisionHash": "sha256:246d79c6f67f414d57376289fb42d6ac39e8b22869c0575e1ed90a0768891fd3",
+    "argsHash": "sha256:3feb833750edb0a48a4d6f64cf58302aa7b4e276e1ba8a17be29d161a228c38a",
+    "bundleSetRef": "policy-bundle:fixture.shell-exec",
+    "bundleVersions": [
+      "fixture.shell-exec@unversioned"
+    ]
+  },
+  "span": {
+    "spanId": "span:policy:redaction",
+    "parentSpanId": "span:parent:redaction",
+    "kind": "policy",
+    "name": "policy.approval_required.tool_call",
+    "status": "approval_required",
+    "startedAt": "2026-06-07T00:00:00.000Z",
+    "endedAt": "2026-06-07T00:00:00.010Z",
+    "eventIds": [
+      "event:policy:redaction"
+    ],
+    "metadata": {
+      "requestId": "req_shell_exec_requires_approval",
+      "runId": "run_policy_fixture",
+      "traceId": "trace:policy:redaction",
+      "phase": "verification",
+      "actionKind": "tool_call",
+      "toolId": "shell.exec",
+      "policyStatus": "approval_required",
+      "decisionHash": "sha256:246d79c6f67f414d57376289fb42d6ac39e8b22869c0575e1ed90a0768891fd3",
+      "requestHash": "sha256:e58cd050f69f3dffdb50183ac6c7e9f737115f89dc15e3e933875860d6e28c5f",
+      "policyBundleHash": "sha256:87f9f02716e3231beb8609b05a6ce64f824a62ebc60c0d1842b22a1e17483bd8",
+      "decidingLayer": "capability",
+      "matchedRuleIds": [
+        "tool.shell.exec.phase",
+        "tool.shell.exec.scope",
+        "tool.shell.exec.default"
+      ]
+    }
+  }
+}

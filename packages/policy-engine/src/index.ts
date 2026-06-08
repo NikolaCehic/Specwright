@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import {
+  PolicyEvaluatedEventPayloadSchema,
   PolicyVerdictSchema,
+  type PolicyEvaluatedEventPayload,
   type ApprovalDecision,
   type BudgetState,
   type PolicyBundle,
@@ -13,9 +15,11 @@ import {
   type PolicyVerdictStatus,
   type RunState
 } from "@specwright/schemas";
+import type { TraceSpanInput, TraceSpanStatus } from "@specwright/trace-recorder";
 import { policyPatternApplies } from "./bundle-load";
 
 export type {
+  PolicyEvaluatedEventPayload,
   ApprovalDecision,
   BudgetState,
   PolicyBundle,
@@ -39,7 +43,22 @@ export type {
   LoadResult
 } from "./bundle-load";
 
-export type PolicyRisk = "low" | "medium" | "high" | "critical";
+export const POLICY_RISKS = ["low", "medium", "high", "critical"] as const;
+export type PolicyRisk = (typeof POLICY_RISKS)[number];
+
+export const POLICY_VERDICT_STATUSES = [
+  "allow",
+  "deny",
+  "approval_required"
+] as const satisfies readonly PolicyVerdictStatus[];
+
+export const POLICY_RULE_EFFECTS = [
+  "allow",
+  "deny",
+  "approval_required",
+  "constrain",
+  "obligate"
+] as const satisfies readonly PolicyRuleEffect[];
 
 export type PolicyAction = {
   kind: string;
@@ -161,6 +180,7 @@ const LAYER_ORDER: readonly PolicyRuleLayer[] = [
   "run_mode",
   "approval"
 ];
+export const POLICY_RULE_LAYERS = LAYER_ORDER;
 
 const DECISION_EFFECTS = new Set<PolicyRuleEffect>([
   "allow",
@@ -243,6 +263,419 @@ export function evaluatePolicy(
   }
 
   return verdictForStatus("allow", request, bundles, matches);
+}
+
+export type PolicyRecordContext = {
+  eventId?: string | undefined;
+  eventIds?: readonly string[] | undefined;
+  traceId: string;
+  spanId: string;
+  parentSpanId?: string | undefined;
+  startedAt: Date | string;
+  endedAt?: Date | string | undefined;
+  bundleSetRef: string;
+  bundleVersions: readonly string[];
+  policyBundles: readonly FixturePolicyBundle[];
+};
+
+export type PolicyEvaluatedRecord = {
+  eventPayload: PolicyEvaluatedEventPayload;
+  span: TraceSpanInput;
+};
+
+export type PolicyRecordErrorCode =
+  | "invalid_policy_record"
+  | "missing_decision_hash"
+  | "missing_event_ids"
+  | "missing_policy_bundle_hash"
+  | "mismatched_policy_bundle_hash"
+  | "missing_deciding_rule"
+  | "malformed_matched_rule"
+  | "unknown_obligation_kind"
+  | "raw_args_leaked";
+
+export class PolicyRecordError extends Error {
+  readonly code: PolicyRecordErrorCode;
+
+  constructor(code: PolicyRecordErrorCode, message: string, cause?: unknown) {
+    super(message);
+    this.name = "PolicyRecordError";
+    this.code = code;
+
+    if (cause !== undefined) {
+      Object.assign(this, { cause });
+    }
+  }
+}
+
+export function toPolicyEvaluatedRecord(
+  request: PolicyRequest,
+  verdict: PolicyVerdict,
+  context: PolicyRecordContext
+): PolicyEvaluatedRecord {
+  const eventIds = eventIdsFor(context);
+  const decisionHash = requireNonEmpty(
+    verdict.decisionHash,
+    "missing_decision_hash",
+    "Policy verdict must carry a decisionHash before recording"
+  );
+  const requestHash = hashJson(request);
+  const policyBundleHash = policyBundleHashFor(verdict, context);
+  const matchedRules = verdict.matchedRules.map(validateRuleMatch);
+  const obligations = verdict.obligations.map(validateObligation);
+  const decidingLayer = decidingLayerOf(matchedRules, verdict.status);
+  const payloadResult = PolicyEvaluatedEventPayloadSchema.safeParse({
+    requestId: request.requestId,
+    runId: request.runId,
+    phase: request.phase,
+    actionKind: request.action.kind,
+    ...(request.action.toolId === undefined ? {} : { toolId: request.action.toolId }),
+    risk: actionRisk(request),
+    status: verdict.status,
+    matchedRules,
+    decidingLayer,
+    constraints: verdict.constraints,
+    obligations,
+    ...(verdict.approvalId === undefined ? {} : { approvalId: verdict.approvalId }),
+    requestHash,
+    policyBundleHash,
+    decisionHash,
+    argsHash: hashJson(request.action.args ?? {}),
+    bundleSetRef: requireNonEmpty(
+      context.bundleSetRef,
+      "invalid_policy_record",
+      "Policy record context must carry a bundleSetRef"
+    ),
+    bundleVersions: nonEmptyStrings(
+      context.bundleVersions,
+      "bundleVersions",
+      "invalid_policy_record"
+    )
+  });
+  if (!payloadResult.success) {
+    throw new PolicyRecordError(
+      "invalid_policy_record",
+      "Policy evaluated event payload failed schema validation",
+      payloadResult.error
+    );
+  }
+
+  const eventPayload = payloadResult.data;
+  const span: TraceSpanInput = {
+    spanId: requireNonEmpty(
+      context.spanId,
+      "invalid_policy_record",
+      "Policy record context must carry a spanId"
+    ),
+    ...(context.parentSpanId === undefined
+      ? {}
+      : {
+          parentSpanId: requireNonEmpty(
+            context.parentSpanId,
+            "invalid_policy_record",
+            "Policy record parentSpanId must be non-empty"
+          )
+        }),
+    kind: "policy",
+    name: `policy.${eventPayload.status}.${eventPayload.actionKind}`,
+    status: spanStatusFor(verdict.status),
+    startedAt: context.startedAt,
+    ...(context.endedAt === undefined ? {} : { endedAt: context.endedAt }),
+    eventIds,
+    metadata: {
+      requestId: eventPayload.requestId,
+      runId: eventPayload.runId,
+      traceId: requireNonEmpty(
+        context.traceId,
+        "invalid_policy_record",
+        "Policy record context must carry a traceId"
+      ),
+      phase: eventPayload.phase,
+      actionKind: eventPayload.actionKind,
+      ...(eventPayload.toolId === undefined ? {} : { toolId: eventPayload.toolId }),
+      policyStatus: eventPayload.status,
+      decisionHash: eventPayload.decisionHash,
+      requestHash: eventPayload.requestHash,
+      policyBundleHash: eventPayload.policyBundleHash,
+      decidingLayer: eventPayload.decidingLayer,
+      matchedRuleIds: eventPayload.matchedRules.map((rule) => rule.ruleId)
+    }
+  };
+
+  assertNoRawArgsLeak(request.action.args, eventPayload, span);
+
+  return { eventPayload, span };
+}
+
+function eventIdsFor(context: PolicyRecordContext) {
+  const eventIds = context.eventIds ?? (
+    context.eventId === undefined ? undefined : [context.eventId]
+  );
+
+  return nonEmptyStrings(
+    eventIds ?? [],
+    "eventIds",
+    "missing_event_ids"
+  );
+}
+
+function policyBundleHashFor(
+  verdict: PolicyVerdict,
+  context: PolicyRecordContext
+) {
+  const policyBundles = requirePolicyBundleSet(
+    (context as { policyBundles?: unknown }).policyBundles
+  );
+  const computedPolicyBundleHash = hashJson(policyBundles);
+
+  if (verdict.policyBundleHash !== undefined) {
+    const verdictPolicyBundleHash = requireNonEmpty(
+      verdict.policyBundleHash,
+      "missing_policy_bundle_hash",
+      "Policy verdict policyBundleHash must be non-empty when supplied"
+    );
+
+    if (verdictPolicyBundleHash !== computedPolicyBundleHash) {
+      throw new PolicyRecordError(
+        "mismatched_policy_bundle_hash",
+        "Policy verdict policyBundleHash does not match the recording context bundle set"
+      );
+    }
+  }
+
+  return computedPolicyBundleHash;
+}
+
+function requirePolicyBundleSet(value: unknown) {
+  if (value === undefined) {
+    throw new PolicyRecordError(
+      "missing_policy_bundle_hash",
+      "Policy record context must carry policyBundles"
+    );
+  }
+
+  if (!Array.isArray(value) || value.some((bundle) => !isRecord(bundle))) {
+    throw new PolicyRecordError(
+      "invalid_policy_record",
+      "Policy record context policyBundles must be an array of bundle objects"
+    );
+  }
+
+  return value as FixturePolicyBundle[];
+}
+
+function validateRuleMatch(match: RuleMatch) {
+  try {
+    return {
+      ruleId: requireNonEmpty(
+        match.ruleId,
+        "malformed_matched_rule",
+        "Matched policy rule must carry ruleId"
+      ),
+      layer: requireKnownLayer(match.layer),
+      effect: requireKnownEffect(match.effect),
+      reason: requireNonEmpty(
+        match.reason,
+        "malformed_matched_rule",
+        "Matched policy rule must carry reason"
+      )
+    };
+  } catch (error) {
+    if (error instanceof PolicyRecordError) {
+      throw error;
+    }
+
+    throw new PolicyRecordError(
+      "malformed_matched_rule",
+      "Matched policy rule is malformed",
+      error
+    );
+  }
+}
+
+function validateObligation(obligation: PolicyObligation) {
+  if (!isKnownObligationKind(obligation.kind)) {
+    throw new PolicyRecordError(
+      "unknown_obligation_kind",
+      `Policy obligation kind ${String(obligation.kind)} is not recognized`
+    );
+  }
+
+  return obligation;
+}
+
+function decidingLayerOf(
+  matchedRules: readonly RuleMatch[],
+  status: PolicyVerdictStatus
+): PolicyRuleLayer {
+  const decisionRule =
+    status === "deny"
+      ? precedenceFirst(matchedRules, (rule) => rule.effect === "deny")
+      : status === "approval_required"
+        ? precedenceFirst(
+            matchedRules,
+            (rule) => rule.effect === "approval_required"
+          )
+        : resolvedAllow(matchedRules);
+
+  if (decisionRule === undefined) {
+    throw new PolicyRecordError(
+      "missing_deciding_rule",
+      `Policy verdict status ${status} has no deciding matched rule`
+    );
+  }
+
+  return decisionRule.layer;
+}
+
+function precedenceFirst(
+  matchedRules: readonly RuleMatch[],
+  predicate: (rule: RuleMatch) => boolean
+) {
+  const matches = matchedRules.filter(predicate);
+
+  return matches.reduce<RuleMatch | undefined>((best, candidate) => {
+    if (best === undefined) {
+      return candidate;
+    }
+
+    return layerRank(candidate.layer) < layerRank(best.layer) ? candidate : best;
+  }, undefined);
+}
+
+function resolvedAllow(matchedRules: readonly RuleMatch[]) {
+  const allowMatches = matchedRules.filter((rule) => rule.effect === "allow");
+  const approvalAllow = allowMatches.find((rule) => rule.layer === "approval");
+
+  if (approvalAllow !== undefined) {
+    return approvalAllow;
+  }
+
+  return allowMatches.reduce<RuleMatch | undefined>((best, candidate) => {
+    if (best === undefined) {
+      return candidate;
+    }
+
+    return layerRank(candidate.layer) > layerRank(best.layer) ? candidate : best;
+  }, undefined);
+}
+
+function spanStatusFor(status: PolicyVerdictStatus): TraceSpanStatus {
+  switch (status) {
+    case "allow":
+      return "success";
+    case "deny":
+      return "denied";
+    case "approval_required":
+      return "approval_required";
+    default:
+      assertNever(status);
+  }
+}
+
+function requireKnownLayer(layer: PolicyRuleLayer) {
+  if (!POLICY_RULE_LAYERS.includes(layer)) {
+    throw new PolicyRecordError(
+      "malformed_matched_rule",
+      `Matched policy rule layer ${String(layer)} is not recognized`
+    );
+  }
+
+  return layer;
+}
+
+function requireKnownEffect(effect: PolicyRuleEffect) {
+  if (!POLICY_RULE_EFFECTS.includes(effect)) {
+    throw new PolicyRecordError(
+      "malformed_matched_rule",
+      `Matched policy rule effect ${String(effect)} is not recognized`
+    );
+  }
+
+  return effect;
+}
+
+function isKnownObligationKind(kind: PolicyObligation["kind"]) {
+  return (
+    kind === "record_event" ||
+    kind === "redact" ||
+    kind === "stage_write" ||
+    kind === "run_eval" ||
+    kind === "require_evidence" ||
+    kind === "attach_trace" ||
+    kind === "mark_external_source" ||
+    kind === "request_human_review"
+  );
+}
+
+function requireNonEmpty(
+  value: string | undefined,
+  code: PolicyRecordErrorCode,
+  message: string
+) {
+  if (typeof value !== "string" || value.length === 0) {
+    throw new PolicyRecordError(code, message);
+  }
+
+  return value;
+}
+
+function nonEmptyStrings(
+  values: readonly string[],
+  label: string,
+  code: PolicyRecordErrorCode
+) {
+  if (
+    values.length === 0 ||
+    values.some((value) => typeof value !== "string" || value.length === 0)
+  ) {
+    throw new PolicyRecordError(
+      code,
+      `Policy record ${label} must contain at least one non-empty string`
+    );
+  }
+
+  return [...values];
+}
+
+function assertNoRawArgsLeak(
+  args: Record<string, unknown> | undefined,
+  eventPayload: PolicyEvaluatedEventPayload,
+  span: TraceSpanInput
+) {
+  const rawStrings = rawArgStrings(args);
+
+  if (rawStrings.length === 0) {
+    return;
+  }
+
+  const serialized = stableStringify({ eventPayload, span });
+  const leaked = rawStrings.find((value) => serialized.includes(value));
+
+  if (leaked !== undefined) {
+    throw new PolicyRecordError(
+      "raw_args_leaked",
+      `Policy evaluated record contains raw action args value ${JSON.stringify(
+        leaked
+      )}`
+    );
+  }
+}
+
+function rawArgStrings(value: unknown): string[] {
+  if (typeof value === "string" && value.length > 0) {
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap(rawArgStrings);
+  }
+
+  if (isRecord(value)) {
+    return Object.values(value).flatMap(rawArgStrings);
+  }
+
+  return [];
 }
 
 function addHostPolicySnapshotMatches(
@@ -903,4 +1336,11 @@ function normalizeStable(value: unknown): unknown {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function assertNever(value: never): never {
+  throw new PolicyRecordError(
+    "invalid_policy_record",
+    `Unhandled policy record value ${String(value)}`
+  );
 }

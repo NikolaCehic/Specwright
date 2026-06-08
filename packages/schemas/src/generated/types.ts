@@ -72,6 +72,7 @@ import {
   PolicyBundleSchema,
   PolicyConstraintSchema,
   PolicyEvaluatedEventPayloadSchema,
+  PolicyEvaluatedEventSchema,
   PolicyObligationSchema,
   PolicyRuleEffectSchema,
   PolicyRuleLayerSchema,
@@ -131,6 +132,7 @@ export type ContractTypeById = {
   "specwright.event.human.input_requested": z.infer<typeof HumanInputRequestedEventPayloadSchema>;
   "specwright.event.phase.entered": z.infer<typeof PhaseEnteredEventPayloadSchema>;
   "specwright.event.phase.transitioned": z.infer<typeof PhaseTransitionedEventPayloadSchema>;
+  "specwright.event.policy-evaluated-event": z.infer<typeof PolicyEvaluatedEventSchema>;
   "specwright.event.policy.evaluated": z.infer<typeof PolicyEvaluatedEventPayloadSchema>;
   "specwright.event.run.completed": z.infer<typeof RunCompletedEventPayloadSchema>;
   "specwright.event.run.failed": z.infer<typeof RunFailedEventPayloadSchema>;
