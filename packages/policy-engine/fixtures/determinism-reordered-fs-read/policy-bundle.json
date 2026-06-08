@@ -1,0 +1,39 @@
+{
+  "toolPolicy": {
+    "fs.read": {
+      "obligations": [
+        {
+          "params": {
+            "eventType": "tool.authorized"
+          },
+          "kind": "record_event"
+        },
+        {
+          "kind": "require_evidence"
+        }
+      ],
+      "constraints": [
+        {
+          "value": 65536,
+          "kind": "maxBytes"
+        }
+      ],
+      "allowedScopes": [
+        "workspace:read",
+        "evidence:read"
+      ],
+      "requiredScopes": [
+        "workspace:read"
+      ],
+      "allowedPhases": [
+        "source_discovery",
+        "evidence"
+      ],
+      "reason": "fs.read is allowed for source and evidence discovery",
+      "risk": "low",
+      "default": "allow"
+    }
+  },
+  "description": "Allows read-only filesystem access during source and evidence discovery.",
+  "id": "fixture.fs-read"
+}

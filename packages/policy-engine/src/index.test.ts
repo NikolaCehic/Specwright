@@ -18,8 +18,11 @@ import {
 } from "./index";
 import "./bundle-load.test";
 import "./conformance.test";
+import "./decision-hash.test";
+import "./determinism.test";
 import "./mutation.test";
 import "./pattern-safety.test";
+import "./replay.test";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
 
@@ -42,7 +45,12 @@ const fixtureCases = [
   "budget-within-limit-allowed",
   "run-mode-local-dev-allowed",
   "run-mode-ci-denied",
-  "host-deny-wins"
+  "host-deny-wins",
+  "determinism-reordered-fs-read",
+  "replay-equivalent-fs-read",
+  "replay-changed-stored-hash",
+  "replay-input-drift",
+  "replay-unpinned-bundle"
 ];
 const recordProjectionCases = [
   {

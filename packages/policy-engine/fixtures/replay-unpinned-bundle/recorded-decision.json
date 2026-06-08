@@ -1,0 +1,7 @@
+{
+  "sourceFixture": "fs-read-allowed-in-evidence",
+  "hashAlgoVersion": "v1",
+  "requestHash": "sha256:8a7146cd676565093cdb2bd2d6854dbe6dae1ef13ddf7223692def46c7b87a77",
+  "storedDecisionHash": "sha256:88fa070ebab11cd19497b511450a74c16f4dcd774bb915499ac0866d5640ece9",
+  "expectedDivergenceClass": "unreplayable"
+}

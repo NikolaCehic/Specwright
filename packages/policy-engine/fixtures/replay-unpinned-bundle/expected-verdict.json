@@ -1,0 +1,57 @@
+{
+  "status": "allow",
+  "reasons": [
+    "Tool fs.read is allowed in phase evidence",
+    "Tool fs.read scopes are within policy",
+    "fs.read is allowed for source and evidence discovery"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "workspace:read",
+        "evidence:read"
+      ],
+      "sourceRuleId": "tool.fs.read.scope"
+    },
+    {
+      "kind": "maxBytes",
+      "value": 65536,
+      "sourceRuleId": "tool.fs.read.default"
+    }
+  ],
+  "obligations": [
+    {
+      "kind": "record_event",
+      "params": {
+        "eventType": "tool.authorized"
+      },
+      "sourceRuleId": "tool.fs.read.default"
+    },
+    {
+      "kind": "require_evidence",
+      "sourceRuleId": "tool.fs.read.default"
+    }
+  ],
+  "matchedRules": [
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool fs.read scopes are within policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed for source and evidence discovery"
+    }
+  ],
+  "decisionHash": "sha256:88fa070ebab11cd19497b511450a74c16f4dcd774bb915499ac0866d5640ece9"
+}

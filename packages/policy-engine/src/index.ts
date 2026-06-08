@@ -1,4 +1,3 @@
-import { createHash } from "node:crypto";
 import {
   PolicyEvaluatedEventPayloadSchema,
   PolicyVerdictSchema,
@@ -17,6 +16,7 @@ import {
 } from "@specwright/schemas";
 import type { TraceSpanInput, TraceSpanStatus } from "@specwright/trace-recorder";
 import { policyPatternApplies } from "./bundle-load";
+import { hashDecision, hashJson, stableStringify } from "./decision-hash";
 
 export type {
   PolicyEvaluatedEventPayload,
@@ -42,6 +42,34 @@ export type {
   BundleLoadFailure,
   LoadResult
 } from "./bundle-load";
+export {
+  HASH_ALGO_VERSION,
+  HASH_ALGO_VERSIONS,
+  hashDecision,
+  hashDecisionForVersion,
+  hashDecisionWithMetadata,
+  hashJson,
+  hashJsonForVersion,
+  isHashAlgoVersion,
+  normalizeStable,
+  stableStringify
+} from "./decision-hash";
+export type {
+  DecisionHashInput,
+  DecisionHashResult,
+  HashAlgoVersion,
+  HashDigest
+} from "./decision-hash";
+export {
+  replayPolicyDecision,
+  verifyDecisionHash
+} from "./replay";
+export type {
+  PolicyDecisionReplayRecord,
+  PolicyReplayDivergenceClass,
+  PolicyReplayResult,
+  PolicyReplayStatus
+} from "./replay";
 
 export const POLICY_RISKS = ["low", "medium", "high", "critical"] as const;
 export type PolicyRisk = (typeof POLICY_RISKS)[number];
@@ -1289,49 +1317,6 @@ function uniqueByStableJson<TValue>(values: readonly TValue[]) {
   }
 
   return result;
-}
-
-function hashDecision(input: {
-  requestHash: string;
-  policyBundleHash: string;
-  matchedRuleIds: string[];
-  status: PolicyVerdictStatus;
-  constraints: PolicyConstraint[];
-  obligations: PolicyObligation[];
-}) {
-  return hashJson(input);
-}
-
-function hashJson(value: unknown) {
-  return `sha256:${createHash("sha256")
-    .update(stableStringify(value))
-    .digest("hex")}`;
-}
-
-function stableStringify(value: unknown): string {
-  return JSON.stringify(normalizeStable(value));
-}
-
-function normalizeStable(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map(normalizeStable);
-  }
-
-  if (isRecord(value)) {
-    const normalized: Record<string, unknown> = {};
-
-    for (const key of Object.keys(value).sort()) {
-      const normalizedValue = normalizeStable(value[key]);
-
-      if (normalizedValue !== undefined) {
-        normalized[key] = normalizedValue;
-      }
-    }
-
-    return normalized;
-  }
-
-  return value;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
