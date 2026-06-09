@@ -219,8 +219,10 @@ describe("runtime facade", () => {
           provenance: {
             toolId: "fs.read",
             toolVersion: "0.1.0",
+            adapterVersion: "0.1.0",
             argsHash: "sha256:args",
             resultHash: "sha256:result",
+            decisionHash: "sha256:decision",
             cacheStatus: "bypass",
             traceId: context?.traceId ?? "trace-tool"
           }
@@ -388,8 +390,10 @@ describe("runtime facade", () => {
           provenance: {
             toolId: "fs.read",
             toolVersion: "0.1.0",
+            adapterVersion: "0.1.0",
             argsHash: "sha256:args",
             resultHash: "sha256:result",
+            decisionHash: "sha256:decision",
             cacheStatus: "bypass",
             traceId: context?.traceId ?? "trace-report"
           }

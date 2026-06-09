@@ -12,8 +12,10 @@
   "provenance": {
     "toolId": "model.review",
     "toolVersion": "1.0.0",
+    "adapterVersion": "1.0.0",
     "argsHash": "sha256:recorded-advisory-args",
     "resultHash": "sha256:recorded-advisory-result",
+    "decisionHash": "sha256:recorded-advisory-decision",
     "cacheStatus": "miss",
     "traceId": "trace_model_advisory"
   }

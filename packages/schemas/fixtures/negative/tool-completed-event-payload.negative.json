@@ -4,8 +4,10 @@
       "path": "packages/schemas/CONTRACTS.md"
     },
     "provenance": {
+      "adapterVersion": "1.0.0",
       "argsHash": "sha256:args-fixture",
       "cacheStatus": "miss",
+      "decisionHash": "sha256:decision-fixture",
       "resultHash": "sha256:result-fixture",
       "toolId": "fs.read",
       "toolVersion": "1.0.0",

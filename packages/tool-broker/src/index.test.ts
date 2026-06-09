@@ -9,6 +9,21 @@ import type {
 import { ToolCallResultSchema } from "@specwright/schemas";
 import { z } from "zod";
 import {
+  EGRESS_ERROR_SECRET,
+  EGRESS_FIXTURE_ADAPTER_VERSION,
+  EGRESS_OUTPUT_BEARER,
+  EGRESS_OUTPUT_CREDENTIAL,
+  EGRESS_OUTPUT_INVALID_SECRET,
+  EGRESS_OUTPUT_TOKEN,
+  egressAllowPolicyBundle,
+  egressErrorDefinition,
+  egressInvalidOutputDefinition,
+  egressMissingRedactionDischargePolicyBundle,
+  egressSecretDefinition,
+  egressSecretRawOutput,
+  egressValidDefinition
+} from "../fixtures/egress/definitions";
+import {
   TOOL_BROKER_APPROVAL_ID,
   toolBrokerAllowPolicyBundle,
   toolBrokerApprovalRequiredPolicyBundle,
@@ -25,6 +40,7 @@ import {
   computeLimits,
   createDefaultCapabilityRegistry,
   createToolBroker,
+  FILESYSTEM_ADAPTER_VERSION,
   FsReadInputSchema,
   FsReadOutputSchema,
   hashValue,
@@ -48,6 +64,8 @@ describe("tool broker filesystem capabilities", () => {
     expect(result.provenance.toolVersion).toBe("0.1.0");
     expect(result.provenance.argsHash.startsWith("sha256:")).toBe(true);
     expect(result.provenance.resultHash?.startsWith("sha256:")).toBe(true);
+    expect(result.provenance.adapterVersion).toBe(FILESYSTEM_ADAPTER_VERSION);
+    expect(result.provenance.decisionHash?.startsWith("sha256:")).toBe(true);
     expect(result.provenance.cacheStatus).toBe("bypass");
     expect(result.provenance.traceId).toBe("trace_fs_list_allowed");
     expect(result.output).toEqual({
@@ -76,6 +94,8 @@ describe("tool broker filesystem capabilities", () => {
     expect(result.status).toBe("success");
     expect(result.provenance.toolId).toBe("fs.read");
     expect(result.provenance.resultHash?.startsWith("sha256:")).toBe(true);
+    expect(result.provenance.adapterVersion).toBe(FILESYSTEM_ADAPTER_VERSION);
+    expect(result.provenance.decisionHash?.startsWith("sha256:")).toBe(true);
     expect(result.output).toEqual({
       path: "src/index.ts",
       content: 'export const sample = "Specwright";\n',
@@ -352,6 +372,8 @@ describe("tool broker filesystem capabilities", () => {
 
     expectResultSchema(resumed);
     expect(resumed.status).toBe("success");
+    expect(resumed.provenance.approvalId).toBe(TOOL_BROKER_APPROVAL_ID);
+    expect(resumed.provenance.decisionHash?.startsWith("sha256:")).toBe(true);
     expect(resumed.output).toEqual({
       path: "src/index.ts",
       content: 'export const sample = "Specwright";\n',
@@ -610,6 +632,187 @@ describe("tool broker filesystem capabilities", () => {
     });
   });
 
+  test("schema-valid fixture output carries enterprise provenance", async () => {
+    const result = await broker({
+      registry: egressRegistry(),
+      policyBundle: egressAllowPolicyBundle
+    }).callTool(request("fixture.egress.valid", { query: "valid" }), {
+      traceId: "trace_egress_valid"
+    });
+
+    expectResultSchema(result);
+    expect(result.status).toBe("success");
+    expect(result.provenance.adapterVersion).toBe(EGRESS_FIXTURE_ADAPTER_VERSION);
+    expect(result.provenance.decisionHash?.startsWith("sha256:")).toBe(true);
+    expect(result.provenance.resultHash).toBe(hashValue(result.output));
+    expect(result.provenance.spanId).toBeUndefined();
+    expect(result.provenance.eventIds).toBeUndefined();
+  });
+
+  test("schema-invalid adapter output fails before redaction and sanitizes output_invalid text", async () => {
+    const result = await broker({
+      registry: egressRegistry(),
+      policyBundle: egressAllowPolicyBundle
+    }).callTool(
+      request("fixture.egress.invalid-output", { query: "invalid" }),
+      {
+        traceId: "trace_egress_invalid"
+      }
+    );
+    const serialized = JSON.stringify(result);
+
+    expectResultSchema(result);
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("output_invalid");
+    expect(result.output).toBeUndefined();
+    expect(result.provenance.redactionSummary).toBeUndefined();
+    expect(result.provenance.adapterVersion).toBe(EGRESS_FIXTURE_ADAPTER_VERSION);
+    expect(result.provenance.decisionHash?.startsWith("sha256:")).toBe(true);
+    expect(serialized).not.toContain(EGRESS_OUTPUT_INVALID_SECRET);
+    expect(result.error?.message).toContain(hashValue(EGRESS_OUTPUT_INVALID_SECRET));
+  });
+
+  test("validated output is redacted before result construction and summarized without raw values", async () => {
+    const args = { query: "customer", limit: 2 };
+    const result = await broker({
+      registry: egressRegistry(),
+      policyBundle: egressAllowPolicyBundle
+    }).callTool(request("fixture.egress.secret-output", args), {
+      traceId: "trace_egress_secret",
+      spanId: "span_egress_secret",
+      eventIds: ["event_tool_executed", "event_tool_completed"]
+    });
+    const serialized = JSON.stringify(result);
+
+    expectResultSchema(result);
+    expect(result.status).toBe("success");
+    expect(result.output).toEqual({
+      account: {
+        apiToken: hashValue(EGRESS_OUTPUT_TOKEN),
+        name: "Acme External",
+        nested: {
+          credential: hashValue(EGRESS_OUTPUT_CREDENTIAL)
+        }
+      },
+      notes: [
+        {
+          label: "authorization",
+          value: hashValue(EGRESS_OUTPUT_BEARER)
+        }
+      ]
+    });
+    expect(result.provenance.argsHash).toBe(hashValue(args));
+    expect(result.provenance.resultHash).toBe(hashValue(result.output));
+    expect(result.provenance.resultHash).not.toBe(hashValue(egressSecretRawOutput()));
+    expect(result.provenance.adapterVersion).toBe(EGRESS_FIXTURE_ADAPTER_VERSION);
+    expect(result.provenance.decisionHash?.startsWith("sha256:")).toBe(true);
+    expect(result.provenance.spanId).toBe("span_egress_secret");
+    expect(result.provenance.eventIds).toEqual([
+      "event_tool_executed",
+      "event_tool_completed"
+    ]);
+    expect(result.provenance.redactionSummary).toEqual({
+      redactedCount: 3,
+      redactions: [
+        {
+          path: "account.apiToken",
+          classification: "secret",
+          hash: hashValue(EGRESS_OUTPUT_TOKEN)
+        },
+        {
+          path: "account.nested.credential",
+          classification: "policy_redact",
+          hash: hashValue(EGRESS_OUTPUT_CREDENTIAL)
+        },
+        {
+          path: "notes.0.value",
+          classification: "secret",
+          hash: hashValue(EGRESS_OUTPUT_BEARER)
+        }
+      ],
+      dischargedObligations: [
+        {
+          kind: "mark_external_source",
+          sourceRuleId: "tool.fixture.egress.secret-output.default",
+          externalSource: "external://fixture-crm/customer-record"
+        },
+        {
+          kind: "redact",
+          sourceRuleId: "tool.fixture.egress.secret-output.default",
+          selector: "account.nested.credential"
+        }
+      ]
+    });
+    expect(serialized).not.toContain(EGRESS_OUTPUT_TOKEN);
+    expect(serialized).not.toContain(EGRESS_OUTPUT_CREDENTIAL);
+    expect(serialized).not.toContain(EGRESS_OUTPUT_BEARER);
+  });
+
+  test("adapter failure messages are sanitized before returning errors", async () => {
+    const result = await broker({
+      registry: egressRegistry(),
+      policyBundle: egressAllowPolicyBundle
+    }).callTool(request("fixture.egress.error", { query: "error" }), {
+      traceId: "trace_egress_error"
+    });
+
+    expectResultSchema(result);
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("adapter_error");
+    expect(result.error?.message).not.toContain(EGRESS_ERROR_SECRET);
+    expect(result.error?.message).toContain(hashValue(EGRESS_ERROR_SECRET));
+    expect(JSON.stringify(result)).not.toContain(EGRESS_ERROR_SECRET);
+  });
+
+  test("missing redaction obligation discharge fails closed", async () => {
+    const result = await broker({
+      registry: egressRegistry(),
+      policyBundle: egressMissingRedactionDischargePolicyBundle
+    }).callTool(request("fixture.egress.secret-output", { query: "gap" }), {
+      traceId: "trace_egress_redaction_gap"
+    });
+    const serialized = JSON.stringify(result);
+
+    expectResultSchema(result);
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("obligation_not_discharged");
+    expect(result.error?.message).toContain("account.missingToken");
+    expect(result.output).toBeUndefined();
+    expect(serialized).not.toContain(EGRESS_OUTPUT_TOKEN);
+    expect(serialized).not.toContain(EGRESS_OUTPUT_CREDENTIAL);
+  });
+
+  test("redaction and hashes are deterministic and argsHash stays order-independent", async () => {
+    const leftArgs = { query: "customer", limit: 2 };
+    const rightArgs = { limit: 2, query: "customer" };
+    const testBroker = broker({
+      registry: egressRegistry(),
+      policyBundle: egressAllowPolicyBundle
+    });
+    const first = await testBroker.callTool(
+      request("fixture.egress.secret-output", leftArgs),
+      { traceId: "trace_egress_determinism_first" }
+    );
+    const second = await testBroker.callTool(
+      request("fixture.egress.secret-output", rightArgs),
+      { traceId: "trace_egress_determinism_second" }
+    );
+
+    expectResultSchema(first);
+    expectResultSchema(second);
+    expect(first.status).toBe("success");
+    expect(second.status).toBe("success");
+    expect(first.output).toEqual(second.output);
+    expect(first.provenance.redactionSummary).toEqual(
+      second.provenance.redactionSummary
+    );
+    expect(first.provenance.argsHash).toBe(second.provenance.argsHash);
+    expect(first.provenance.argsHash).toBe(hashValue(leftArgs));
+    expect(second.provenance.argsHash).toBe(hashValue(rightArgs));
+    expect(first.provenance.resultHash).toBe(second.provenance.resultHash);
+    expect(first.provenance.resultHash).toBe(hashValue(first.output));
+  });
+
   test("hashValue is deterministic, key-sorted, and drops undefined values", () => {
     const left = hashValue({ b: 2, a: 1, omitted: undefined });
     const right = hashValue({ a: 1, b: 2 });
@@ -657,6 +860,15 @@ function request(toolId: string, args: unknown) {
       phase: "evidence"
     }
   };
+}
+
+function egressRegistry() {
+  return new CapabilityRegistry([
+    egressValidDefinition(),
+    egressInvalidOutputDefinition(),
+    egressSecretDefinition(),
+    egressErrorDefinition()
+  ]);
 }
 
 function expectResultSchema(result: unknown) {

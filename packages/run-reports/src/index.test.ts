@@ -221,10 +221,12 @@ describe("run reports", () => {
           provenance: {
             toolId: "tool.fs.read",
             toolVersion: "0.1.0",
+            adapterVersion: "0.1.0",
             argsHash:
               "sha256:d8576b4d26ccf208a9372f9df7e7e9d6786fd8a292091fea2bc1e86a6a41b5d8",
             resultHash:
               "sha256:4b01f791f3caecd55bb6f23a443731846f66adef1d7bc0c1c8d817cf32603fbe",
+            decisionHash: "sha256:report-redaction-decision",
             cacheStatus: "bypass",
             traceId: "trace-redacted-report"
           }
@@ -396,8 +398,10 @@ async function createSuccessfulRun(runId: string) {
         provenance: {
           toolId: "tool.fs.read",
           toolVersion: "0.1.0",
+          adapterVersion: "0.1.0",
           argsHash: "sha256:args",
           resultHash: "sha256:result",
+          decisionHash: "sha256:decision",
           cacheStatus: "bypass",
           traceId: `trace-${runId}`
         }

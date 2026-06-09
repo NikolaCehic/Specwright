@@ -16,7 +16,7 @@ export const RUNTIME_EVENT_SCHEMA_HASHES = {
   "run.failed": "sha256:798b78acec10d4ee5398ef0b16bdfc96fabe7877c8d547d84c2d0b3b9d99286e",
   "run.started": "sha256:a670db6bd3212b2022150b28ed9b9636135886c9d7da76d98f926a060a047c53",
   "tool.authorized": "sha256:837d353fd10767218af0161d212403f3ce48f7ef51ee065af41f54e5dcc9f42d",
-  "tool.completed": "sha256:4f968d003f7352138f68b03ef2aba6179a64386adcd924d915b39403a960b85d",
-  "tool.denied": "sha256:8189752eb42678f931a04061084dcc6bfb24b280ed623a66c0fa60ba3ff5c18c",
+  "tool.completed": "sha256:13f3f758118cb349afe15870ef70eb0047da7e65d9a153c125d221ac365f6e58",
+  "tool.denied": "sha256:1fd374501c298b56e0b0caecae2d7f4ee7572202d214da1f9b91067e03b5afc7",
   "tool.requested": "sha256:88687b2da2fa70ad290d920ab1b83e65f1523e29fd86df3b00fa40f0441ad7d0"
 } as const;

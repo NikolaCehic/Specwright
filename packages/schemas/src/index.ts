@@ -730,6 +730,31 @@ export const ToolCallRequestSchema = z
   .strict();
 export type ToolCallRequest = z.infer<typeof ToolCallRequestSchema>;
 
+const ToolCallRedactionSummarySchema = z
+  .object({
+    redactedCount: z.number().int().nonnegative(),
+    redactions: z.array(
+      z
+        .object({
+          path: nonEmptyString,
+          classification: nonEmptyString,
+          hash: nonEmptyString
+        })
+        .strict()
+    ),
+    dischargedObligations: z.array(
+      z
+        .object({
+          kind: z.enum(["redact", "mark_external_source"]),
+          sourceRuleId: nonEmptyString,
+          selector: nonEmptyString.optional(),
+          externalSource: nonEmptyString.optional()
+        })
+        .strict()
+    )
+  })
+  .strict();
+
 export const ToolCallResultSchema = z
   .object({
     toolCallId: nonEmptyString,
@@ -750,11 +775,49 @@ export const ToolCallResultSchema = z
         argsHash: nonEmptyString,
         resultHash: nonEmptyString.optional(),
         cacheStatus: CacheStatusSchema,
-        traceId: nonEmptyString
+        traceId: nonEmptyString,
+        adapterVersion: nonEmptyString.optional(),
+        decisionHash: nonEmptyString.optional(),
+        approvalId: nonEmptyString.optional(),
+        spanId: nonEmptyString.optional(),
+        eventIds: z.array(nonEmptyString).optional(),
+        redactionSummary: ToolCallRedactionSummarySchema.optional()
       })
       .strict()
   })
-  .strict();
+  .strict()
+  .superRefine((result, context) => {
+    // A successful ToolCallResult represents an executed adapter call. Executed
+    // calls must carry the adapter build, policy decision, and model-visible
+    // result digest; pre-resolution/pre-policy failures may omit them.
+    if (result.status !== "success") {
+      return;
+    }
+
+    if (result.provenance.resultHash === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["provenance", "resultHash"],
+        message: "success ToolCallResult requires provenance.resultHash"
+      });
+    }
+
+    if (result.provenance.adapterVersion === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["provenance", "adapterVersion"],
+        message: "success ToolCallResult requires provenance.adapterVersion"
+      });
+    }
+
+    if (result.provenance.decisionHash === undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["provenance", "decisionHash"],
+        message: "success ToolCallResult requires provenance.decisionHash"
+      });
+    }
+  });
 export type ToolCallResult = z.infer<typeof ToolCallResultSchema>;
 
 export const ArtifactInputSchema = z

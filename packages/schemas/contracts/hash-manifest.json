@@ -86,7 +86,7 @@
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "ToolCallResultSchema",
-    "hash": "sha256:2697fd9e9958d42e3d6411fe616ee3a7f4b15eddfae34842fb9a37a84abf095c",
+    "hash": "sha256:7dad986fea6b0d28ef7442772461469d62748242318e3abbf5349f2bce18fe1c",
     "id": "specwright.capability.tool-call-result",
     "version": "1"
   },
@@ -226,7 +226,7 @@
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "RuntimeEventSchema",
-    "hash": "sha256:21b73d32904b70829fbdf767c9cdc982e587c9d4c9c9669b61eb78831f253879",
+    "hash": "sha256:beda5c802c408ff4b39bcf34e476a4ad754b74942f64f03762df74964660a664",
     "id": "specwright.event.runtime-event",
     "version": "1"
   },
@@ -254,14 +254,14 @@
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "ToolCompletedEventPayloadSchema",
-    "hash": "sha256:4f968d003f7352138f68b03ef2aba6179a64386adcd924d915b39403a960b85d",
+    "hash": "sha256:13f3f758118cb349afe15870ef70eb0047da7e65d9a153c125d221ac365f6e58",
     "id": "specwright.event.tool.completed",
     "version": "1"
   },
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "ToolDeniedEventPayloadSchema",
-    "hash": "sha256:8189752eb42678f931a04061084dcc6bfb24b280ed623a66c0fa60ba3ff5c18c",
+    "hash": "sha256:1fd374501c298b56e0b0caecae2d7f4ee7572202d214da1f9b91067e03b5afc7",
     "id": "specwright.event.tool.denied",
     "version": "1"
   },
