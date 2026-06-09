@@ -3,6 +3,9 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "properties": {
+    "decisionHash": {
+      "type": "string"
+    },
     "evaluatedAt": {
       "format": "date-time",
       "type": "string"
@@ -190,7 +193,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "lifecycle",
-    "hash": "sha256:044aa4081ae7d3dc72af62360c716b5cb44b51a7de4a1ab8544b922361002eb7",
+    "hash": "sha256:b237bfe42dcf456e9802a0ab3afaf30f9f984428cbfa16af7e5f23ff050061a0",
     "id": "specwright.lifecycle.gate-verdict",
     "status": "public",
     "version": "1"

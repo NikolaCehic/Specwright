@@ -234,13 +234,13 @@
     {
       "baselineHash": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c",
+      "classification": "migration-required",
+      "currentHash": "sha256:b4fe790a00e3055212f30a7c89e86531a4735ffacc7b281dc60819e2888c6457",
       "currentVersion": "1",
       "exportName": "GateEvaluatedEventPayloadSchema",
       "id": "specwright.event.gate.evaluated",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:bf81a597052653e924e313dd53d7186f7fbc640f655c3ef1ac9dc3500ce8e17f",
@@ -354,7 +354,7 @@
       "baselineHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
       "baselineVersion": "1",
       "classification": "migration-required",
-      "currentHash": "sha256:868293cd2d6101cc7aa48a8bb9cfcb705d892951d511bfd9ef8cd5d11c93bede",
+      "currentHash": "sha256:21b73d32904b70829fbdf767c9cdc982e587c9d4c9c9669b61eb78831f253879",
       "currentVersion": "1",
       "exportName": "RuntimeEventSchema",
       "id": "specwright.event.runtime-event",
@@ -903,13 +903,13 @@
     {
       "baselineHash": "sha256:044aa4081ae7d3dc72af62360c716b5cb44b51a7de4a1ab8544b922361002eb7",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:044aa4081ae7d3dc72af62360c716b5cb44b51a7de4a1ab8544b922361002eb7",
+      "classification": "migration-required",
+      "currentHash": "sha256:b237bfe42dcf456e9802a0ab3afaf30f9f984428cbfa16af7e5f23ff050061a0",
       "currentVersion": "1",
       "exportName": "GateVerdictSchema",
       "id": "specwright.lifecycle.gate-verdict",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:8578421450ae56f7c5489ab744d9608f1ca88336887603839b9d432fb2b57801",
@@ -1103,22 +1103,26 @@
   "registryVersion": "scope-01.packet-05",
   "releasePolicy": {
     "auditExportChanges": [
+      "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
-      "specwright.harness.harness-snapshot"
+      "specwright.harness.harness-snapshot",
+      "specwright.lifecycle.gate-verdict"
     ],
     "changedContractIds": [
+      "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
-      "specwright.harness.harness-snapshot"
+      "specwright.harness.harness-snapshot",
+      "specwright.lifecycle.gate-verdict"
     ],
     "compatibilityClasses": {
       "specwright.adapter.host-kind": "unchanged",
@@ -1142,7 +1146,7 @@
       "specwright.event.decision.recorded": "unchanged",
       "specwright.event.eval.completed": "unchanged",
       "specwright.event.evidence.recorded": "unchanged",
-      "specwright.event.gate.evaluated": "unchanged",
+      "specwright.event.gate.evaluated": "migration-required",
       "specwright.event.harness.loaded": "migration-required",
       "specwright.event.human.answer_recorded": "unchanged",
       "specwright.event.human.input_requested": "unchanged",
@@ -1203,7 +1207,7 @@
       "specwright.lifecycle.gate-repair-task": "unchanged",
       "specwright.lifecycle.gate-required-action": "unchanged",
       "specwright.lifecycle.gate-severity": "unchanged",
-      "specwright.lifecycle.gate-verdict": "unchanged",
+      "specwright.lifecycle.gate-verdict": "migration-required",
       "specwright.lifecycle.gate-verdict-status": "unchanged",
       "specwright.lifecycle.repair-task": "unchanged",
       "specwright.lifecycle.run-input": "unchanged",
@@ -1225,32 +1229,38 @@
     "conformanceResultSummary": "migration review required before release",
     "contractRegistryVersion": "scope-01.packet-05",
     "generatedSdkSurfaceChanges": [
+      "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
-      "specwright.harness.harness-snapshot"
+      "specwright.harness.harness-snapshot",
+      "specwright.lifecycle.gate-verdict"
     ],
     "migrationRequirements": [
+      "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.governance.policy-bundle",
-      "specwright.harness.harness-snapshot"
+      "specwright.harness.harness-snapshot",
+      "specwright.lifecycle.gate-verdict"
     ],
     "redactionChanges": [
       "specwright.event.policy-evaluated-event"
     ],
     "unsupportedHistoricalVersions": [
+      "specwright.event.gate.evaluated@1",
       "specwright.event.harness.loaded@1",
       "specwright.event.policy.evaluated@1",
       "specwright.event.runtime-event@1",
       "specwright.event.runtime-event-envelope@1",
       "specwright.governance.policy-bundle@1",
-      "specwright.harness.harness-snapshot@1"
+      "specwright.harness.harness-snapshot@1",
+      "specwright.lifecycle.gate-verdict@1"
     ]
   },
   "summary": {
@@ -1258,8 +1268,8 @@
     "backward-compatible": 0,
     "breaking": 0,
     "forward-compatible": 0,
-    "migration-required": 6,
+    "migration-required": 8,
     "patch-compatible": 0,
-    "unchanged": 93
+    "unchanged": 91
   }
 }

@@ -21,6 +21,7 @@ import {
   validateGateDefinition,
   type GateDefinitionFinding
 } from "./definition";
+import { gateDecisionHashInput, hashDecision } from "./decision-hash";
 
 export type {
   GateApprovalRequest as ApprovalRequest,
@@ -36,6 +37,14 @@ export type {
   PolicyVerdict,
   PolicyVerdictStatus
 } from "@specwright/schemas";
+export {
+  gateDecisionHashInput,
+  hashDecision,
+  hashJson,
+  normalizeStable,
+  stableStringify
+} from "./decision-hash";
+export type { GateDecisionHashInput, HashDigest } from "./decision-hash";
 
 export const DEFAULT_EVALUATED_AT = "1970-01-01T00:00:00.000Z";
 export const DEFAULT_GATE_ENGINE_EVALUATOR = "specwright.gate-engine.v0";
@@ -48,10 +57,14 @@ export type GateLifecycleInstructionKind =
   | "create_repair_task"
   | "fail_run";
 
+export type HashedGateVerdict = GateVerdict & { decisionHash: string };
+
 export type GateEvaluationResult = {
-  verdict: GateVerdict;
+  verdict: HashedGateVerdict;
   instruction: GateLifecycleInstruction;
 };
+
+type UnhashedGateVerdict = Omit<GateVerdict, "decisionHash">;
 
 export type GateArtifactSnapshot = {
   artifactId?: string;
@@ -834,7 +847,7 @@ function failClosed(input: {
 
 function validatedGateResult(input: GateEvaluationResult): GateEvaluationResult {
   return {
-    verdict: GateVerdictSchema.parse(input.verdict),
+    verdict: parseHashedGateVerdict(input.verdict),
     instruction: GateLifecycleInstructionSchema.parse(input.instruction)
   };
 }
@@ -986,8 +999,8 @@ function repairTaskFor(
   return base;
 }
 
-function compactVerdict(verdict: GateVerdict): GateVerdict {
-  return verdict.requiredAction === undefined
+function compactVerdict(verdict: UnhashedGateVerdict): HashedGateVerdict {
+  const compacted = verdict.requiredAction === undefined
     ? {
         gateId: verdict.gateId,
         phase: verdict.phase,
@@ -1001,6 +1014,11 @@ function compactVerdict(verdict: GateVerdict): GateVerdict {
         evaluator: verdict.evaluator
       }
     : verdict;
+
+  return {
+    ...compacted,
+    decisionHash: hashDecision(gateDecisionHashInput(compacted))
+  };
 }
 
 function makeFinding(input: {
@@ -1534,6 +1552,16 @@ function firstReviewRequiredAction(
 
 function firstReason(verdict: GateVerdict) {
   return verdict.reasons[0] ?? `Gate ${verdict.gateId} did not pass`;
+}
+
+function parseHashedGateVerdict(verdict: HashedGateVerdict): HashedGateVerdict {
+  const parsed = GateVerdictSchema.parse(verdict);
+
+  if (!isPresent(parsed.decisionHash)) {
+    throw new Error("Gate verdict is missing decisionHash");
+  }
+
+  return parsed as HashedGateVerdict;
 }
 
 function normalizeEvaluatedAt(value: Date | string | undefined) {

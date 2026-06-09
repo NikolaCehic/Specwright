@@ -893,7 +893,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `gate.evaluated`. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c",
+    "canonicalHash": "sha256:b4fe790a00e3055212f30a7c89e86531a4735ffacc7b281dc60819e2888c6457",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/gate-evaluated-event-payload.positive.json",
@@ -1310,7 +1310,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
     },
-    "canonicalHash": "sha256:868293cd2d6101cc7aa48a8bb9cfcb705d892951d511bfd9ef8cd5d11c93bede",
+    "canonicalHash": "sha256:21b73d32904b70829fbdf767c9cdc982e587c9d4c9c9669b61eb78831f253879",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event.positive.json",
@@ -3177,7 +3177,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Gate verdict contract. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:044aa4081ae7d3dc72af62360c716b5cb44b51a7de4a1ab8544b922361002eb7",
+    "canonicalHash": "sha256:b237bfe42dcf456e9802a0ab3afaf30f9f984428cbfa16af7e5f23ff050061a0",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/gate-verdict.positive.json",
