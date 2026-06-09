@@ -1,0 +1,17 @@
+{
+  "status": "deny",
+  "reasons": [
+    "No applicable policy exists for risky action shell.exec"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "runtime.missing_policy.fail_closed",
+      "layer": "runtime_invariant",
+      "effect": "deny",
+      "reason": "No applicable policy exists for risky action shell.exec"
+    }
+  ],
+  "decisionHash": "sha256:bfb4c8551b42945170d3650d624d885ab5271d562d7c883fb34de53738d24604"
+}

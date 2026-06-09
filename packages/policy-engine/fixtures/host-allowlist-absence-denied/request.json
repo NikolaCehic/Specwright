@@ -1,0 +1,29 @@
+{
+  "requestId": "req_host_allowlist_absence_denied",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "bun test",
+      "timeoutMs": 120000
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "hostPolicy": {
+      "allowedTools": [
+        "fs.read"
+      ]
+    },
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

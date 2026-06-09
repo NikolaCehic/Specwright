@@ -1,0 +1,4 @@
+{
+  "id": "fixture.injected-source-text",
+  "description": "Injected source text is adjudicated as an action claim and has no deploy allow rule."
+}

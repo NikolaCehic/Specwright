@@ -1,0 +1,16 @@
+{
+  "id": "fixture.workspace-host-conflict",
+  "description": "Workspace policy attempts to allow a host-denied tool.",
+  "workspaceRules": [
+    {
+      "id": "workspace.fs_read.allow",
+      "layer": "workspace",
+      "effect": "allow",
+      "reason": "workspace policy allows fs.read",
+      "match": {
+        "actionKind": "tool_call",
+        "toolId": "fs.read"
+      }
+    }
+  ]
+}

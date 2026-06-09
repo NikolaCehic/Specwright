@@ -1,0 +1,24 @@
+{
+  "id": "fixture.missing-budget-snapshot",
+  "description": "A governed positive budget cost denies when the budget snapshot is absent.",
+  "toolPolicy": {
+    "network.write": {
+      "default": "allow",
+      "risk": "critical",
+      "reason": "network.write is allowed only with a current budget snapshot",
+      "allowedPhases": [
+        "execution"
+      ]
+    }
+  },
+  "budgetPolicy": [
+    {
+      "id": "budget.tokens.max",
+      "resource": "tokens",
+      "max": 1000,
+      "onExceeded": "approval_required",
+      "approvalId": "appr_token_budget",
+      "reason": "token budget would exceed policy limit"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "id": "fixture.self-lowered-risk-low-allow",
+  "description": "A caller-supplied low risk claim for shell.exec must not match a low-risk allow rule.",
+  "harnessRules": [
+    {
+      "id": "harness.low_risk.tool_call.allow",
+      "layer": "harness",
+      "effect": "allow",
+      "reason": "harness allows low risk tool calls only",
+      "match": {
+        "actionKind": "tool_call",
+        "risk": "low"
+      }
+    }
+  ]
+}

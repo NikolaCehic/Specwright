@@ -1,0 +1,23 @@
+{
+  "requestId": "req_missing_budget_snapshot_denied",
+  "runId": "run_policy_fixture",
+  "phase": "execution",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "network.write",
+    "risk": "critical",
+    "args": {
+      "url": "https://api.example.invalid/upload",
+      "method": "POST"
+    },
+    "budgetCosts": {
+      "tokens": 25
+    }
+  },
+  "snapshots": {
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

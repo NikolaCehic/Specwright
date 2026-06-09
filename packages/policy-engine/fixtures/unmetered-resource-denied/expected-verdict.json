@@ -1,0 +1,43 @@
+{
+  "status": "deny",
+  "reasons": [
+    "No budget policy exists for resource gpuSeconds"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "workspace:read"
+      ],
+      "sourceRuleId": "tool.fs.read.scope"
+    }
+  ],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "budget.gpuSeconds.missing_policy",
+      "layer": "harness",
+      "effect": "deny",
+      "reason": "No budget policy exists for resource gpuSeconds"
+    },
+    {
+      "ruleId": "tool.fs.read.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool fs.read is allowed in phase evidence"
+    },
+    {
+      "ruleId": "tool.fs.read.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool fs.read scopes are within policy"
+    },
+    {
+      "ruleId": "tool.fs.read.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "fs.read is allowed for unmetered resource coverage"
+    }
+  ],
+  "decisionHash": "sha256:83c6e52c0ab18b87a31d4d5ab3ba92dd82bb8014d99305aab2dbb0412fe530c0"
+}

@@ -1,0 +1,20 @@
+{
+  "id": "fixture.unmetered-resource",
+  "description": "Allows fs.read but denies a positive costed resource with no budget policy.",
+  "toolPolicy": {
+    "fs.read": {
+      "default": "allow",
+      "risk": "low",
+      "reason": "fs.read is allowed for unmetered resource coverage",
+      "allowedPhases": [
+        "evidence"
+      ],
+      "requiredScopes": [
+        "workspace:read"
+      ],
+      "allowedScopes": [
+        "workspace:read"
+      ]
+    }
+  }
+}

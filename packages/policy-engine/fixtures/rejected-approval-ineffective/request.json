@@ -1,0 +1,31 @@
+{
+  "requestId": "req_rejected_approval_ineffective",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "bun test packages/policy-engine/src/index.test.ts",
+      "timeoutMs": 120000,
+      "idempotencyKey": "rejected-approval"
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": [
+        {
+          "approvalId": "appr_shell_exec_tests",
+          "decision": "rejected",
+          "humanMessage": "The operator rejected this shell execution."
+        }
+      ]
+    },
+    "sourceTrust": {}
+  }
+}

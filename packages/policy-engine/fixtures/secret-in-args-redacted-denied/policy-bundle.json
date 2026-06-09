@@ -1,0 +1,4 @@
+{
+  "id": "fixture.secret-in-args",
+  "description": "Secret-bearing args have no matching allow rule and must not be echoed in the verdict."
+}

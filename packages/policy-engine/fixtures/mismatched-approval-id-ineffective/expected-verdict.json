@@ -1,0 +1,48 @@
+{
+  "status": "approval_required",
+  "approvalId": "appr_shell_exec_tests",
+  "reasons": [
+    "shell.exec requires explicit approval"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "shell:exec"
+      ],
+      "sourceRuleId": "tool.shell.exec.scope"
+    },
+    {
+      "kind": "timeoutMs",
+      "value": 120000,
+      "sourceRuleId": "tool.shell.exec.default"
+    },
+    {
+      "kind": "network",
+      "value": "disabled",
+      "sourceRuleId": "tool.shell.exec.default"
+    }
+  ],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "tool.shell.exec.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool shell.exec is allowed in phase verification"
+    },
+    {
+      "ruleId": "tool.shell.exec.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool shell.exec scopes are within policy"
+    },
+    {
+      "ruleId": "tool.shell.exec.default",
+      "layer": "capability",
+      "effect": "approval_required",
+      "reason": "shell.exec requires explicit approval"
+    }
+  ],
+  "decisionHash": "sha256:20082cb7c8f8b2fc01b1d992cefe55f4a79592da56edbf3ef5f57d10e0528148"
+}

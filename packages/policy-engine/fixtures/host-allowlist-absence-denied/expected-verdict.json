@@ -1,0 +1,43 @@
+{
+  "status": "deny",
+  "reasons": [
+    "Host policy does not allow shell.exec"
+  ],
+  "constraints": [
+    {
+      "kind": "allowedScopes",
+      "value": [
+        "shell:exec"
+      ],
+      "sourceRuleId": "tool.shell.exec.scope"
+    }
+  ],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "host.shell.exec.not_allowed",
+      "layer": "host",
+      "effect": "deny",
+      "reason": "Host policy does not allow shell.exec"
+    },
+    {
+      "ruleId": "tool.shell.exec.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool shell.exec is allowed in phase verification"
+    },
+    {
+      "ruleId": "tool.shell.exec.scope",
+      "layer": "capability",
+      "effect": "constrain",
+      "reason": "Tool shell.exec scopes are within policy"
+    },
+    {
+      "ruleId": "tool.shell.exec.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "shell.exec would otherwise be allowed by the bundle"
+    }
+  ],
+  "decisionHash": "sha256:7237ab8c163be683cc146011c6d0275cbfed91b54a365dd14f47d61440e4d08e"
+}

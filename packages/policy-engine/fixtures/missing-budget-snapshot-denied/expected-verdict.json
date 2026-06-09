@@ -1,0 +1,29 @@
+{
+  "status": "deny",
+  "reasons": [
+    "Budget snapshot is missing for resource tokens"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "budget.tokens.missing_snapshot",
+      "layer": "harness",
+      "effect": "deny",
+      "reason": "Budget snapshot is missing for resource tokens"
+    },
+    {
+      "ruleId": "tool.network.write.phase",
+      "layer": "phase",
+      "effect": "allow",
+      "reason": "Tool network.write is allowed in phase execution"
+    },
+    {
+      "ruleId": "tool.network.write.default",
+      "layer": "capability",
+      "effect": "allow",
+      "reason": "network.write is allowed only with a current budget snapshot"
+    }
+  ],
+  "decisionHash": "sha256:16cb2cc2b083dabe9b2d93f3eaee1a974f78f945cf81f22ea3cdd5fdb7421907"
+}

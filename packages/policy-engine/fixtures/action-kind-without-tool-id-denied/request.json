@@ -1,0 +1,22 @@
+{
+  "requestId": "req_action_kind_without_tool_id_denied",
+  "runId": "run_policy_fixture",
+  "phase": "release",
+  "action": {
+    "kind": "deploy",
+    "risk": "low",
+    "args": {
+      "target": "production"
+    },
+    "requestedScopes": [
+      "deploy:production"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}
