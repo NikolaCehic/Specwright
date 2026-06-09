@@ -340,6 +340,9 @@
     "verdict": {
       "additionalProperties": false,
       "properties": {
+        "decisionHash": {
+          "type": "string"
+        },
         "evaluatedAt": {
           "format": "date-time",
           "type": "string"
@@ -535,7 +538,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c",
+    "hash": "sha256:b4fe790a00e3055212f30a7c89e86531a4735ffacc7b281dc60819e2888c6457",
     "id": "specwright.event.gate.evaluated",
     "status": "public",
     "version": "1"

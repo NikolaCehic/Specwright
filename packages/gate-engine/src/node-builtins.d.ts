@@ -1,3 +1,12 @@
+declare module "node:crypto" {
+  export interface Hash {
+    update(data: string | Uint8Array): Hash;
+    digest(encoding: "hex"): string;
+  }
+
+  export function createHash(algorithm: string): Hash;
+}
+
 declare module "node:fs/promises" {
   export function readdir(path: string): Promise<string[]>;
   export function readFile(path: string, encoding: "utf8"): Promise<string>;

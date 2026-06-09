@@ -23,7 +23,8 @@
     "evaluator": {
       "kind": "deterministic",
       "ref": "specwright.gate-engine.v0"
-    }
+    },
+    "decisionHash": "sha256:124bf0e524860d11558c2e85405a393048f99dd4a0feab745ad21fcbf8340026"
   },
   "instruction": {
     "kind": "fail_run",

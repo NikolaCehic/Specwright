@@ -1,0 +1,40 @@
+{
+  "verdict": {
+    "gateId": "input_required",
+    "phase": "evidence",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Required gate input run_input is missing"
+    ],
+    "findings": [
+      {
+        "id": "input.run_input.missing",
+        "message": "Required gate input run_input is missing",
+        "severity": "blocking",
+        "targetRef": "input:run_input",
+        "evidenceRefs": []
+      }
+    ],
+    "evidenceRefs": [],
+    "requiredAction": "clarify",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:aef60940e190dcd30ce4e56eefdf826a41ea62d33a7934cc4799270f26a6b86d"
+  },
+  "instruction": {
+    "kind": "pause_for_human",
+    "gateId": "input_required",
+    "question": {
+      "id": "question.input_required",
+      "gateId": "input_required",
+      "phase": "evidence",
+      "question": "I need the run input before this gate can evaluate.",
+      "requiredFor": "gate:input_required"
+    }
+  }
+}

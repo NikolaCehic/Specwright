@@ -369,6 +369,7 @@ export const GateVerdictSchema = z
     obligations: z.array(GateObligationSchema),
     evaluatedAt: z.string().datetime({ offset: true }),
     evaluator: DecisionProducedBySchema,
+    decisionHash: nonEmptyString.optional(),
     provenance: DecisionProvenanceSchema.optional()
   })
   .strict();

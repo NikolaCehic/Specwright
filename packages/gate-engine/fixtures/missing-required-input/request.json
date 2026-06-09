@@ -1,0 +1,22 @@
+{
+  "gateId": "input_required",
+  "phase": "evidence",
+  "gateDefinition": {
+    "id": "input_required",
+    "phase": "evidence",
+    "kind": "entry",
+    "required": true,
+    "inputs": [
+      "run_input"
+    ],
+    "checks": [],
+    "onFail": {
+      "action": "request_clarification",
+      "questionTemplate": "I need the run input before this gate can evaluate."
+    }
+  },
+  "input": {
+    "runId": "run-missing-required-input",
+    "phase": "evidence"
+  }
+}

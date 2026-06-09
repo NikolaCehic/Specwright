@@ -28,7 +28,8 @@
     "evaluator": {
       "kind": "deterministic",
       "ref": "specwright.gate-engine.v0"
-    }
+    },
+    "decisionHash": "sha256:30c966e5422361a8434a094bd5a0ec41b94b76e54746a766a9011c5902de4cad"
   },
   "instruction": {
     "kind": "create_repair_task",

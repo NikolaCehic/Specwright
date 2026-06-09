@@ -3,15 +3,23 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   GateLifecycleInstructionSchema,
-  GateVerdictSchema
+  GateVerdictSchema,
+  type GateVerdict
 } from "@specwright/schemas";
-import { evaluateGate, type EvaluateGateRequest } from "./index";
+import {
+  evaluateGate,
+  gateDecisionHashInput,
+  hashDecision,
+  type EvaluateGateRequest
+} from "./index";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
+const decisionHashPattern = /^sha256:[0-9a-f]{64}$/;
 
 const fixtureCases = [
   "context-sufficiency-pass",
   "context-sufficiency-missing-context",
+  "missing-required-input",
   "artifact-schema-invalid",
   "eval-passed-failed",
   "policy-denial-blocks",
@@ -37,10 +45,64 @@ describe("gate engine fixtures", () => {
       expect(GateLifecycleInstructionSchema.parse(result.instruction)).toEqual(
         result.instruction
       );
+      expect(result.verdict.decisionHash).toMatch(decisionHashPattern);
+      expect(result.verdict.evaluator.kind).toBe("deterministic");
       expect(result).toEqual(expected);
       expect(evaluateGate(request)).toEqual(result);
+      expect(recomputedDecisionHash(result.verdict)).toBe(
+        expected.verdict.decisionHash
+      );
     });
   }
+});
+
+describe("gate engine determinism", () => {
+  test("ignores wall clock when evaluatedAt is not supplied", async () => {
+    const request = await readJson(
+      join(fixturesDir, "context-sufficiency-pass", "request.json")
+    );
+    const baseline = evaluateGate(request);
+    const originalNow = Date.now;
+
+    Date.now = () => 4_102_444_800_000;
+
+    try {
+      expect(evaluateGate(request)).toEqual(baseline);
+    } finally {
+      Date.now = originalNow;
+    }
+  });
+
+  test("core deterministic path avoids external side effects and randomness", async () => {
+    const sourceFiles = [
+      join(import.meta.dir, "index.ts"),
+      join(import.meta.dir, "decision-hash.ts")
+    ];
+    const forbiddenPatterns = [
+      /from\s+["']node:fs(?:\/promises)?["']/,
+      /from\s+["']node:net["']/,
+      /from\s+["']node:process["']/,
+      /from\s+["']node:http["']/,
+      /from\s+["']node:https["']/,
+      /\bprocess\.env\b/,
+      /\bDate\.now\b/,
+      /\bnew\s+Date\s*\(/,
+      /\bMath\.random\b/,
+      /\brandomUUID\b/,
+      /\bfetch\s*\(/,
+      /\bToolBroker\b/,
+      /\bproviderClient\b/,
+      /\bmodelClient\b/
+    ];
+
+    for (const sourceFile of sourceFiles) {
+      const source = await readFile(sourceFile, "utf8");
+
+      for (const forbiddenPattern of forbiddenPatterns) {
+        expect(source).not.toMatch(forbiddenPattern);
+      }
+    }
+  });
 });
 
 describe("unsupported check defense in depth", () => {
@@ -85,4 +147,10 @@ describe("unsupported check defense in depth", () => {
 
 async function readJson(path: string) {
   return JSON.parse(await readFile(path, "utf8")) as never;
+}
+
+function recomputedDecisionHash(verdict: GateVerdict) {
+  const { decisionHash: _decisionHash, ...withoutDecisionHash } = verdict;
+
+  return hashDecision(gateDecisionHashInput(withoutDecisionHash));
 }

@@ -1812,6 +1812,9 @@
             "verdict": {
               "additionalProperties": false,
               "properties": {
+                "decisionHash": {
+                  "type": "string"
+                },
                 "evaluatedAt": {
                   "format": "date-time",
                   "type": "string"
@@ -2009,7 +2012,7 @@
           "type": "string"
         },
         "schemaHash": {
-          "const": "sha256:4f549727e81437af28625c45a41d1d6254900cac14bd694fd533ab17b9b88e8c"
+          "const": "sha256:b4fe790a00e3055212f30a7c89e86531a4735ffacc7b281dc60819e2888c6457"
         },
         "sequence": {
           "type": "number"
@@ -4860,7 +4863,7 @@
   "title": "RuntimeEventSchema",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:868293cd2d6101cc7aa48a8bb9cfcb705d892951d511bfd9ef8cd5d11c93bede",
+    "hash": "sha256:21b73d32904b70829fbdf767c9cdc982e587c9d4c9c9669b61eb78831f253879",
     "id": "specwright.event.runtime-event",
     "status": "public",
     "version": "1"
