@@ -1,0 +1,5 @@
+{
+  "domain": "approval-governance",
+  "kind": "verdict",
+  "description": "Rejected approval leaves shell execution gated."
+}

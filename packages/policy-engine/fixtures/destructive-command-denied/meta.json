@@ -1,0 +1,5 @@
+{
+  "domain": "approval-governance",
+  "kind": "verdict",
+  "description": "Destructive shell command is denied before approval can satisfy shell policy."
+}

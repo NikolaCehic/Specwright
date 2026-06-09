@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Host allowlist absence denies a tool outside the host policy."
+}

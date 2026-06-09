@@ -1,0 +1,5 @@
+{
+  "domain": "replay-governance",
+  "kind": "replay",
+  "description": "Replay fails closed when a bundle hash is not pinned."
+}

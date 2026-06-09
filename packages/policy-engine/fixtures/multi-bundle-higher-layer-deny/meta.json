@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Workspace bundle denial tightens a harness allow across a bundle set."
+}

@@ -1,0 +1,5 @@
+{
+  "domain": "bundle-load-governance",
+  "kind": "load_failure",
+  "description": "Malformed bundle shape fails schema validation."
+}

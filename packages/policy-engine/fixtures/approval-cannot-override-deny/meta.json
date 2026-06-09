@@ -1,0 +1,5 @@
+{
+  "domain": "approval-governance",
+  "kind": "verdict",
+  "description": "Approval evidence cannot override a runtime-invariant denial."
+}

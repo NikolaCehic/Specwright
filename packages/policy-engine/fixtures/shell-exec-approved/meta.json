@@ -1,0 +1,5 @@
+{
+  "domain": "approval-governance",
+  "kind": "verdict",
+  "description": "Matching approval satisfies shell execution while preserving constraints."
+}

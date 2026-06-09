@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Reordered request and bundle keys preserve the filesystem verdict."
+}

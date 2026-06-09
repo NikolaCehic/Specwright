@@ -1,0 +1,5 @@
+{
+  "domain": "budget-governance",
+  "kind": "verdict",
+  "description": "Missing budget snapshot denies a budgeted network action."
+}

@@ -5,6 +5,7 @@ import {
   evaluatePolicy,
   loadPolicyBundles,
   type FixturePolicyBundle,
+  type FixturePolicyRule,
   type PolicyRequest,
   type PolicyRuleEffect,
   type PolicyVerdict,
@@ -146,6 +147,67 @@ describe("policy engine tightening mutations", () => {
       expect(mutatedVerdict.decisionHash).not.toBe(verdict.decisionHash);
     });
   }
+
+  test("broaden path makes the verdict strictly stricter", async () => {
+    const { request, policyBundles, verdict } = await loadFixture(
+      "fs-read-allowed-in-evidence"
+    );
+    const pathGuard: FixturePolicyRule = {
+      id: "runtime.fs_read.deny_workspace_root",
+      layer: "runtime_invariant",
+      effect: "deny",
+      reason: "runtime policy denies broad workspace root reads",
+      match: {
+        actionKind: "tool_call",
+        toolId: "fs.read",
+        args: [
+          {
+            path: "path",
+            equals: "."
+          }
+        ]
+      }
+    };
+    const guardedBundles = withRuntimeInvariant(policyBundles, pathGuard);
+    const guardedLoad = loadPolicyBundles(guardedBundles);
+
+    expect(guardedLoad.ok).toBe(true);
+    if (!guardedLoad.ok) {
+      throw new Error("Path guard bundle must pass policy load");
+    }
+
+    const baselineVerdict = evaluatePolicy(request, guardedLoad.bundles);
+    const broadenedVerdict = evaluatePolicy(
+      {
+        ...structuredClone(request),
+        action: {
+          ...request.action,
+          args: {
+            ...request.action.args,
+            path: "."
+          }
+        }
+      },
+      guardedLoad.bundles
+    );
+
+    expect(verdict.status).toBe("allow");
+    expect(baselineVerdict.status).toBe("allow");
+    expect(broadenedVerdict.status).toBe("deny");
+    expect(strictnessOf(broadenedVerdict)).toBeGreaterThan(
+      strictnessOf(baselineVerdict)
+    );
+    expect(broadenedVerdict.matchedRules).toContainEqual({
+      ruleId: "runtime.fs_read.deny_workspace_root",
+      layer: "runtime_invariant",
+      effect: "deny",
+      reason: "runtime policy denies broad workspace root reads"
+    });
+    expect(broadenedVerdict.decisionHash).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(broadenedVerdict.decisionHash).not.toBe(
+      baselineVerdict.decisionHash
+    );
+  });
 });
 
 type MutationCase = {
@@ -193,6 +255,25 @@ async function loadFixture(fixtureName: string): Promise<FixtureInputs> {
 
 function strictnessOf(verdict: PolicyVerdict) {
   return statusStrictness[verdict.status];
+}
+
+function withRuntimeInvariant(
+  policyBundles: readonly FixturePolicyBundle[],
+  rule: FixturePolicyRule
+): FixturePolicyBundle[] {
+  const [firstBundle, ...rest] = structuredClone(policyBundles);
+
+  if (firstBundle === undefined) {
+    throw new Error("Expected at least one policy bundle");
+  }
+
+  return [
+    {
+      ...firstBundle,
+      runtimeInvariants: [...(firstBundle.runtimeInvariants ?? []), rule]
+    },
+    ...rest
+  ];
 }
 
 async function readJson<TValue>(path: string): Promise<TValue> {

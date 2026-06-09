@@ -1,0 +1,5 @@
+{
+  "domain": "bundle-load-governance",
+  "kind": "load_failure",
+  "description": "A malformed bundle rejects the entire bundle set."
+}

@@ -1,0 +1,5 @@
+{
+  "domain": "scope-governance",
+  "kind": "verdict",
+  "description": "Allowed scope union emits a constraining verdict."
+}

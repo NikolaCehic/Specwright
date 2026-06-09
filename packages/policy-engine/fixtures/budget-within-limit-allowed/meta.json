@@ -1,0 +1,5 @@
+{
+  "domain": "budget-governance",
+  "kind": "verdict",
+  "description": "Budgeted filesystem access within limits remains allowed."
+}

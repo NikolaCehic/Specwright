@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Read-only filesystem access is allowed during evidence collection with constraints."
+}

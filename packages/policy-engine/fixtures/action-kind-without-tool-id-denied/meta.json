@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Action-kind-only risky requests fail closed when no policy accounts for them."
+}
