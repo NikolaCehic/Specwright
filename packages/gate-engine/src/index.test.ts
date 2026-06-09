@@ -1412,8 +1412,10 @@ function modelToolResult(
     provenance: {
       toolId: "model.review",
       toolVersion: "1.0.0",
+      adapterVersion: "1.0.0",
       argsHash: `sha256:recorded-${name}-args`,
       resultHash: `sha256:recorded-${name}-result`,
+      decisionHash: `sha256:recorded-${name}-decision`,
       cacheStatus: "miss",
       traceId: `trace_model_${name}`
     },

@@ -12,6 +12,7 @@ import {
   RedactionClassSchema,
   RuntimeEventSchema,
   SourceRefSchema,
+  ToolCallResultSchema,
   claimLevelRequiresEvidence,
   evidenceClassRequiresSourceRefs,
   isRedactionAtLeast,
@@ -402,6 +403,96 @@ describe("policy evaluated event contract", () => {
         risk: "unknown"
       }).success
     ).toBe(false);
+  });
+});
+
+describe("tool call result provenance contract", () => {
+  const successfulToolResult = {
+    toolCallId: "toolcall_contract_success",
+    status: "success",
+    output: {
+      ok: true
+    },
+    provenance: {
+      toolId: "fs.read",
+      toolVersion: "0.1.0",
+      adapterVersion: "0.1.0",
+      argsHash: "sha256:args",
+      resultHash: "sha256:result",
+      decisionHash: "sha256:decision",
+      cacheStatus: "bypass",
+      traceId: "trace_contract_tool",
+      spanId: "span_contract_tool",
+      eventIds: ["event_tool_completed"],
+      redactionSummary: {
+        redactedCount: 1,
+        redactions: [
+          {
+            path: "token",
+            classification: "secret",
+            hash: "sha256:redacted"
+          }
+        ],
+        dischargedObligations: [
+          {
+            kind: "redact",
+            sourceRuleId: "tool.fs.read.default",
+            selector: "token"
+          }
+        ]
+      }
+    }
+  };
+
+  test("accepts enterprise provenance fields and keeps provenance strict", () => {
+    expect(ToolCallResultSchema.safeParse(successfulToolResult).success).toBe(
+      true
+    );
+
+    expect(
+      ToolCallResultSchema.safeParse({
+        ...successfulToolResult,
+        provenance: {
+          ...successfulToolResult.provenance,
+          unexpected: "not allowed"
+        }
+      }).success
+    ).toBe(false);
+  });
+
+  test("rejects success results missing executed-call provenance", () => {
+    for (const field of ["adapterVersion", "resultHash", "decisionHash"]) {
+      const provenance = { ...successfulToolResult.provenance };
+      delete provenance[field as keyof typeof provenance];
+
+      expect(
+        ToolCallResultSchema.safeParse({
+          ...successfulToolResult,
+          provenance
+        }).success
+      ).toBe(false);
+    }
+  });
+
+  test("allows pre-execution failures without adapter or decision provenance", () => {
+    expect(
+      ToolCallResultSchema.safeParse({
+        toolCallId: "toolcall_contract_invalid_request",
+        status: "failed",
+        error: {
+          code: "invalid_request",
+          message: "Request did not match the tool call schema.",
+          retryable: false
+        },
+        provenance: {
+          toolId: "unknown",
+          toolVersion: "unresolved",
+          argsHash: "sha256:args",
+          cacheStatus: "bypass",
+          traceId: "trace_contract_invalid"
+        }
+      }).success
+    ).toBe(true);
   });
 });
 

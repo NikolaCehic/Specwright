@@ -7,8 +7,10 @@
   "provenance": {
     "toolId": "model.review",
     "toolVersion": "1.0.0",
+    "adapterVersion": "1.0.0",
     "argsHash": "sha256:recorded-redacted-args",
     "resultHash": "sha256:recorded-redacted-result",
+    "decisionHash": "sha256:recorded-redacted-decision",
     "cacheStatus": "miss",
     "traceId": "trace_model_redacted"
   }

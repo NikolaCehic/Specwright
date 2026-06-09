@@ -345,6 +345,8 @@ export type ToolCallContext = {
   runId?: string;
   cwd?: string;
   traceId?: string;
+  spanId?: string;
+  eventIds?: string[];
   runMode?: string;
   approvalDeadlineAt?: string | number | Date;
   policyBundle?: FixturePolicyBundle | readonly FixturePolicyBundle[];
@@ -484,6 +486,8 @@ export class ToolBroker {
         argsHash,
         cacheStatus: "bypass",
         traceId,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId: policyVerdict.approvalId,
         error: {
           code: "policy_denied",
           message: policyVerdict.reasons.join("; ") || "Policy denied tool call.",
@@ -506,6 +510,8 @@ export class ToolBroker {
           argsHash,
           cacheStatus: "bypass",
           traceId,
+          decisionHash: policyVerdict.decisionHash,
+          approvalId,
           error: {
             code: "approval_rejected",
             message: `Approval ${approvalId} was rejected.`,
@@ -523,6 +529,8 @@ export class ToolBroker {
           argsHash,
           cacheStatus: "bypass",
           traceId,
+          decisionHash: policyVerdict.decisionHash,
+          approvalId,
           error: {
             code: "approval_timeout",
             message: `Approval ${approvalId} timed out before execution.`,
@@ -539,6 +547,8 @@ export class ToolBroker {
         argsHash,
         cacheStatus: "bypass",
         traceId,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId,
         error: {
           code: "approval_required",
           message: approvalRequiredMessage(policyVerdict, approvalId),
@@ -551,6 +561,7 @@ export class ToolBroker {
       policyVerdict,
       context
     );
+    const executedApprovalId = policyVerdict.approvalId ?? satisfiedApprovalId;
     if (
       satisfiedApprovalId !== undefined &&
       isApprovalDeadlineElapsed(
@@ -566,6 +577,8 @@ export class ToolBroker {
         argsHash,
         cacheStatus: "bypass",
         traceId,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId: executedApprovalId,
         error: {
           code: "approval_timeout",
           message: `Approval ${satisfiedApprovalId} timed out before execution.`,
@@ -594,6 +607,11 @@ export class ToolBroker {
         argsHash,
         cacheStatus: "bypass",
         traceId,
+        adapterVersion: definition.adapter.version,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId: executedApprovalId,
+        spanId: context.spanId,
+        eventIds: context.eventIds,
         error: adapterResult.error
       });
     }
@@ -609,6 +627,11 @@ export class ToolBroker {
         argsHash,
         cacheStatus: "bypass",
         traceId,
+        adapterVersion: definition.adapter.version,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId: executedApprovalId,
+        spanId: context.spanId,
+        eventIds: context.eventIds,
         error: {
           code: "output_invalid",
           message: formatZodIssues(parsedOutput.error),
@@ -618,6 +641,56 @@ export class ToolBroker {
     }
 
     const output = parsedOutput.data;
+    const redactionResult = redactOutput(output, policyVerdict.obligations);
+
+    if (!redactionResult.ok) {
+      return buildToolResult({
+        toolCallId: createToolCallId(),
+        status: "failed",
+        toolId: definition.id,
+        toolVersion: definition.version,
+        argsHash,
+        cacheStatus: "bypass",
+        traceId,
+        adapterVersion: definition.adapter.version,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId: executedApprovalId,
+        spanId: context.spanId,
+        eventIds: context.eventIds,
+        error: {
+          code: "obligation_not_discharged",
+          message: redactionResult.message,
+          retryable: false
+        }
+      });
+    }
+
+    const parsedRedactedOutput = definition.outputSchema.safeParse(
+      redactionResult.output
+    );
+    if (!parsedRedactedOutput.success) {
+      return buildToolResult({
+        toolCallId: createToolCallId(),
+        status: "failed",
+        toolId: definition.id,
+        toolVersion: definition.version,
+        argsHash,
+        cacheStatus: "bypass",
+        traceId,
+        adapterVersion: definition.adapter.version,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId: executedApprovalId,
+        spanId: context.spanId,
+        eventIds: context.eventIds,
+        error: {
+          code: "output_invalid",
+          message: `Redacted output failed schema validation: ${formatZodIssues(parsedRedactedOutput.error)}`,
+          retryable: false
+        }
+      });
+    }
+
+    const redactedOutput = parsedRedactedOutput.data;
 
     // Stages 10 and 11: construct provenance and parse the result schema.
     return buildToolResult({
@@ -626,10 +699,16 @@ export class ToolBroker {
       toolId: definition.id,
       toolVersion: definition.version,
       argsHash,
-      resultHash: hashValue(output),
+      resultHash: hashValue(redactedOutput),
       cacheStatus: "bypass",
       traceId,
-      output
+      adapterVersion: definition.adapter.version,
+      decisionHash: policyVerdict.decisionHash,
+      approvalId: executedApprovalId,
+      spanId: context.spanId,
+      eventIds: context.eventIds,
+      redactionSummary: redactionResult.summary,
+      output: redactedOutput
     });
   }
 
@@ -1156,6 +1235,405 @@ function readPositiveNumber(value: unknown, key: string) {
     : undefined;
 }
 
+type PolicyObligation = PolicyVerdict["obligations"][number];
+type BrokerRelevantObligationKind = "redact" | "mark_external_source";
+type RedactionSelector =
+  | {
+      kind: "path";
+      value: string;
+    }
+  | {
+      kind: "field";
+      value: string;
+    };
+type RedactionRecord = {
+  path: string;
+  classification: string;
+  hash: string;
+};
+type DischargedObligation = {
+  kind: BrokerRelevantObligationKind;
+  sourceRuleId: string;
+  selector?: string | undefined;
+  externalSource?: string | undefined;
+};
+type RedactionSummary = {
+  redactedCount: number;
+  redactions: RedactionRecord[];
+  dischargedObligations: DischargedObligation[];
+};
+type RedactionResult =
+  | {
+      ok: true;
+      output: unknown;
+      summary?: RedactionSummary | undefined;
+    }
+  | {
+      ok: false;
+      message: string;
+    };
+
+const HASH_REFERENCE_PATTERN = /^sha256:[0-9a-f]{64}$/;
+const SENSITIVE_KEY_PATTERN =
+  /(api.?key|access.?token|refresh.?token|auth.?token|token|secret|password|passwd|credential|authorization|client.?secret|private.?key|database.?url|connection.?string)/i;
+const SECRET_VALUE_PATTERNS = [
+  /\bsk_(?:live|test)_[A-Za-z0-9_=-]{8,}\b/g,
+  /\bsk-[A-Za-z0-9_-]{16,}\b/g,
+  /\bAKIA[0-9A-Z]{16}\b/g,
+  /\b[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\b/g,
+  /\bBearer\s+[A-Za-z0-9._~+/-]+=*/gi,
+  /\b(?:postgres(?:ql)?|mysql|mongodb(?:\+srv)?|redis):\/\/[^\s"']+/gi,
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/g
+] as const;
+const SECRET_ASSIGNMENT_PATTERN =
+  /\b(api[_-]?key|access[_-]?token|refresh[_-]?token|auth[_-]?token|token|secret|password|passwd|credential|authorization|client[_-]?secret|database[_-]?url|connection[_-]?string)(\s*[:=]\s*)([^\s,;]+)/gi;
+
+function redactOutput(
+  value: unknown,
+  obligations: readonly PolicyObligation[]
+): RedactionResult {
+  const redactObligations = obligations.filter(
+    (obligation) => obligation.kind === "redact"
+  );
+  const externalSourceObligations = obligations.filter(
+    (obligation) => obligation.kind === "mark_external_source"
+  );
+  const selectorEntries = redactObligations.flatMap((obligation) =>
+    selectorsFromRedactObligation(obligation).map((selector) => ({
+      obligation,
+      selector
+    }))
+  );
+  const selectorMatches = new Map<string, number>();
+
+  for (const entry of selectorEntries) {
+    selectorMatches.set(selectorKey(entry.selector), 0);
+  }
+
+  const redactions: RedactionRecord[] = [];
+  const output = redactValue({
+    value,
+    path: [],
+    key: undefined,
+    selectorEntries,
+    selectorMatches,
+    redactions
+  });
+
+  const missingSelectors = [...selectorMatches.entries()]
+    .filter(([, count]) => count === 0)
+    .map(([selector]) => selector);
+  if (missingSelectors.length > 0) {
+    return {
+      ok: false,
+      message: `Redaction obligation selectors were not discharged: ${missingSelectors.join(", ")}.`
+    };
+  }
+
+  const dischargedObligations = [
+    ...dischargedRedactObligations(redactObligations),
+    ...externalSourceObligations.map((obligation): DischargedObligation => ({
+      kind: "mark_external_source",
+      sourceRuleId: obligation.sourceRuleId,
+      externalSource: sanitizedExternalSourceMarker(obligation)
+    }))
+  ].sort(compareDischargedObligations);
+
+  const summary =
+    redactions.length > 0 || dischargedObligations.length > 0
+      ? {
+          redactedCount: redactions.length,
+          redactions,
+          dischargedObligations
+        }
+      : undefined;
+
+  return {
+    ok: true,
+    output,
+    summary
+  };
+}
+
+function redactValue(input: {
+  value: unknown;
+  path: readonly string[];
+  key: string | undefined;
+  selectorEntries: readonly {
+    obligation: PolicyObligation;
+    selector: RedactionSelector;
+  }[];
+  selectorMatches: Map<string, number>;
+  redactions: RedactionRecord[];
+}): unknown {
+  if (typeof input.value === "string") {
+    const selectedBy = matchingSelectors(
+      input.path,
+      input.key,
+      input.selectorEntries
+    );
+    const classification =
+      selectedBy.length > 0
+        ? "policy_redact"
+        : classifySensitiveString(input.key, input.value);
+
+    if (classification === undefined || isHashReference(input.value)) {
+      return input.value;
+    }
+
+    const hash = hashValue(input.value);
+    const path = formatPath(input.path);
+
+    for (const entry of selectedBy) {
+      const key = selectorKey(entry.selector);
+      input.selectorMatches.set(
+        key,
+        (input.selectorMatches.get(key) ?? 0) + 1
+      );
+    }
+
+    input.redactions.push({
+      path,
+      classification,
+      hash
+    });
+    return hash;
+  }
+
+  if (Array.isArray(input.value)) {
+    return input.value.map((item, index) =>
+      redactValue({
+        ...input,
+        value: item,
+        path: [...input.path, String(index)],
+        key: String(index)
+      })
+    );
+  }
+
+  if (isRecord(input.value)) {
+    const redacted: Record<string, unknown> = {};
+
+    for (const key of Object.keys(input.value).sort()) {
+      redacted[key] = redactValue({
+        ...input,
+        value: input.value[key],
+        path: [...input.path, key],
+        key
+      });
+    }
+
+    return redacted;
+  }
+
+  return input.value;
+}
+
+function classifySensitiveString(key: string | undefined, value: string) {
+  if (key !== undefined && SENSITIVE_KEY_PATTERN.test(key)) {
+    return "secret";
+  }
+
+  return containsSecretPattern(value) ? "secret" : undefined;
+}
+
+function containsSecretPattern(value: string) {
+  return SECRET_VALUE_PATTERNS.some((pattern) => {
+    pattern.lastIndex = 0;
+    return pattern.test(value);
+  });
+}
+
+function matchingSelectors(
+  path: readonly string[],
+  key: string | undefined,
+  selectorEntries: readonly {
+    obligation: PolicyObligation;
+    selector: RedactionSelector;
+  }[]
+) {
+  return selectorEntries.filter((entry) => {
+    if (entry.selector.kind === "field") {
+      return key === entry.selector.value;
+    }
+
+    return selectorMatchesPath(entry.selector.value, formatPath(path));
+  });
+}
+
+function selectorMatchesPath(selector: string, path: string) {
+  return (
+    selector === path ||
+    (path.length > selector.length && path.startsWith(`${selector}.`))
+  );
+}
+
+function selectorsFromRedactObligation(
+  obligation: PolicyObligation
+): RedactionSelector[] {
+  const params = obligation.params;
+  if (!isRecord(params)) {
+    return [];
+  }
+
+  return [
+    ...stringValues(params.path).map(pathSelector),
+    ...stringValues(params.paths).map(pathSelector),
+    ...stringValues(params.selector).map(pathSelector),
+    ...selectorValues(params.selectors),
+    ...stringValues(params.field).map(fieldSelector),
+    ...stringValues(params.fields).map(fieldSelector),
+    ...stringValues(params.key).map(fieldSelector),
+    ...stringValues(params.keys).map(fieldSelector)
+  ].filter(uniqueSelector);
+}
+
+function selectorValues(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((entry): RedactionSelector[] => {
+        if (typeof entry === "string") {
+          return [pathSelector(entry)];
+        }
+
+        if (isRecord(entry)) {
+          return [
+            ...stringValues(entry.path).map(pathSelector),
+            ...stringValues(entry.field).map(fieldSelector),
+            ...stringValues(entry.key).map(fieldSelector)
+          ];
+        }
+
+        return [];
+      })
+      .filter(uniqueSelector);
+  }
+
+  return stringValues(value).map(pathSelector);
+}
+
+function stringValues(value: unknown) {
+  if (typeof value === "string") {
+    return [value];
+  }
+
+  if (Array.isArray(value)) {
+    return value.filter((entry): entry is string => typeof entry === "string");
+  }
+
+  return [];
+}
+
+function pathSelector(value: string): RedactionSelector {
+  return {
+    kind: "path",
+    value: normalizeSelectorPath(value)
+  };
+}
+
+function fieldSelector(value: string): RedactionSelector {
+  return {
+    kind: "field",
+    value
+  };
+}
+
+function normalizeSelectorPath(value: string) {
+  return value.replace(/^\$\.?/, "").replace(/^\./, "");
+}
+
+function uniqueSelector(
+  selector: RedactionSelector,
+  index: number,
+  selectors: RedactionSelector[]
+) {
+  return (
+    selector.value.length > 0 &&
+    selectors.findIndex(
+      (candidate) =>
+        candidate.kind === selector.kind && candidate.value === selector.value
+    ) === index
+  );
+}
+
+function dischargedRedactObligations(
+  obligations: readonly PolicyObligation[]
+): DischargedObligation[] {
+  return obligations.flatMap((obligation) => {
+    const selectors = selectorsFromRedactObligation(obligation);
+
+    if (selectors.length === 0) {
+      return [
+        {
+          kind: "redact" as const,
+          sourceRuleId: obligation.sourceRuleId
+        }
+      ];
+    }
+
+    return selectors.map((selector) => ({
+      kind: "redact" as const,
+      sourceRuleId: obligation.sourceRuleId,
+      selector: selectorKey(selector)
+    }));
+  });
+}
+
+function sanitizedExternalSourceMarker(obligation: PolicyObligation) {
+  const params = obligation.params;
+  if (!isRecord(params)) {
+    return undefined;
+  }
+
+  const marker =
+    firstString(params.source) ??
+    firstString(params.sourceRef) ??
+    firstString(params.externalSource) ??
+    firstString(params.uri) ??
+    firstString(params.url) ??
+    firstString(params.serverId);
+
+  return marker === undefined ? undefined : sanitizeErrorMessage(marker);
+}
+
+function firstString(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function compareDischargedObligations(
+  left: DischargedObligation,
+  right: DischargedObligation
+) {
+  return stableStringify(left).localeCompare(stableStringify(right));
+}
+
+function selectorKey(selector: RedactionSelector) {
+  return selector.kind === "path" ? selector.value : `*.${selector.value}`;
+}
+
+function formatPath(path: readonly string[]) {
+  return path.length === 0 ? "value" : path.join(".");
+}
+
+function isHashReference(value: string) {
+  return HASH_REFERENCE_PATTERN.test(value);
+}
+
+export function sanitizeErrorMessage(message: string) {
+  let sanitized = message.replace(
+    SECRET_ASSIGNMENT_PATTERN,
+    (_match, key: string, separator: string, rawValue: string) =>
+      `${key}${separator}${isHashReference(rawValue) ? rawValue : hashValue(rawValue)}`
+  );
+
+  for (const pattern of SECRET_VALUE_PATTERNS) {
+    pattern.lastIndex = 0;
+    sanitized = sanitized.replace(pattern, (rawValue) => hashValue(rawValue));
+  }
+
+  return sanitized;
+}
+
 function buildToolResult(input: {
   toolCallId: string;
   status: ToolCallResult["status"];
@@ -1165,6 +1643,12 @@ function buildToolResult(input: {
   resultHash?: string;
   cacheStatus: CacheStatus;
   traceId: string;
+  adapterVersion?: string;
+  decisionHash?: string | undefined;
+  approvalId?: string | undefined;
+  spanId?: string | undefined;
+  eventIds?: string[] | undefined;
+  redactionSummary?: RedactionSummary | undefined;
   output?: unknown;
   error?: AdapterError;
 }): ToolCallResult {
@@ -1180,6 +1664,30 @@ function buildToolResult(input: {
     provenance.resultHash = input.resultHash;
   }
 
+  if (input.adapterVersion !== undefined) {
+    provenance.adapterVersion = input.adapterVersion;
+  }
+
+  if (input.decisionHash !== undefined) {
+    provenance.decisionHash = input.decisionHash;
+  }
+
+  if (input.approvalId !== undefined) {
+    provenance.approvalId = input.approvalId;
+  }
+
+  if (input.spanId !== undefined) {
+    provenance.spanId = input.spanId;
+  }
+
+  if (input.eventIds !== undefined) {
+    provenance.eventIds = input.eventIds;
+  }
+
+  if (input.redactionSummary !== undefined) {
+    provenance.redactionSummary = input.redactionSummary;
+  }
+
   const result: Record<string, unknown> = {
     toolCallId: input.toolCallId,
     status: input.status,
@@ -1191,7 +1699,10 @@ function buildToolResult(input: {
   }
 
   if (input.error !== undefined) {
-    result.error = input.error;
+    result.error = {
+      ...input.error,
+      message: sanitizeErrorMessage(input.error.message)
+    };
   }
 
   return ToolCallResultSchema.parse(result);
@@ -1302,7 +1813,7 @@ function adapterFailure(
     status: "failed",
     error: {
       code,
-      message,
+      message: sanitizeErrorMessage(message),
       retryable
     }
   };

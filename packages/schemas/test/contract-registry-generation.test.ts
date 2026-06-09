@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   buildCompatibilityReport,
@@ -179,7 +179,8 @@ describe("generated contract registry", () => {
     );
   });
 
-  test("checked-in generated artifacts have no drift after regeneration", async () => {
+  test("checked-in generated artifacts are idempotent after regeneration", async () => {
+    const before = snapshotGeneratedArtifacts();
     const proc = Bun.spawn(["bun", "packages/schemas/scripts/generate.ts"], {
       cwd: repoRoot,
       stdout: "pipe",
@@ -190,31 +191,44 @@ describe("generated contract registry", () => {
 
     expect(stderr).toBe("");
     expect(exitCode).toBe(0);
-
-    const diff = Bun.spawn(
-      [
-        "git",
-        "diff",
-        "--",
-        "packages/schemas/contracts",
-        "packages/schemas/fixtures",
-        "packages/schemas/src/generated"
-      ],
-      {
-        cwd: repoRoot,
-        stdout: "pipe",
-        stderr: "pipe"
-      }
-    );
-    const diffExit = await diff.exited;
-    const diffOutput = await new Response(diff.stdout).text();
-    const diffError = await new Response(diff.stderr).text();
-
-    expect(diffError).toBe("");
-    expect(diffExit).toBe(0);
-    expect(diffOutput).toBe("");
+    expect(snapshotGeneratedArtifacts()).toEqual(before);
   });
 });
+
+function snapshotGeneratedArtifacts() {
+  const roots = [
+    join(packageRoot, "contracts"),
+    join(packageRoot, "fixtures"),
+    join(packageRoot, "src", "generated")
+  ];
+
+  return Object.fromEntries(
+    roots
+      .flatMap((root) => readFilesRecursively(root))
+      .sort(([left], [right]) => left.localeCompare(right))
+  );
+}
+
+function readFilesRecursively(directory: string): [string, string][] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+
+    if (entry.isDirectory()) {
+      return readFilesRecursively(path);
+    }
+
+    if (!entry.isFile()) {
+      return [];
+    }
+
+    return [
+      [
+        relative(packageRoot, path).split(sep).join("/"),
+        readFileSync(path, "utf8")
+      ]
+    ];
+  });
+}
 
 function inventorySchemaExports() {
   const markdown = readFileSync(join(packageRoot, "CONTRACTS.md"), "utf8");

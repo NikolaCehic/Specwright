@@ -1154,8 +1154,10 @@ const validToolCallResult = {
   provenance: {
     toolId: "fs.read",
     toolVersion: "1.0.0",
+    adapterVersion: "1.0.0",
     argsHash: "sha256:args-fixture",
     resultHash: "sha256:result-fixture",
+    decisionHash: "sha256:decision-fixture",
     cacheStatus: "miss",
     traceId: "trace:contract-registry"
   }

@@ -135,13 +135,13 @@
     {
       "baselineHash": "sha256:2697fd9e9958d42e3d6411fe616ee3a7f4b15eddfae34842fb9a37a84abf095c",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:2697fd9e9958d42e3d6411fe616ee3a7f4b15eddfae34842fb9a37a84abf095c",
+      "classification": "migration-required",
+      "currentHash": "sha256:7dad986fea6b0d28ef7442772461469d62748242318e3abbf5349f2bce18fe1c",
       "currentVersion": "1",
       "exportName": "ToolCallResultSchema",
       "id": "specwright.capability.tool-call-result",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:4d2c4e7d39ad729d7819fc6b77601cc54a2093eed101c288e1788b15589fbabc",
@@ -354,7 +354,7 @@
       "baselineHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
       "baselineVersion": "1",
       "classification": "migration-required",
-      "currentHash": "sha256:21b73d32904b70829fbdf767c9cdc982e587c9d4c9c9669b61eb78831f253879",
+      "currentHash": "sha256:beda5c802c408ff4b39bcf34e476a4ad754b74942f64f03762df74964660a664",
       "currentVersion": "1",
       "exportName": "RuntimeEventSchema",
       "id": "specwright.event.runtime-event",
@@ -397,24 +397,24 @@
     {
       "baselineHash": "sha256:4f968d003f7352138f68b03ef2aba6179a64386adcd924d915b39403a960b85d",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:4f968d003f7352138f68b03ef2aba6179a64386adcd924d915b39403a960b85d",
+      "classification": "migration-required",
+      "currentHash": "sha256:13f3f758118cb349afe15870ef70eb0047da7e65d9a153c125d221ac365f6e58",
       "currentVersion": "1",
       "exportName": "ToolCompletedEventPayloadSchema",
       "id": "specwright.event.tool.completed",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:8189752eb42678f931a04061084dcc6bfb24b280ed623a66c0fa60ba3ff5c18c",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:8189752eb42678f931a04061084dcc6bfb24b280ed623a66c0fa60ba3ff5c18c",
+      "classification": "migration-required",
+      "currentHash": "sha256:1fd374501c298b56e0b0caecae2d7f4ee7572202d214da1f9b91067e03b5afc7",
       "currentVersion": "1",
       "exportName": "ToolDeniedEventPayloadSchema",
       "id": "specwright.event.tool.denied",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:88687b2da2fa70ad290d920ab1b83e65f1523e29fd86df3b00fa40f0441ad7d0",
@@ -1103,23 +1103,29 @@
   "registryVersion": "scope-01.packet-05",
   "releasePolicy": {
     "auditExportChanges": [
+      "specwright.capability.tool-call-result",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
+      "specwright.event.tool.completed",
+      "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
     ],
     "changedContractIds": [
+      "specwright.capability.tool-call-result",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
+      "specwright.event.tool.completed",
+      "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
@@ -1137,7 +1143,7 @@
       "specwright.capability.cache-status": "unchanged",
       "specwright.capability.harness-manifest-tools": "unchanged",
       "specwright.capability.tool-call-request": "unchanged",
-      "specwright.capability.tool-call-result": "unchanged",
+      "specwright.capability.tool-call-result": "migration-required",
       "specwright.capability.tool-call-status": "unchanged",
       "specwright.capability.tool-definition": "unchanged",
       "specwright.compatibility.harness-schema-version": "unchanged",
@@ -1161,8 +1167,8 @@
       "specwright.event.runtime-event-contract-metadata": "unchanged",
       "specwright.event.runtime-event-envelope": "migration-required",
       "specwright.event.tool.authorized": "unchanged",
-      "specwright.event.tool.completed": "unchanged",
-      "specwright.event.tool.denied": "unchanged",
+      "specwright.event.tool.completed": "migration-required",
+      "specwright.event.tool.denied": "migration-required",
       "specwright.event.tool.requested": "unchanged",
       "specwright.evidence.claim-level": "unchanged",
       "specwright.evidence.created-by": "unchanged",
@@ -1229,22 +1235,28 @@
     "conformanceResultSummary": "migration review required before release",
     "contractRegistryVersion": "scope-01.packet-05",
     "generatedSdkSurfaceChanges": [
+      "specwright.capability.tool-call-result",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
+      "specwright.event.tool.completed",
+      "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
     ],
     "migrationRequirements": [
+      "specwright.capability.tool-call-result",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy.evaluated",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
+      "specwright.event.tool.completed",
+      "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
@@ -1253,11 +1265,14 @@
       "specwright.event.policy-evaluated-event"
     ],
     "unsupportedHistoricalVersions": [
+      "specwright.capability.tool-call-result@1",
       "specwright.event.gate.evaluated@1",
       "specwright.event.harness.loaded@1",
       "specwright.event.policy.evaluated@1",
       "specwright.event.runtime-event@1",
       "specwright.event.runtime-event-envelope@1",
+      "specwright.event.tool.completed@1",
+      "specwright.event.tool.denied@1",
       "specwright.governance.policy-bundle@1",
       "specwright.harness.harness-snapshot@1",
       "specwright.lifecycle.gate-verdict@1"
@@ -1268,8 +1283,8 @@
     "backward-compatible": 0,
     "breaking": 0,
     "forward-compatible": 0,
-    "migration-required": 8,
+    "migration-required": 11,
     "patch-compatible": 0,
-    "unchanged": 91
+    "unchanged": 88
   }
 }

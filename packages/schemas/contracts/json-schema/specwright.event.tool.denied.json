@@ -262,6 +262,12 @@
         "provenance": {
           "additionalProperties": false,
           "properties": {
+            "adapterVersion": {
+              "type": "string"
+            },
+            "approvalId": {
+              "type": "string"
+            },
             "argsHash": {
               "type": "string"
             },
@@ -272,7 +278,84 @@
                 "bypass"
               ]
             },
+            "decisionHash": {
+              "type": "string"
+            },
+            "eventIds": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "redactionSummary": {
+              "additionalProperties": false,
+              "properties": {
+                "dischargedObligations": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "externalSource": {
+                        "type": "string"
+                      },
+                      "kind": {
+                        "enum": [
+                          "redact",
+                          "mark_external_source"
+                        ]
+                      },
+                      "selector": {
+                        "type": "string"
+                      },
+                      "sourceRuleId": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "sourceRuleId"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
+                "redactedCount": {
+                  "type": "number"
+                },
+                "redactions": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "classification": {
+                        "type": "string"
+                      },
+                      "hash": {
+                        "type": "string"
+                      },
+                      "path": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "classification",
+                      "hash",
+                      "path"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                }
+              },
+              "required": [
+                "dischargedObligations",
+                "redactedCount",
+                "redactions"
+              ],
+              "type": "object"
+            },
             "resultHash": {
+              "type": "string"
+            },
+            "spanId": {
               "type": "string"
             },
             "toolId": {
@@ -311,7 +394,8 @@
         "status",
         "toolCallId"
       ],
-      "type": "object"
+      "type": "object",
+      "x-zod-effect": "refinement"
     }
   },
   "required": [],
@@ -319,7 +403,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:8189752eb42678f931a04061084dcc6bfb24b280ed623a66c0fa60ba3ff5c18c",
+    "hash": "sha256:1fd374501c298b56e0b0caecae2d7f4ee7572202d214da1f9b91067e03b5afc7",
     "id": "specwright.event.tool.denied",
     "status": "public",
     "version": "1"
