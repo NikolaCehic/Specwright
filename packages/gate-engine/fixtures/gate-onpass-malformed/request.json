@@ -1,0 +1,16 @@
+{
+  "gateId": "gate_onpass_malformed",
+  "phase": "verification",
+  "gateDefinitions": {
+    "gate_onpass_malformed": {
+      "id": "gate_onpass_malformed",
+      "phase": "verification",
+      "kind": "exit",
+      "required": true,
+      "checks": [],
+      "onPass": {
+        "action": "transition_phase"
+      }
+    }
+  }
+}

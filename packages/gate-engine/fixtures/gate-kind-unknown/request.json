@@ -1,0 +1,13 @@
+{
+  "gateId": "gate_kind_unknown",
+  "phase": "verification",
+  "gateDefinitions": {
+    "gate_kind_unknown": {
+      "id": "gate_kind_unknown",
+      "phase": "verification",
+      "kind": "unknown",
+      "required": true,
+      "checks": []
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "gateId": "gate_onfail_malformed",
+  "phase": "verification",
+  "gateDefinitions": {
+    "gate_onfail_malformed": {
+      "id": "gate_onfail_malformed",
+      "phase": "verification",
+      "kind": "exit",
+      "required": true,
+      "checks": [],
+      "onFail": {
+        "action": "create_repair_task",
+        "successGate": 42
+      }
+    }
+  }
+}

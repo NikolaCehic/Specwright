@@ -1,0 +1,20 @@
+{
+  "gateId": "gate_definition_inline_rejected",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "gate_definition_inline_rejected",
+    "phase": "verification",
+    "kind": "exit",
+    "required": true,
+    "checks": []
+  },
+  "gateDefinitions": {
+    "gate_definition_inline_rejected": {
+      "id": "gate_definition_inline_rejected",
+      "phase": "verification",
+      "kind": "exit",
+      "required": true,
+      "checks": []
+    }
+  }
+}

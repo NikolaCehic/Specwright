@@ -1,0 +1,33 @@
+{
+  "verdict": {
+    "gateId": "gate_definition_inline_rejected",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required"
+    ],
+    "findings": [
+      {
+        "id": "gate.definition.inline_rejected",
+        "severity": "blocking",
+        "message": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required",
+        "targetRef": "gate:gate_definition_inline_rejected",
+        "evidenceRefs": []
+      }
+    ],
+    "evidenceRefs": [],
+    "requiredAction": "fail_run",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    }
+  },
+  "instruction": {
+    "kind": "fail_run",
+    "gateId": "gate_definition_inline_rejected",
+    "reason": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required"
+  }
+}

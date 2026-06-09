@@ -1,0 +1,11 @@
+{
+  "gateId": "gate_definition_id_mismatch",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "different_gate",
+    "phase": "verification",
+    "kind": "exit",
+    "required": true,
+    "checks": []
+  }
+}

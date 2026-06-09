@@ -1,0 +1,33 @@
+{
+  "verdict": {
+    "gateId": "gate_kind_unknown",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Gate definition gate_kind_unknown declares unknown kind unknown"
+    ],
+    "findings": [
+      {
+        "id": "gate.kind.unknown",
+        "severity": "blocking",
+        "message": "Gate definition gate_kind_unknown declares unknown kind unknown",
+        "targetRef": "gate:gate_kind_unknown",
+        "evidenceRefs": []
+      }
+    ],
+    "evidenceRefs": [],
+    "requiredAction": "fail_run",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    }
+  },
+  "instruction": {
+    "kind": "fail_run",
+    "gateId": "gate_kind_unknown",
+    "reason": "Gate definition gate_kind_unknown declares unknown kind unknown"
+  }
+}
