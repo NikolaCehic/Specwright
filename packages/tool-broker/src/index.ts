@@ -71,7 +71,42 @@ export const FsReadOutputSchema = z
   .strict();
 export type FsReadOutput = z.infer<typeof FsReadOutputSchema>;
 
-export type CapabilityKind = "filesystem";
+export const CAPABILITY_KINDS = [
+  "filesystem",
+  "git",
+  "browser",
+  "model",
+  "embeddings",
+  "memory",
+  "cache",
+  "shell",
+  "mcp",
+  "network",
+  "human"
+] as const;
+export type CapabilityKind = (typeof CAPABILITY_KINDS)[number];
+
+export const ISOLATION_TIERS = [0, 1, 2, 3, 4] as const;
+export type IsolationTier = (typeof ISOLATION_TIERS)[number];
+
+export const CAPABILITY_KIND_ISOLATION_TIERS = Object.freeze({
+  filesystem: 0,
+  git: 0,
+  browser: 4,
+  model: 1,
+  embeddings: 1,
+  memory: 1,
+  cache: 1,
+  shell: 3,
+  mcp: 4,
+  network: 4,
+  human: 4
+} as const satisfies Record<CapabilityKind, IsolationTier>);
+
+export function isolationTierForKind(kind: CapabilityKind): IsolationTier {
+  return CAPABILITY_KIND_ISOLATION_TIERS[kind];
+}
+
 export type AdapterStatus = "success" | "failed";
 
 export type AdapterError = {
@@ -141,11 +176,68 @@ export type CapabilityDefinition = {
   adapter: CapabilityAdapter;
   risk: PolicyRisk;
   requestedScopes: string[];
-  limits?: CapabilityLimits;
+  limits: CapabilityLimits;
   cache: {
     enabled: boolean;
   };
+  isolationTier: IsolationTier;
 };
+
+const CapabilityKindSchema = z.enum(CAPABILITY_KINDS);
+const IsolationTierSchema = z.union([
+  z.literal(0),
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+  z.literal(4)
+]);
+const PolicyRiskSchema = z.enum(["low", "medium", "high", "critical"]);
+const NonEmptyStringSchema = z.string().min(1);
+const ZodTypeSchema = z.custom<ZodTypeAny>(isZodType, {
+  message: "Expected a Zod schema."
+});
+const CapabilityLimitsSchema = z
+  .object({
+    timeoutMs: z.number().int().positive().optional(),
+    maxBytes: z.number().int().positive().optional(),
+    maxTokens: z.number().int().positive().optional()
+  })
+  .strict();
+const CapabilityCacheSchema = z
+  .object({
+    enabled: z.boolean()
+  })
+  .strict();
+const CapabilityAdapterSchema = z
+  .object({
+    id: NonEmptyStringSchema,
+    version: NonEmptyStringSchema,
+    kind: CapabilityKindSchema,
+    execute: z.custom<CapabilityAdapter["execute"]>(
+      (value) => typeof value === "function",
+      {
+        message: "Expected adapter execute function."
+      }
+    )
+  })
+  .strict();
+
+export const CapabilityDefinitionSchema = z
+  .object({
+    id: NonEmptyStringSchema,
+    kind: CapabilityKindSchema,
+    description: NonEmptyStringSchema,
+    version: NonEmptyStringSchema,
+    inputSchema: ZodTypeSchema,
+    outputSchema: ZodTypeSchema,
+    adapter: CapabilityAdapterSchema,
+    risk: PolicyRiskSchema,
+    requestedScopes: z.array(NonEmptyStringSchema).nonempty(),
+    limits: CapabilityLimitsSchema,
+    cache: CapabilityCacheSchema,
+    isolationTier: IsolationTierSchema
+  })
+  .strict();
 
 export class CapabilityRegistry {
   private readonly definitions = new Map<string, CapabilityDefinition>();
@@ -157,6 +249,8 @@ export class CapabilityRegistry {
   }
 
   register(definition: CapabilityDefinition) {
+    assertValidCapabilityDefinition(definition);
+
     if (this.definitions.has(definition.id)) {
       throw new ToolBrokerError(
         "duplicate_tool",
@@ -206,7 +300,8 @@ export function createDefaultCapabilityRegistry(
       },
       cache: {
         enabled: false
-      }
+      },
+      isolationTier: isolationTierForKind("filesystem")
     },
     {
       id: "fs.read",
@@ -224,7 +319,8 @@ export function createDefaultCapabilityRegistry(
       },
       cache: {
         enabled: false
-      }
+      },
+      isolationTier: isolationTierForKind("filesystem")
     }
   ]);
 }
@@ -490,6 +586,142 @@ export function createToolBroker(options: ToolBrokerOptions) {
   return new ToolBroker(options);
 }
 
+const NORMALIZATION_OUTPUT_SCHEMA_KINDS = [
+  "model",
+  "embeddings",
+  "memory",
+  "mcp"
+] as const satisfies readonly CapabilityKind[];
+
+function assertValidCapabilityDefinition(definition: CapabilityDefinition) {
+  const parsedDefinition = CapabilityDefinitionSchema.safeParse(definition);
+
+  if (!parsedDefinition.success) {
+    if (isMissingOutputSchemaFailure(definition)) {
+      throw new ToolBrokerError(
+        "missing_output_schema",
+        missingOutputSchemaMessage(definition)
+      );
+    }
+
+    if (isMissingIsolationTierFailure(definition)) {
+      throw new ToolBrokerError(
+        "missing_isolation_tier",
+        missingIsolationTierMessage(definition)
+      );
+    }
+
+    throw new ToolBrokerError(
+      "invalid_definition",
+      formatZodIssues(parsedDefinition.error)
+    );
+  }
+
+  const expectedIsolationTier = isolationTierForKind(definition.kind);
+  if (definition.isolationTier !== expectedIsolationTier) {
+    throw new ToolBrokerError(
+      "missing_isolation_tier",
+      `Capability ${definition.id} must declare isolation tier ${expectedIsolationTier} for kind ${definition.kind}.`
+    );
+  }
+
+  if (definition.adapter.kind !== definition.kind) {
+    throw new ToolBrokerError(
+      "adapter_kind_mismatch",
+      `Capability ${definition.id} declares kind ${definition.kind} but adapter ${definition.adapter.id} declares kind ${definition.adapter.kind}.`
+    );
+  }
+
+  if (
+    requiresNormalizationOutputSchema(definition.kind) &&
+    !isZodType(definition.outputSchema)
+  ) {
+    throw new ToolBrokerError(
+      "missing_output_schema",
+      missingOutputSchemaMessage(definition)
+    );
+  }
+}
+
+function isMissingOutputSchemaFailure(definition: unknown) {
+  if (!isRecord(definition)) {
+    return false;
+  }
+
+  const kind = definition.kind;
+  return (
+    typeof kind === "string" &&
+    isNormalizationOutputSchemaKind(kind) &&
+    !isZodType(definition.outputSchema)
+  );
+}
+
+function isMissingIsolationTierFailure(definition: unknown) {
+  if (!isRecord(definition)) {
+    return false;
+  }
+
+  const kind = definition.kind;
+  if (typeof kind === "string" && !hasIsolationTierForKind(kind)) {
+    return true;
+  }
+
+  const isolationTier = definition.isolationTier;
+  if (!isIsolationTier(isolationTier)) {
+    return true;
+  }
+
+  return (
+    typeof kind === "string" &&
+    hasIsolationTierForKind(kind) &&
+    isolationTier !== isolationTierForKind(kind)
+  );
+}
+
+function missingOutputSchemaMessage(definition: unknown) {
+  const id = readStringProperty(definition, "id") ?? "unknown";
+  const kind = readStringProperty(definition, "kind") ?? "unknown";
+  return `Capability ${id} (${kind}) must declare a real output schema.`;
+}
+
+function missingIsolationTierMessage(definition: unknown) {
+  const id = readStringProperty(definition, "id") ?? "unknown";
+  const kind = readStringProperty(definition, "kind") ?? "unknown";
+  return `Capability ${id} must declare the registered isolation tier for kind ${kind}.`;
+}
+
+function requiresNormalizationOutputSchema(kind: CapabilityKind) {
+  return (
+    NORMALIZATION_OUTPUT_SCHEMA_KINDS as readonly CapabilityKind[]
+  ).includes(kind);
+}
+
+function isNormalizationOutputSchemaKind(
+  kind: string
+): kind is (typeof NORMALIZATION_OUTPUT_SCHEMA_KINDS)[number] {
+  return (
+    NORMALIZATION_OUTPUT_SCHEMA_KINDS as readonly string[]
+  ).includes(kind);
+}
+
+function hasIsolationTierForKind(kind: string): kind is CapabilityKind {
+  return Object.prototype.hasOwnProperty.call(
+    CAPABILITY_KIND_ISOLATION_TIERS,
+    kind
+  );
+}
+
+function isIsolationTier(value: unknown): value is IsolationTier {
+  return (
+    typeof value === "number" &&
+    (ISOLATION_TIERS as readonly number[]).includes(value)
+  );
+}
+
+function isZodType(value: unknown): value is ZodTypeAny {
+  return value instanceof z.ZodType;
+}
+
 export function createFsListAdapter(): CapabilityAdapter {
   return {
     id: "adapters/filesystem/list",
@@ -611,10 +843,20 @@ export function createFsReadAdapter(): CapabilityAdapter {
   };
 }
 
-export class ToolBrokerError extends Error {
-  readonly code: string;
+export type ToolBrokerErrorCode =
+  | "duplicate_tool"
+  | "path_outside_workspace"
+  | "cwd_outside_workspace"
+  | "not_found"
+  | "invalid_definition"
+  | "missing_isolation_tier"
+  | "missing_output_schema"
+  | "adapter_kind_mismatch";
 
-  constructor(code: string, message: string) {
+export class ToolBrokerError extends Error {
+  readonly code: ToolBrokerErrorCode;
+
+  constructor(code: ToolBrokerErrorCode, message: string) {
     super(message);
     this.name = "ToolBrokerError";
     this.code = code;
@@ -658,10 +900,10 @@ function computeLimits(
   verdict: PolicyVerdict
 ): AdapterExecutionLimits {
   const limits: AdapterExecutionLimits = {
-    timeoutMs: definition.limits?.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS
+    timeoutMs: definition.limits.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS
   };
   const maxByteCandidates = [
-    definition.limits?.maxBytes,
+    definition.limits.maxBytes,
     readPositiveNumber(args, "maxBytes"),
     readPolicyMaxBytes(verdict)
   ].filter((value): value is number => value !== undefined);
@@ -788,7 +1030,10 @@ function resolvePathInsideWorkspace(base: string, path: string) {
 function assertInsideWorkspace(
   workspaceRoot: string,
   targetPath: string,
-  code: string
+  code: Extract<
+    ToolBrokerErrorCode,
+    "path_outside_workspace" | "cwd_outside_workspace"
+  >
 ) {
   if (!isPathInside(workspaceRoot, targetPath)) {
     throw new ToolBrokerError(code, "Path resolves outside the configured workspace.");
