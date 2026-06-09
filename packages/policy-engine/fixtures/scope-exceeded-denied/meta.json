@@ -1,0 +1,5 @@
+{
+  "domain": "scope-governance",
+  "kind": "verdict",
+  "description": "Requested scope outside policy is denied."
+}

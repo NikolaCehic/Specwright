@@ -1,0 +1,5 @@
+{
+  "domain": "budget-governance",
+  "kind": "verdict",
+  "description": "Budget overrun with deny policy blocks the request."
+}

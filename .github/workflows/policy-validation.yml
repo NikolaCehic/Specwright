@@ -1,0 +1,52 @@
+name: Policy Validation
+
+on:
+  pull_request:
+    paths:
+      - "packages/policy-engine/**"
+      - "packages/schemas/**"
+      - ".github/workflows/policy-validation.yml"
+      - "package.json"
+      - "bun.lock"
+      - "tsconfig.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/policy-engine/**"
+      - "packages/schemas/**"
+      - ".github/workflows/policy-validation.yml"
+      - "package.json"
+      - "bun.lock"
+      - "tsconfig.json"
+
+permissions:
+  contents: read
+
+jobs:
+  policy-validation:
+    name: Policy validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.14"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Validate policy corpus
+        run: bun run --cwd packages/policy-engine validate:policy
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Proof v0
+        run: bun run proof:v0

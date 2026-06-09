@@ -1,0 +1,5 @@
+{
+  "domain": "approval-governance",
+  "kind": "verdict",
+  "description": "Tool output cannot satisfy human approval state."
+}

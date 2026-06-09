@@ -1,0 +1,5 @@
+{
+  "domain": "approval-governance",
+  "kind": "verdict",
+  "description": "Replayed stale approval does not satisfy the current shell approval id."
+}

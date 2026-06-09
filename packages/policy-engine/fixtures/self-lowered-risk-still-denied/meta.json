@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Caller-supplied lower risk cannot reduce scrutiny for shell execution."
+}

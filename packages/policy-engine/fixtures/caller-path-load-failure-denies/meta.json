@@ -1,0 +1,5 @@
+{
+  "domain": "bundle-load-governance",
+  "kind": "caller_path_load_failure",
+  "description": "Caller-side bundle load failure denies without evaluating a partial set."
+}

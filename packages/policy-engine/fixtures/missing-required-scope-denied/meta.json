@@ -1,0 +1,5 @@
+{
+  "domain": "scope-governance",
+  "kind": "verdict",
+  "description": "Request missing a required scope is denied."
+}

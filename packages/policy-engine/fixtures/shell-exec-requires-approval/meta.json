@@ -1,0 +1,5 @@
+{
+  "domain": "approval-governance",
+  "kind": "verdict",
+  "description": "Shell execution requires explicit approval."
+}

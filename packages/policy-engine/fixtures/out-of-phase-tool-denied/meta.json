@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Tool use outside its allowed phase is denied."
+}

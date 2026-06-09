@@ -1,0 +1,5 @@
+{
+  "domain": "replay-governance",
+  "kind": "replay",
+  "description": "Replay detects a stored decision hash mismatch."
+}

@@ -1,0 +1,5 @@
+{
+  "domain": "replay-governance",
+  "kind": "replay",
+  "description": "Replay rederives the stored filesystem decision hash."
+}

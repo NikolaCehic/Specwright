@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Host denial dominates lower-layer filesystem allow rules."
+}

@@ -1,0 +1,5 @@
+{
+  "domain": "capability-admission",
+  "kind": "verdict",
+  "description": "Local development run mode allows the same model prompt capability."
+}

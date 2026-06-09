@@ -1,0 +1,5 @@
+{
+  "domain": "bundle-load-governance",
+  "kind": "load_failure",
+  "description": "Unsafe authored pattern fails bundle load."
+}

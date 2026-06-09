@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
   PolicyEvaluatedEventPayloadSchema,
-  PolicyVerdictSchema,
   type PolicyEvaluatedEventPayload
 } from "@specwright/schemas";
 import {
@@ -26,47 +25,15 @@ import "./mutation.test";
 import "./pattern-safety.test";
 import "./replay.test";
 import "./failure-class-coverage.test";
+import "./policy-validation.test";
+import {
+  loadPolicyFixtureCorpus,
+  readDecisionHashBaseline,
+  validatePolicyFixtureCorpus
+} from "./policy-validation";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
 
-const fixtureCases = [
-  "fs-read-allowed-in-evidence",
-  "shell-exec-requires-approval",
-  "shell-exec-approved",
-  "destructive-command-denied",
-  "missing-policy-fails-closed",
-  "approval-cannot-override-deny",
-  "out-of-phase-tool-denied",
-  "scope-exceeded-denied",
-  "workspace-deny-overrides-harness-allow",
-  "multi-bundle-higher-layer-deny",
-  "missing-required-scope-denied",
-  "scope-union-constrained",
-  "budget-exceeded-approval-required",
-  "budget-missing-policy-denied",
-  "budget-overrun-denied",
-  "budget-within-limit-allowed",
-  "run-mode-local-dev-allowed",
-  "run-mode-ci-denied",
-  "host-deny-wins",
-  "determinism-reordered-fs-read",
-  "replay-equivalent-fs-read",
-  "replay-changed-stored-hash",
-  "replay-input-drift",
-  "replay-unpinned-bundle",
-  "self-lowered-risk-still-denied",
-  "mismatched-approval-id-ineffective",
-  "replayed-approval-ineffective",
-  "rejected-approval-ineffective",
-  "missing-budget-snapshot-denied",
-  "unmetered-resource-denied",
-  "injected-source-text-requests-deploy-denied",
-  "host-allowlist-absence-denied",
-  "workspace-bundle-allows-host-denied-tool",
-  "secret-in-args-redacted-denied",
-  "tool-output-self-approval-ignored",
-  "action-kind-without-tool-id-denied"
-];
 const recordProjectionCases = [
   {
     fixtureName: "fs-read-allowed-in-evidence",
@@ -87,34 +54,24 @@ const recordProjectionCases = [
 ] as const;
 
 describe("policy engine fixtures", () => {
-  for (const fixtureName of fixtureCases) {
-    test(fixtureName, async () => {
-      const fixtureDir = join(fixturesDir, fixtureName);
-      const request = await readJson(join(fixtureDir, "request.json"));
-      const policyBundle = await readJson(join(fixtureDir, "policy-bundle.json"));
-      const expected = await readJson(join(fixtureDir, "expected-verdict.json"));
-      const loadResult = loadPolicyBundles(policyBundle);
-      const expectedBundles = Array.isArray(policyBundle)
-        ? policyBundle
-        : [policyBundle];
+  test("discovery-driven policy validation gates every fixture directory", async () => {
+    const corpus = await loadPolicyFixtureCorpus();
+    const baselineRead = await readDecisionHashBaseline();
 
-      expect(loadResult).toEqual({
-        ok: true,
-        bundles: expectedBundles
-      });
+    expect(baselineRead.ok).toBe(true);
+    if (!baselineRead.ok) {
+      throw new Error("Decision hash baseline must be readable");
+    }
 
-      const verdict = evaluatePolicy(
-        request,
-        loadResult.ok ? loadResult.bundles : []
-      );
+    const report = validatePolicyFixtureCorpus(corpus, baselineRead.baseline);
 
-      expect(PolicyVerdictSchema.parse(verdict)).toEqual(verdict);
-      expect(verdict).toEqual(expected);
-      expect(evaluatePolicy(request, loadResult.ok ? loadResult.bundles : [])).toEqual(
-        verdict
-      );
-    });
-  }
+    expect(report.issues).toEqual([]);
+    expect(report.totalFixtureDirectories).toBe(42);
+    expect(report.verdictFixtureCount).toBe(36);
+    expect(report.nonVerdictFixtureCount).toBe(6);
+    expect(report.replayFixtureCount).toBe(4);
+    expect(report.decisionHashBaselineEntries).toBe(report.verdictFixtureCount);
+  });
 });
 
 describe("policy evaluated record projection", () => {
