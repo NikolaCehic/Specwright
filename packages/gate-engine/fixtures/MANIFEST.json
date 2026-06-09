@@ -1,0 +1,493 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "fixtureId": "artifact-schema-invalid",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:dc9937bb56ec4f9d9c5dd65087b99ca1e8e39df6845650404f4f198a32648c9d"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:6bab5506163e28f06ac7e2077d236ec2b8e73fc5d3d0b6cfc5ace44ae836bdf6"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:9911d77e3464169f0f55191d709b46c18aaaaa5a06cacd44b49fe925ea318b8f"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "context-sufficiency-missing-context",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:d6e4f2e197892ee012e89c5ca7091fdbf457a65bd022661eeb28ca352939dcb9"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:71fba47dc03dd64559b0fccd27093e80f088bd2eca05ca3fd9d3d8dd83276b41"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:9530806b5bd106da4778d62bf0630ccb7c5ad29f03d5eb94cf2785540c24920b"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "context-sufficiency-pass",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:f9afa8015ca0805d61c91035302948c94dc5193b0de0a90c873024de7911fe73"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:2ce12b1f912d003548294d31a3521feb1a96158c9c69abecf909ec792df624a7"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:f470fdc09ced460aef8918a748072eafc9cd2bb3910335dfe703b3751339485b"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "definition-changed",
+      "governedFiles": [
+        {
+          "path": "expected-signal.json",
+          "sha256": "sha256:ed6aea696985dd8625c2c3217e72b1a4f74a84ceac54dd74fee491ab717fdc2e"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:464e25191ac8ae4f94d4b6aa1a2fe4071f8b7c6832118a30db5621d0103e90e9"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "eval-passed-failed",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:82235881cef31dff1527bfe7ff0e519608e4604cac99e71018aeb84875210758"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:5fd655a66e9572dbbc23eb7059dff61b113b75dd19fcb56de8be145ad7f54753"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:6d9a2592f17cf48a44ad656934f706e9629e79b7f1213f3fa3afb788e3c23046"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "gate-check-unsupported-type",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:f20554ea30dc628059fcab57d4abecf586816c081ce9b49e34a66567e689d428"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:bb30fe9e9003cb73b32cdd9785cea71d88e14ba577d319eb6a9d438d2d3f1f42"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:4ef664f5e821e83d85b64529236d475cb7f0d2b867daf2bcc47b1cc801980690"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "gate-definition-id-mismatch",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:d62251bf5c12700f40d7b15125c213493955094f1b66b7b4191611fc7d83ae19"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:bfd878b4ef54cb9089fa953fa10c5ffb5142fc6bbe9c519c1881cd1cbe1ce2e4"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:37a7c2d6a9ca5f336c94cd6d02239f99b120938336e663fa3a6c7912ffd191b5"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "gate-definition-inline-rejected",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:a960fd8967ad55e00d82c6e32cce3b3a9cd1a4f87c446dd1a63daa3b6bddc9d9"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:3a05c5f519d5c06c320a74d3e7f5b494ec96f338dd539d50714c3cfb99d30de1"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:20fad637d8f1649bdfa2d07889e59c166df59d4a32513e17b923ebc4a471c5e9"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "gate-kind-unknown",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:0390315bc4b2b0a5cc997533c1ebf2983c71fcd44c5ff5a9fda98cff5d44261d"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:dd9728bc95483bd5086fdc8ee4cf5e754862297de50745f7ca3df1884941fd32"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:c32acccdb6ba357eb7f2d21d1a6c0582a0a0fadfcb13ddf35f2e409e4304e583"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "gate-onfail-malformed",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:f733d04e8c5772d028b07448cffecec22729155969626fe26505382072049ed4"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:732e6b10820297b5c0f5212eb12d7fe75ab4a84ad6104607f7e0837a952938ee"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:2476e8574d1e41de0d3c34b00a57df9f5bbc8f6859b0f8385d45b59b9142db7c"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "gate-onpass-malformed",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:bf82007991bed08e457d6bbf0afc3048826bf902d440f95b74b1f5433ac58342"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:9762ba3b9d0a51d144fa0790fd309cf6976c8d08bce2482139972ce65247aec8"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:e88d0762c58a76f3eda9f4501beecff9b0070ca954c3b5f609c2cbbc57a53e19"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "human-review-clarification",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:55a52d1a7e35f0afdce06984d290a7c7b8e9a2def64d222ce63054cc3258fa46"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:35135bd59c2f9d39b9ee89a0b635a3d94785eae8b30058ebf350e70f09dfe982"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:74c149be3e1e09a7222846052797e555561f1441b2f00adc265d3acfd13334e7"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "missing-gate-definition",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:7a2062c16402efe383b1f53f903ce6e5bf9eb20e7acd5d3fa4174a48ac8e2a51"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:1661517e5d714a5e525c7cb995ee69960eb3f9481bfab1a8516274c44006a6fd"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:c82447c941b398085b10af01efc3bd0d35ca8694b6de3467a357d02aeee876b9"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "missing-required-input",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:c910d91d3dc3bc3a041b02266ca7c4730f3ed01c937e6809173376fc150d0dff"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:739136c107a198381879d1ebb98a5f2a860c386a6815c5b97e36b7db1842fa9c"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:3617ad7b206db804223f4ab6eed8f43c9456daea732139fc3cced5d88bb1421d"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "model-assisted-advisory-finding",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:8129888b4c5f09a6f7c2e60006093a989eaee7b6510eb6a670c584461623610b"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:548cfbab57bf4b5768dd2618577becf392008a282dca5513c35776d93108cfcf"
+        },
+        {
+          "path": "recorded-result.json",
+          "sha256": "sha256:527542ee756028ed0282593557b6fc9edd3da93e55205fbc7f65e9f5a1d0046e"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:d4ce5c642decef17797e4765bf384fb5eda03662eecbdcbdba9f28a5c119c401"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "model-assisted-cannot-raise-fail-to-pass",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:8f577fffbfdb35611c51fe9dafaa87966d48f3e5a91b3b18591cecc1833a762b"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:c51add0a4ff729706b5f91ed54e0aa78c676cc4622e75efdd529526559bef35d"
+        },
+        {
+          "path": "recorded-result.json",
+          "sha256": "sha256:2b2ed5b610f7fd9d6888c5278c9e0e585b1dcf4c93b63c5dde48971e4f7a0963"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:2971888a4462c3794105c285ca6fb74193909d0c5d1c59f87a60987f759ae03c"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "model-assisted-deterministic-blocks",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:6779d56cdad883a14e6213c88e8f6fccf4d4e943da16eb231c5cae951bd63751"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:ab78b1511dbfe4834d7dab013f7de27ee61678fb2cf148360648cd7b91ef2387"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:013d05c7769b7741c50519b8cfa2eac76c2cbbbfa3b5842bcffc8c45f34b6dbe"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "model-assisted-invalid-output",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:7c87b7aad29c6e666fbb3d5f57d343a36844439541a09c129e07d0ec62a7a50a"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:09afd35af9c86e9618eaabed9418415eb2c529fb0ef073173f4a4fee8819ee4c"
+        },
+        {
+          "path": "recorded-result.json",
+          "sha256": "sha256:daaa91d6ceed297bef4d1c429fd1985e6e16e6d056336963981f25288b4236fd"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:812d22aeb92bf8df0617d47c6c541caa5023e029ce45e46f1aee1eb5cce25170"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "model-assisted-redacted-projection",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:19448155010034c9226710c57d9da77e39762770f3d340b9149561c09eb69f6f"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:90ee39c16249c4fe07b879d6a80ff4ceed63eed31645f03bd28bc07285e3e7f9"
+        },
+        {
+          "path": "recorded-result.json",
+          "sha256": "sha256:7736a7329b138dd1cfdb12ddf76ab9cb475c1a69372b80a5722b0e03c968cda3"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:ba5bd54ac02c62a8610baaa56358ac569e744f8daa0669f95267bd6b719b9b3a"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "needs-review-approval-required",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:5ae363c6665a70c204d29b2e113807034ce998bf04c83a8ed7cc9c88db7dedd8"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:3c1d4585fba8616858184d1b61abe180eb716c1ad53bf2c51e2314f8f35619f5"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:e4b9a6bb0d3436ea3144fe25348401297b45f86a2f5069bccc5eaaa8175cbb01"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "policy-denial-blocks",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:34c71c8bf8cd72667c730a1f33ab98bf38ecf40f03b76c3660dc89d75284609d"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:610f7dd8da39e4cce2b038e6b9be6832831e8ccc7d75ed07fcbafee96130cf0d"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:5e1ed2aa334a832a8afc2390e99e2a76a82d995e4ed6d4dab71ef503a02becfb"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "repair-loop-ceiling-escalates",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:99a24f25aca5fec1ce8beec8193ec32a569b9f13257775e9f3e8f6d819768583"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:26fdf1db6a01bb6c0e8f5223035f5f3cadfd26dd0f774cd06faf87357efa61aa"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:8e503fbba946f7a705e8117b72d7c2de7af92e739d52ee9047cd48216b2d149a"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "repair-loop-relinked",
+      "governedFiles": [
+        {
+          "path": "linked-pass-expected-audit.json",
+          "sha256": "sha256:d00adc37e92019f099046e76b25c31c3832a4379d21acd59f45632a4d04d5997"
+        },
+        {
+          "path": "linked-pass-expected-result.json",
+          "sha256": "sha256:5a423dbb9fdce32763f783b5b62b9678be8404cd657cc3ede847ba36fe856ae6"
+        },
+        {
+          "path": "linked-pass-request.json",
+          "sha256": "sha256:2b659710e909c4e61eb9a9add723c805bbb3a9500f9c4c374049b8f6152dd274"
+        },
+        {
+          "path": "prior-fail-expected-audit.json",
+          "sha256": "sha256:dad92161487a614e11db479e023cde123fb88376889c631598d2a7f1bda7b8aa"
+        },
+        {
+          "path": "prior-fail-expected-result.json",
+          "sha256": "sha256:6f6b4db44b212903d9e88284642833193fc2a9af0b4fae47ecbcedc3f7f5e5a0"
+        },
+        {
+          "path": "prior-fail-request.json",
+          "sha256": "sha256:1c9ffd0f83eeca35b2b0a9f28fbab4d29bd792f761f3d2f74a313798a9572993"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "repair-tool-widening-rejected",
+      "governedFiles": [
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:cac726053e0eb553262ed98c35be8a8e31a0a313795a35c6e90b5e869770e627"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:f7798dddd088fe5e88a3d8ebd221d28f0e1ff587e6757ffe92d7dceb6d0687f3"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "string-action-onfail-repair",
+      "governedFiles": [
+        {
+          "path": "expected-audit.json",
+          "sha256": "sha256:6009fd38a897ad0db916960b404f54c117947a5a2bf304133dbd1e3e882cc43d"
+        },
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:80df0eab27be1180dde086085165aefa1b624e05a0b1dee66088e327dc1cbc91"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:27a525f2faf30bf345fd9fb1c001e693a106eb2222cefcd3d7f3850dd7973418"
+        }
+      ],
+      "migrationDescriptorId": null
+    },
+    {
+      "fixtureId": "v0-verdict-replay",
+      "governedFiles": [
+        {
+          "path": "expected-result.json",
+          "sha256": "sha256:2ce12b1f912d003548294d31a3521feb1a96158c9c69abecf909ec792df624a7"
+        },
+        {
+          "path": "recorded-verdict.json",
+          "sha256": "sha256:eba46795184b45377258aa21bdd6116fa01e5d7172bb2ebed30b34f51c05a6ca"
+        },
+        {
+          "path": "request.json",
+          "sha256": "sha256:f470fdc09ced460aef8918a748072eafc9cd2bb3910335dfe703b3751339485b"
+        }
+      ],
+      "migrationDescriptorId": null
+    }
+  ]
+}

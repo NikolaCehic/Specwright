@@ -18,7 +18,7 @@
     "build": "tsc -p tsconfig.build.json --pretty false",
     "lint:gates": "bun src/lint.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json --pretty false",
-    "test": "bun test src/index.test.ts src/definition.test.ts"
+    "test": "bun test src/index.test.ts src/definition.test.ts src/evaluator-identity.test.ts src/compatibility.test.ts src/definition-hash.test.ts src/definition-change.test.ts src/migration-descriptor.test.ts src/index.fixtures.test.ts src/replay.test.ts"
   },
   "dependencies": {
     "@specwright/schemas": "workspace:*",
