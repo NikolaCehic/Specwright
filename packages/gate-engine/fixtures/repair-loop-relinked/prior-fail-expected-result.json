@@ -1,0 +1,58 @@
+{
+  "verdict": {
+    "gateId": "repair_relinked",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Artifact schema validation failed"
+    ],
+    "findings": [
+      {
+        "id": "plan_schema_valid",
+        "message": "Artifact schema validation failed",
+        "severity": "blocking",
+        "targetRef": "artifact:plan",
+        "evidenceRefs": [
+          "evidence:plan"
+        ],
+        "repairHint": "Add the missing implementation steps."
+      }
+    ],
+    "evidenceRefs": [
+      "evidence:plan"
+    ],
+    "requiredAction": "repair",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70"
+  },
+  "instruction": {
+    "kind": "create_repair_task",
+    "gateId": "repair_relinked",
+    "repairTask": {
+      "id": "repair.repair_relinked",
+      "gateId": "repair_relinked",
+      "failedPhase": "verification",
+      "targetRef": "artifact:plan",
+      "problem": "Artifact schema validation failed",
+      "requiredEvidenceRefs": [
+        "evidence:plan"
+      ],
+      "allowedTools": [
+        "fs.read"
+      ],
+      "blockedTools": [
+        "shell.exec"
+      ],
+      "successGate": "repair_relinked",
+      "createdFromFindingIds": [
+        "plan_schema_valid"
+      ]
+    }
+  }
+}

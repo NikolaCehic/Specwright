@@ -1,0 +1,302 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "context_sufficiency",
+        "verdict": {
+          "gateId": "context_sufficiency",
+          "phase": "evidence",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Target task is required before planning"
+          ],
+          "findings": [
+            {
+              "id": "goal_known",
+              "message": "Target task is required before planning",
+              "severity": "blocking",
+              "targetRef": "$.run_input.task",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [
+            "source:requirements"
+          ],
+          "requiredAction": "clarify",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "context_sufficiency",
+          "question": {
+            "id": "question.context_sufficiency",
+            "gateId": "context_sufficiency",
+            "phase": "evidence",
+            "question": "I need the target task and source authority before planning.",
+            "requiredFor": "gate:context_sufficiency"
+          }
+        },
+        "definitionHash": "sha256:61fc2e37cea551fe99c4288dc6b1ef4b5b2fb18d9d0429a51a35b4a3cef25dcd",
+        "inputRefHashes": {
+          "artifact:context": "sha256:048510454c48e699e8af7528fb0ecd9d640e9cac3d98d6bc34e478f364d0f8fd",
+          "evidence": "sha256:2d6a18f2d0daf183c47d74a23c5fac1ab83752468ab5f9bbf0c2b18b5729fc32",
+          "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
+          "runInput": "sha256:d5720301f323311933b251e814b748384ea2c13ebc46d0f615346c162f9e5000"
+        },
+        "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "goal_known",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": []
+          },
+          {
+            "id": "source_authority_known",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": [
+              "source:requirements"
+            ]
+          },
+          {
+            "id": "context_evidence_covered",
+            "type": "evidence",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "context_sufficiency",
+        "verdict": {
+          "gateId": "context_sufficiency",
+          "phase": "evidence",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Target task is required before planning"
+          ],
+          "findings": [
+            {
+              "id": "goal_known",
+              "message": "Target task is required before planning",
+              "severity": "blocking",
+              "targetRef": "$.run_input.task",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [
+            "source:requirements"
+          ],
+          "requiredAction": "clarify",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "context_sufficiency",
+          "question": {
+            "id": "question.context_sufficiency",
+            "gateId": "context_sufficiency",
+            "phase": "evidence",
+            "question": "I need the target task and source authority before planning.",
+            "requiredFor": "gate:context_sufficiency"
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.review.requested",
+      "payload": {
+        "gateId": "context_sufficiency",
+        "phase": "evidence",
+        "reviewKind": "human_question",
+        "question": {
+          "id": "question.context_sufficiency",
+          "gateId": "context_sufficiency",
+          "phase": "evidence",
+          "question": "I need the target task and source authority before planning.",
+          "requiredFor": "gate:context_sufficiency"
+        },
+        "requiredFor": "gate:context_sufficiency",
+        "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "kind": "gate",
+      "name": "gate.context_sufficiency",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad",
+        "definitionHash": "sha256:61fc2e37cea551fe99c4288dc6b1ef4b5b2fb18d9d0429a51a35b4a3cef25dcd",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "context_sufficiency",
+        "instructionKind": "pause_for_human",
+        "phase": "evidence",
+        "runId": "run-gates"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_a5e7c793b9726a8f16fc943c",
+      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "kind": "gate.input_resolution",
+      "name": "gate.context_sufficiency.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "context_sufficiency",
+        "phase": "evidence",
+        "inputRefHashes": {
+          "artifact:context": "sha256:048510454c48e699e8af7528fb0ecd9d640e9cac3d98d6bc34e478f364d0f8fd",
+          "evidence": "sha256:2d6a18f2d0daf183c47d74a23c5fac1ab83752468ab5f9bbf0c2b18b5729fc32",
+          "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
+          "runInput": "sha256:d5720301f323311933b251e814b748384ea2c13ebc46d0f615346c162f9e5000"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_3ee4b6f92b932a059730821f",
+      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "kind": "gate.check",
+      "name": "gate.context_sufficiency.check.goal_known",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "goal_known",
+        "checkType": "deterministic",
+        "evidenceRefs": [],
+        "gateId": "context_sufficiency",
+        "outcome": "fail",
+        "phase": "evidence",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_19e80b16764f702752d77ea5",
+      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "kind": "gate.check",
+      "name": "gate.context_sufficiency.check.source_authority_known",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "source_authority_known",
+        "checkType": "deterministic",
+        "evidenceRefs": [
+          "source:requirements"
+        ],
+        "gateId": "context_sufficiency",
+        "outcome": "pass",
+        "phase": "evidence",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_03bb657ccd3821f07a5aebca",
+      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "kind": "gate.check",
+      "name": "gate.context_sufficiency.check.context_evidence_covered",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "context_evidence_covered",
+        "checkType": "evidence",
+        "evidenceRefs": [],
+        "gateId": "context_sufficiency",
+        "outcome": "pass",
+        "phase": "evidence",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "context_sufficiency",
+        "phase": "evidence",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "pause_for_human"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "context_sufficiency",
+        "phase": "evidence"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_review_wait_seconds",
+      "value": 0,
+      "labels": {
+        "gateId": "context_sufficiency",
+        "kind": "pause_for_human",
+        "phase": "evidence"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "deterministic",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:61fc2e37cea551fe99c4288dc6b1ef4b5b2fb18d9d0429a51a35b4a3cef25dcd",
+  "inputRefHashes": {
+    "artifact:context": "sha256:048510454c48e699e8af7528fb0ecd9d640e9cac3d98d6bc34e478f364d0f8fd",
+    "evidence": "sha256:2d6a18f2d0daf183c47d74a23c5fac1ab83752468ab5f9bbf0c2b18b5729fc32",
+    "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
+    "runInput": "sha256:d5720301f323311933b251e814b748384ea2c13ebc46d0f615346c162f9e5000"
+  },
+  "auditGaps": []
+}

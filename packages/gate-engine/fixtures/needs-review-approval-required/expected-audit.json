@@ -1,0 +1,229 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "policy_approval_required",
+        "verdict": {
+          "gateId": "policy_approval_required",
+          "phase": "verification",
+          "status": "needs_review",
+          "severity": "blocking",
+          "reasons": [
+            "Policy requires approval before advancement"
+          ],
+          "findings": [
+            {
+              "id": "policy_allows_advance",
+              "message": "Policy requires approval before advancement",
+              "severity": "blocking",
+              "targetRef": "policy:advance",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "approve",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:dd30d9bd8bf19c6f50f2f21adc72cd30a9870a5abe24d3dbe8d5e1e4d1351074"
+        },
+        "instruction": {
+          "kind": "request_approval",
+          "gateId": "policy_approval_required",
+          "approvalRequest": {
+            "id": "approval.policy_approval_required",
+            "gateId": "policy_approval_required",
+            "phase": "verification",
+            "reason": "A human approver must authorize advancement.",
+            "requiredFor": "gate:policy_approval_required"
+          }
+        },
+        "definitionHash": "sha256:5eaf0ce6c39a14ca48c971da480a3008c3b57a6544d3646a11cc5e657565da1c",
+        "inputRefHashes": {
+          "policy:policy:advance": "sha256:751ca11a558af70fb533b76453d0d6ec766a72342f911dc57dfac8078cb19955"
+        },
+        "decisionHash": "sha256:dd30d9bd8bf19c6f50f2f21adc72cd30a9870a5abe24d3dbe8d5e1e4d1351074",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "policy_allows_advance",
+            "type": "policy",
+            "severity": "blocking",
+            "outcome": "needs_review",
+            "targetRef": "policy:advance",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "policy_approval_required",
+        "verdict": {
+          "gateId": "policy_approval_required",
+          "phase": "verification",
+          "status": "needs_review",
+          "severity": "blocking",
+          "reasons": [
+            "Policy requires approval before advancement"
+          ],
+          "findings": [
+            {
+              "id": "policy_allows_advance",
+              "message": "Policy requires approval before advancement",
+              "severity": "blocking",
+              "targetRef": "policy:advance",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "approve",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:dd30d9bd8bf19c6f50f2f21adc72cd30a9870a5abe24d3dbe8d5e1e4d1351074"
+        },
+        "instruction": {
+          "kind": "request_approval",
+          "gateId": "policy_approval_required",
+          "approvalRequest": {
+            "id": "approval.policy_approval_required",
+            "gateId": "policy_approval_required",
+            "phase": "verification",
+            "reason": "A human approver must authorize advancement.",
+            "requiredFor": "gate:policy_approval_required"
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.review.requested",
+      "payload": {
+        "gateId": "policy_approval_required",
+        "phase": "verification",
+        "reviewKind": "approval_request",
+        "approvalRequest": {
+          "id": "approval.policy_approval_required",
+          "gateId": "policy_approval_required",
+          "phase": "verification",
+          "reason": "A human approver must authorize advancement.",
+          "requiredFor": "gate:policy_approval_required"
+        },
+        "requiredFor": "gate:policy_approval_required",
+        "decisionHash": "sha256:dd30d9bd8bf19c6f50f2f21adc72cd30a9870a5abe24d3dbe8d5e1e4d1351074"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_7a9b3a0f618867b9d7c415d6",
+      "kind": "gate",
+      "name": "gate.policy_approval_required",
+      "status": "needs_review",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:dd30d9bd8bf19c6f50f2f21adc72cd30a9870a5abe24d3dbe8d5e1e4d1351074",
+        "definitionHash": "sha256:5eaf0ce6c39a14ca48c971da480a3008c3b57a6544d3646a11cc5e657565da1c",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "policy_approval_required",
+        "instructionKind": "request_approval",
+        "phase": "verification",
+        "runId": "run-gates"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_9450bd21f870bf00a2406fb2",
+      "parentSpanId": "span_gate_7a9b3a0f618867b9d7c415d6",
+      "kind": "gate.input_resolution",
+      "name": "gate.policy_approval_required.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "policy_approval_required",
+        "phase": "verification",
+        "inputRefHashes": {
+          "policy:policy:advance": "sha256:751ca11a558af70fb533b76453d0d6ec766a72342f911dc57dfac8078cb19955"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_c4ff2d9b702b6cc5f87f7580",
+      "parentSpanId": "span_gate_7a9b3a0f618867b9d7c415d6",
+      "kind": "gate.check",
+      "name": "gate.policy_approval_required.check.policy_allows_advance",
+      "status": "needs_review",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "policy_allows_advance",
+        "checkType": "policy",
+        "evidenceRefs": [],
+        "gateId": "policy_approval_required",
+        "outcome": "needs_review",
+        "phase": "verification",
+        "severity": "blocking",
+        "targetRef": "policy:advance"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "policy_approval_required",
+        "phase": "verification",
+        "status": "needs_review"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "request_approval"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "policy_approval_required",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_review_wait_seconds",
+      "value": 0,
+      "labels": {
+        "gateId": "policy_approval_required",
+        "kind": "request_approval",
+        "phase": "verification"
+      }
+    }
+  ],
+  "definitionHash": "sha256:5eaf0ce6c39a14ca48c971da480a3008c3b57a6544d3646a11cc5e657565da1c",
+  "inputRefHashes": {
+    "policy:policy:advance": "sha256:751ca11a558af70fb533b76453d0d6ec766a72342f911dc57dfac8078cb19955"
+  },
+  "auditGaps": []
+}

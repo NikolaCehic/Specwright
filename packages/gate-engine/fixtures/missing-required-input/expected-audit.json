@@ -1,0 +1,234 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "input_required",
+        "verdict": {
+          "gateId": "input_required",
+          "phase": "evidence",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Required gate input run_input is missing"
+          ],
+          "findings": [
+            {
+              "id": "input.run_input.missing",
+              "message": "Required gate input run_input is missing",
+              "severity": "blocking",
+              "targetRef": "input:run_input",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "clarify",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:aef60940e190dcd30ce4e56eefdf826a41ea62d33a7934cc4799270f26a6b86d"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "input_required",
+          "question": {
+            "id": "question.input_required",
+            "gateId": "input_required",
+            "phase": "evidence",
+            "question": "I need the run input before this gate can evaluate.",
+            "requiredFor": "gate:input_required"
+          }
+        },
+        "definitionHash": "sha256:5b9c725c54f11616fa172cee8373b4dfba63ab2dd1624133b57eef46094f74f7",
+        "inputRefHashes": {},
+        "decisionHash": "sha256:aef60940e190dcd30ce4e56eefdf826a41ea62d33a7934cc4799270f26a6b86d",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [],
+        "missingInputs": [
+          {
+            "id": "run_input",
+            "message": "Required gate input run_input is missing",
+            "targetRef": "input:run_input"
+          }
+        ]
+      },
+      "runtimePayload": {
+        "gateId": "input_required",
+        "verdict": {
+          "gateId": "input_required",
+          "phase": "evidence",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Required gate input run_input is missing"
+          ],
+          "findings": [
+            {
+              "id": "input.run_input.missing",
+              "message": "Required gate input run_input is missing",
+              "severity": "blocking",
+              "targetRef": "input:run_input",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "clarify",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:aef60940e190dcd30ce4e56eefdf826a41ea62d33a7934cc4799270f26a6b86d"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "input_required",
+          "question": {
+            "id": "question.input_required",
+            "gateId": "input_required",
+            "phase": "evidence",
+            "question": "I need the run input before this gate can evaluate.",
+            "requiredFor": "gate:input_required"
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.input.missing",
+      "payload": {
+        "gateId": "input_required",
+        "phase": "evidence",
+        "missingInputs": [
+          {
+            "id": "run_input",
+            "message": "Required gate input run_input is missing",
+            "targetRef": "input:run_input"
+          }
+        ],
+        "requiredAction": "clarify",
+        "decisionHash": "sha256:aef60940e190dcd30ce4e56eefdf826a41ea62d33a7934cc4799270f26a6b86d"
+      }
+    },
+    {
+      "type": "gate.review.requested",
+      "payload": {
+        "gateId": "input_required",
+        "phase": "evidence",
+        "reviewKind": "human_question",
+        "question": {
+          "id": "question.input_required",
+          "gateId": "input_required",
+          "phase": "evidence",
+          "question": "I need the run input before this gate can evaluate.",
+          "requiredFor": "gate:input_required"
+        },
+        "requiredFor": "gate:input_required",
+        "decisionHash": "sha256:aef60940e190dcd30ce4e56eefdf826a41ea62d33a7934cc4799270f26a6b86d"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_9e2c3e81e788edddb1618953",
+      "kind": "gate",
+      "name": "gate.input_required",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:aef60940e190dcd30ce4e56eefdf826a41ea62d33a7934cc4799270f26a6b86d",
+        "definitionHash": "sha256:5b9c725c54f11616fa172cee8373b4dfba63ab2dd1624133b57eef46094f74f7",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "input_required",
+        "instructionKind": "pause_for_human",
+        "phase": "evidence",
+        "runId": "run-missing-required-input"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_414447a8933563528bf4cdfe",
+      "parentSpanId": "span_gate_9e2c3e81e788edddb1618953",
+      "kind": "gate.input_resolution",
+      "name": "gate.input_required.input_resolution",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "input_required",
+        "phase": "evidence",
+        "inputRefHashes": {},
+        "missingInputIds": [
+          "run_input"
+        ]
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "input_required",
+        "phase": "evidence",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "pause_for_human"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "input_required",
+        "phase": "evidence"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_review_wait_seconds",
+      "value": 0,
+      "labels": {
+        "gateId": "input_required",
+        "kind": "pause_for_human",
+        "phase": "evidence"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "unknown",
+        "severity": "blocking"
+      }
+    },
+    {
+      "name": "gate_fail_closed_total",
+      "value": 1,
+      "labels": {
+        "reason": "missing_input"
+      }
+    }
+  ],
+  "definitionHash": "sha256:5b9c725c54f11616fa172cee8373b4dfba63ab2dd1624133b57eef46094f74f7",
+  "inputRefHashes": {},
+  "auditGaps": []
+}

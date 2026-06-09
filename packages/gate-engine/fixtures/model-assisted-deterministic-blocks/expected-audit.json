@@ -1,0 +1,273 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "model_assisted_deterministic_blocks",
+        "verdict": {
+          "gateId": "model_assisted_deterministic_blocks",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Summary text is required before model review"
+          ],
+          "findings": [
+            {
+              "id": "summary_text_present",
+              "message": "Summary text is required before model review",
+              "severity": "blocking",
+              "targetRef": "$.artifacts.summary.content.text",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "model_assisted_deterministic_blocks",
+          "repairTask": {
+            "id": "repair.model_assisted_deterministic_blocks",
+            "gateId": "model_assisted_deterministic_blocks",
+            "failedPhase": "verification",
+            "targetRef": "$.artifacts.summary.content.text",
+            "problem": "Summary text is required before model review",
+            "requiredEvidenceRefs": [],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "model_assisted_deterministic_blocks",
+            "createdFromFindingIds": [
+              "summary_text_present"
+            ]
+          }
+        },
+        "definitionHash": "sha256:127632fbd9a6e73ae9f8baf7f2a0bf2ffc3fb60d7f68163cf5ca28ddae100146",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:8717bf2570a06195d0713e101ada4712048877e820fb029827c9b4c8e1ba42c8"
+        },
+        "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "summary_text_present",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": []
+          },
+          {
+            "id": "model_review",
+            "type": "model_assisted",
+            "severity": "blocking",
+            "outcome": "skipped",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "model_assisted_deterministic_blocks",
+        "verdict": {
+          "gateId": "model_assisted_deterministic_blocks",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Summary text is required before model review"
+          ],
+          "findings": [
+            {
+              "id": "summary_text_present",
+              "message": "Summary text is required before model review",
+              "severity": "blocking",
+              "targetRef": "$.artifacts.summary.content.text",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "model_assisted_deterministic_blocks",
+          "repairTask": {
+            "id": "repair.model_assisted_deterministic_blocks",
+            "gateId": "model_assisted_deterministic_blocks",
+            "failedPhase": "verification",
+            "targetRef": "$.artifacts.summary.content.text",
+            "problem": "Summary text is required before model review",
+            "requiredEvidenceRefs": [],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "model_assisted_deterministic_blocks",
+            "createdFromFindingIds": [
+              "summary_text_present"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.repair_task.created",
+      "payload": {
+        "gateId": "model_assisted_deterministic_blocks",
+        "phase": "verification",
+        "repairTask": {
+          "id": "repair.model_assisted_deterministic_blocks",
+          "gateId": "model_assisted_deterministic_blocks",
+          "failedPhase": "verification",
+          "targetRef": "$.artifacts.summary.content.text",
+          "problem": "Summary text is required before model review",
+          "requiredEvidenceRefs": [],
+          "allowedTools": [],
+          "blockedTools": [],
+          "successGate": "model_assisted_deterministic_blocks",
+          "createdFromFindingIds": [
+            "summary_text_present"
+          ]
+        },
+        "createdFromFindingIds": [
+          "summary_text_present"
+        ],
+        "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "kind": "gate",
+      "name": "gate.model_assisted_deterministic_blocks",
+      "status": "fail",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f",
+        "definitionHash": "sha256:127632fbd9a6e73ae9f8baf7f2a0bf2ffc3fb60d7f68163cf5ca28ddae100146",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "model_assisted_deterministic_blocks",
+        "instructionKind": "create_repair_task",
+        "phase": "verification",
+        "runId": "run-model-assisted"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_65e724b4eb42ca0d56e70213",
+      "parentSpanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "kind": "gate.input_resolution",
+      "name": "gate.model_assisted_deterministic_blocks.input_resolution",
+      "status": "success",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "model_assisted_deterministic_blocks",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:8717bf2570a06195d0713e101ada4712048877e820fb029827c9b4c8e1ba42c8"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_461e53b0f0cf9dc9e8d243a0",
+      "parentSpanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_deterministic_blocks.check.summary_text_present",
+      "status": "fail",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "summary_text_present",
+        "checkType": "deterministic",
+        "evidenceRefs": [],
+        "gateId": "model_assisted_deterministic_blocks",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_413c9b4ac5937f8cf7238c90",
+      "parentSpanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_deterministic_blocks.check.model_review",
+      "status": "skipped",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "model_review",
+        "checkType": "model_assisted",
+        "evidenceRefs": [],
+        "gateId": "model_assisted_deterministic_blocks",
+        "outcome": "skipped",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "model_assisted_deterministic_blocks",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "create_repair_task"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "model_assisted_deterministic_blocks",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "deterministic",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:127632fbd9a6e73ae9f8baf7f2a0bf2ffc3fb60d7f68163cf5ca28ddae100146",
+  "inputRefHashes": {
+    "artifact:summary": "sha256:8717bf2570a06195d0713e101ada4712048877e820fb029827c9b4c8e1ba42c8"
+  },
+  "auditGaps": []
+}

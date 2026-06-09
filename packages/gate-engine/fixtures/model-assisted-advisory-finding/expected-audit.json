@@ -1,0 +1,326 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "model_assisted_review",
+        "verdict": {
+          "gateId": "model_assisted_review",
+          "phase": "verification",
+          "status": "needs_review",
+          "severity": "blocking",
+          "reasons": [
+            "Clarify whether the implementation claim is source-backed before packaging."
+          ],
+          "findings": [
+            {
+              "id": "model_review",
+              "message": "Clarify whether the implementation claim is source-backed before packaging.",
+              "severity": "blocking",
+              "targetRef": "artifact:summary",
+              "evidenceRefs": [
+                "evidence:summary"
+              ]
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:summary"
+          ],
+          "requiredAction": "clarify",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "model_assisted",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:55d68e236a348d4620e371934401bd66ddef099c2189ecfa7842b4529d8bb88b"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "model_assisted_review",
+          "question": {
+            "id": "question.model_assisted_review",
+            "gateId": "model_assisted_review",
+            "phase": "verification",
+            "question": "Clarify whether the implementation claim is source-backed before packaging.",
+            "requiredFor": "gate:model_assisted_review"
+          }
+        },
+        "definitionHash": "sha256:cc15eabbf87eef3ca58de9b4989d46c28ce92c0d7c3ed892b5347bfb41981b31",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:910cad8e8471e913d962b44747cc8444c48c16f77a6a9b3a18b02c64322d39c3"
+        },
+        "decisionHash": "sha256:55d68e236a348d4620e371934401bd66ddef099c2189ecfa7842b4529d8bb88b",
+        "evaluator": {
+          "kind": "model_assisted",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "summary_text_present",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": [
+              "evidence:summary"
+            ]
+          },
+          {
+            "id": "model_review",
+            "type": "model_assisted",
+            "severity": "blocking",
+            "outcome": "needs_review",
+            "evidenceRefs": [
+              "evidence:summary"
+            ]
+          }
+        ],
+        "missingInputs": [],
+        "modelAssisted": {
+          "calls": [
+            {
+              "checkId": "model_review",
+              "modelCallId": "gate_model_f9c543545fd88459f34b6dfd",
+              "rubric": {
+                "ref": "rubric://verification/model-review@v1",
+                "hash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000"
+              },
+              "outcome": "success",
+              "tool": {
+                "toolId": "model.review",
+                "toolVersion": "1.0.0",
+                "requestHash": "sha256:cbfc4811d2991b547b84b0e11dbce5ff460c2a8d098c1a04d256f59868d9f3a9",
+                "resultHash": "sha256:recorded-advisory-result",
+                "argsHash": "sha256:recorded-advisory-args",
+                "cacheStatus": "miss",
+                "traceId": "trace_model_advisory",
+                "tokenBudget": 200,
+                "policyStatus": "allow"
+              }
+            }
+          ]
+        }
+      },
+      "runtimePayload": {
+        "gateId": "model_assisted_review",
+        "verdict": {
+          "gateId": "model_assisted_review",
+          "phase": "verification",
+          "status": "needs_review",
+          "severity": "blocking",
+          "reasons": [
+            "Clarify whether the implementation claim is source-backed before packaging."
+          ],
+          "findings": [
+            {
+              "id": "model_review",
+              "message": "Clarify whether the implementation claim is source-backed before packaging.",
+              "severity": "blocking",
+              "targetRef": "artifact:summary",
+              "evidenceRefs": [
+                "evidence:summary"
+              ]
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:summary"
+          ],
+          "requiredAction": "clarify",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "model_assisted",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:55d68e236a348d4620e371934401bd66ddef099c2189ecfa7842b4529d8bb88b"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "model_assisted_review",
+          "question": {
+            "id": "question.model_assisted_review",
+            "gateId": "model_assisted_review",
+            "phase": "verification",
+            "question": "Clarify whether the implementation claim is source-backed before packaging.",
+            "requiredFor": "gate:model_assisted_review"
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.review.requested",
+      "payload": {
+        "gateId": "model_assisted_review",
+        "phase": "verification",
+        "reviewKind": "human_question",
+        "question": {
+          "id": "question.model_assisted_review",
+          "gateId": "model_assisted_review",
+          "phase": "verification",
+          "question": "Clarify whether the implementation claim is source-backed before packaging.",
+          "requiredFor": "gate:model_assisted_review"
+        },
+        "requiredFor": "gate:model_assisted_review",
+        "decisionHash": "sha256:55d68e236a348d4620e371934401bd66ddef099c2189ecfa7842b4529d8bb88b"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_c6fa445c845270c9e6487a73",
+      "kind": "gate",
+      "name": "gate.model_assisted_review",
+      "status": "needs_review",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:55d68e236a348d4620e371934401bd66ddef099c2189ecfa7842b4529d8bb88b",
+        "definitionHash": "sha256:cc15eabbf87eef3ca58de9b4989d46c28ce92c0d7c3ed892b5347bfb41981b31",
+        "evaluatorKind": "model_assisted",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "model_assisted_review",
+        "instructionKind": "pause_for_human",
+        "phase": "verification",
+        "runId": "run-model-assisted"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_5ccb762bdd71ec6fbd367cd5",
+      "parentSpanId": "span_gate_c6fa445c845270c9e6487a73",
+      "kind": "gate.input_resolution",
+      "name": "gate.model_assisted_review.input_resolution",
+      "status": "success",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "model_assisted_review",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:910cad8e8471e913d962b44747cc8444c48c16f77a6a9b3a18b02c64322d39c3"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_149563c1e2a0fcad030c2e20",
+      "parentSpanId": "span_gate_c6fa445c845270c9e6487a73",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_review.check.summary_text_present",
+      "status": "pass",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "summary_text_present",
+        "checkType": "deterministic",
+        "evidenceRefs": [
+          "evidence:summary"
+        ],
+        "gateId": "model_assisted_review",
+        "outcome": "pass",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_ea5855eaa26e2e91893ec605",
+      "parentSpanId": "span_gate_c6fa445c845270c9e6487a73",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_review.check.model_review",
+      "status": "needs_review",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "model_review",
+        "checkType": "model_assisted",
+        "evidenceRefs": [
+          "evidence:summary"
+        ],
+        "gateId": "model_assisted_review",
+        "outcome": "needs_review",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_tool_1dde92538487bd78dd47893a",
+      "parentSpanId": "span_gate_check_ea5855eaa26e2e91893ec605",
+      "kind": "tool",
+      "name": "gate.model_assisted_review.tool.model_review",
+      "status": "success",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "argsHash": "sha256:recorded-advisory-args",
+        "brokerTraceId": "trace_model_advisory",
+        "cacheStatus": "miss",
+        "checkId": "model_review",
+        "gateId": "model_assisted_review",
+        "modelCallId": "gate_model_f9c543545fd88459f34b6dfd",
+        "outcome": "success",
+        "phase": "verification",
+        "policyStatus": "allow",
+        "requestHash": "sha256:cbfc4811d2991b547b84b0e11dbce5ff460c2a8d098c1a04d256f59868d9f3a9",
+        "resultHash": "sha256:recorded-advisory-result",
+        "rubricHash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000",
+        "rubricRef": "rubric://verification/model-review@v1",
+        "tokenBudget": 200,
+        "toolId": "model.review",
+        "toolVersion": "1.0.0"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "model_assisted_review",
+        "phase": "verification",
+        "status": "needs_review"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "pause_for_human"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "model_assisted_review",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "model_assisted"
+      }
+    },
+    {
+      "name": "gate_review_wait_seconds",
+      "value": 0,
+      "labels": {
+        "gateId": "model_assisted_review",
+        "kind": "pause_for_human",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_model_assisted_calls_total",
+      "value": 1,
+      "labels": {
+        "outcome": "success"
+      }
+    }
+  ],
+  "definitionHash": "sha256:cc15eabbf87eef3ca58de9b4989d46c28ce92c0d7c3ed892b5347bfb41981b31",
+  "inputRefHashes": {
+    "artifact:summary": "sha256:910cad8e8471e913d962b44747cc8444c48c16f77a6a9b3a18b02c64322d39c3"
+  },
+  "auditGaps": []
+}

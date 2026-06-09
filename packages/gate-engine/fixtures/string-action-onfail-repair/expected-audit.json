@@ -1,0 +1,270 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "string_onfail_repair",
+        "verdict": {
+          "gateId": "string_onfail_repair",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Required run input field is missing"
+          ],
+          "findings": [
+            {
+              "id": "required_field_present",
+              "message": "Required run input field is missing",
+              "severity": "blocking",
+              "targetRef": "input:requiredField",
+              "evidenceRefs": [
+                "evidence:string-action"
+              ],
+              "repairHint": "Populate the required field."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:string-action"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:1c06ba9a2744f6a27a4266c3ac1674486d220d91f2346a45d3c009621bc56334"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "string_onfail_repair",
+          "repairTask": {
+            "id": "repair.string_onfail_repair",
+            "gateId": "string_onfail_repair",
+            "failedPhase": "verification",
+            "targetRef": "input:requiredField",
+            "problem": "Required run input field is missing",
+            "requiredEvidenceRefs": [
+              "evidence:string-action"
+            ],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "string_onfail_repair",
+            "createdFromFindingIds": [
+              "required_field_present"
+            ]
+          }
+        },
+        "definitionHash": "sha256:24d3112c7b28f438b4159bf06940e601d4cf02c79ca479636672edf0809836eb",
+        "inputRefHashes": {
+          "runInput": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "decisionHash": "sha256:1c06ba9a2744f6a27a4266c3ac1674486d220d91f2346a45d3c009621bc56334",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "required_field_present",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "fail",
+            "targetRef": "input:requiredField",
+            "evidenceRefs": [
+              "evidence:string-action"
+            ]
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "string_onfail_repair",
+        "verdict": {
+          "gateId": "string_onfail_repair",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Required run input field is missing"
+          ],
+          "findings": [
+            {
+              "id": "required_field_present",
+              "message": "Required run input field is missing",
+              "severity": "blocking",
+              "targetRef": "input:requiredField",
+              "evidenceRefs": [
+                "evidence:string-action"
+              ],
+              "repairHint": "Populate the required field."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:string-action"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:1c06ba9a2744f6a27a4266c3ac1674486d220d91f2346a45d3c009621bc56334"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "string_onfail_repair",
+          "repairTask": {
+            "id": "repair.string_onfail_repair",
+            "gateId": "string_onfail_repair",
+            "failedPhase": "verification",
+            "targetRef": "input:requiredField",
+            "problem": "Required run input field is missing",
+            "requiredEvidenceRefs": [
+              "evidence:string-action"
+            ],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "string_onfail_repair",
+            "createdFromFindingIds": [
+              "required_field_present"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.repair_task.created",
+      "payload": {
+        "gateId": "string_onfail_repair",
+        "phase": "verification",
+        "repairTask": {
+          "id": "repair.string_onfail_repair",
+          "gateId": "string_onfail_repair",
+          "failedPhase": "verification",
+          "targetRef": "input:requiredField",
+          "problem": "Required run input field is missing",
+          "requiredEvidenceRefs": [
+            "evidence:string-action"
+          ],
+          "allowedTools": [],
+          "blockedTools": [],
+          "successGate": "string_onfail_repair",
+          "createdFromFindingIds": [
+            "required_field_present"
+          ]
+        },
+        "createdFromFindingIds": [
+          "required_field_present"
+        ],
+        "decisionHash": "sha256:1c06ba9a2744f6a27a4266c3ac1674486d220d91f2346a45d3c009621bc56334"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_35a89730355042b3b423ed28",
+      "kind": "gate",
+      "name": "gate.string_onfail_repair",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:1c06ba9a2744f6a27a4266c3ac1674486d220d91f2346a45d3c009621bc56334",
+        "definitionHash": "sha256:24d3112c7b28f438b4159bf06940e601d4cf02c79ca479636672edf0809836eb",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "string_onfail_repair",
+        "instructionKind": "create_repair_task",
+        "phase": "verification",
+        "runId": "run-gates"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_0ceb6c16c7dbfa722d4c6947",
+      "parentSpanId": "span_gate_35a89730355042b3b423ed28",
+      "kind": "gate.input_resolution",
+      "name": "gate.string_onfail_repair.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "string_onfail_repair",
+        "phase": "verification",
+        "inputRefHashes": {
+          "runInput": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_24fbceeaa3ac78dd6420fca5",
+      "parentSpanId": "span_gate_35a89730355042b3b423ed28",
+      "kind": "gate.check",
+      "name": "gate.string_onfail_repair.check.required_field_present",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "required_field_present",
+        "checkType": "deterministic",
+        "evidenceRefs": [
+          "evidence:string-action"
+        ],
+        "gateId": "string_onfail_repair",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking",
+        "targetRef": "input:requiredField"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "string_onfail_repair",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "create_repair_task"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "string_onfail_repair",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "deterministic",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:24d3112c7b28f438b4159bf06940e601d4cf02c79ca479636672edf0809836eb",
+  "inputRefHashes": {
+    "runInput": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "auditGaps": []
+}

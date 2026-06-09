@@ -1,0 +1,176 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "gate_onfail_malformed",
+        "verdict": {
+          "gateId": "gate_onfail_malformed",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate definition gate_onfail_malformed has malformed onFail"
+          ],
+          "findings": [
+            {
+              "id": "gate.onFail.malformed",
+              "message": "Gate definition gate_onfail_malformed has malformed onFail",
+              "severity": "blocking",
+              "targetRef": "gate:gate_onfail_malformed",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:1ac11d63d531b906b68775226ff280b799ea1184aaf5d76489f07fd559500f96"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "gate_onfail_malformed",
+          "reason": "Gate definition gate_onfail_malformed has malformed onFail"
+        },
+        "definitionHash": "sha256:5fe99c75cc2b70b5732644e8f06efef9b0a524209b53c3969e77543373f65304",
+        "inputRefHashes": {},
+        "decisionHash": "sha256:1ac11d63d531b906b68775226ff280b799ea1184aaf5d76489f07fd559500f96",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "gate_onfail_malformed",
+        "verdict": {
+          "gateId": "gate_onfail_malformed",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate definition gate_onfail_malformed has malformed onFail"
+          ],
+          "findings": [
+            {
+              "id": "gate.onFail.malformed",
+              "message": "Gate definition gate_onfail_malformed has malformed onFail",
+              "severity": "blocking",
+              "targetRef": "gate:gate_onfail_malformed",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:1ac11d63d531b906b68775226ff280b799ea1184aaf5d76489f07fd559500f96"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "gate_onfail_malformed",
+          "reason": "Gate definition gate_onfail_malformed has malformed onFail"
+        }
+      }
+    },
+    {
+      "type": "gate.run.failed",
+      "payload": {
+        "gateId": "gate_onfail_malformed",
+        "phase": "verification",
+        "reason": "Gate definition gate_onfail_malformed has malformed onFail",
+        "originatingFindingIds": [
+          "gate.onFail.malformed"
+        ],
+        "decisionHash": "sha256:1ac11d63d531b906b68775226ff280b799ea1184aaf5d76489f07fd559500f96"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_d5a46b473880a873737bbbfc",
+      "kind": "gate",
+      "name": "gate.gate_onfail_malformed",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:1ac11d63d531b906b68775226ff280b799ea1184aaf5d76489f07fd559500f96",
+        "definitionHash": "sha256:5fe99c75cc2b70b5732644e8f06efef9b0a524209b53c3969e77543373f65304",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "gate_onfail_malformed",
+        "instructionKind": "fail_run",
+        "phase": "verification"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_8a5f31eba43325592fcf600a",
+      "parentSpanId": "span_gate_d5a46b473880a873737bbbfc",
+      "kind": "gate.input_resolution",
+      "name": "gate.gate_onfail_malformed.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "gate_onfail_malformed",
+        "phase": "verification",
+        "inputRefHashes": {},
+        "missingInputIds": []
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "gate_onfail_malformed",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "fail_run"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "gate_onfail_malformed",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "unknown",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:5fe99c75cc2b70b5732644e8f06efef9b0a524209b53c3969e77543373f65304",
+  "inputRefHashes": {},
+  "auditGaps": []
+}

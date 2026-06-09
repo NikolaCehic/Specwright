@@ -1,0 +1,211 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "tool_policy",
+        "verdict": {
+          "gateId": "tool_policy",
+          "phase": "evidence",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Policy denied gate advancement"
+          ],
+          "findings": [
+            {
+              "id": "policy_allowed_gate_evaluation",
+              "message": "Policy denied gate advancement",
+              "severity": "blocking",
+              "targetRef": "policy:gate-evaluation-policy",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:8e12c8bc890de205786c9c1404b8436e249db7981c59e7775cd3dcea7255858b"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "tool_policy",
+          "reason": "Policy denied gate advancement"
+        },
+        "definitionHash": "sha256:83a53b317470e5dcf22ec93852e41150fba3c528ca5fe551f5837e498ab6f705",
+        "inputRefHashes": {
+          "policy:gate-evaluation-policy": "sha256:9be067cb0d4cb77a56a9d54b3cd1e788f55169b300967285707f5543b863c3a0"
+        },
+        "decisionHash": "sha256:8e12c8bc890de205786c9c1404b8436e249db7981c59e7775cd3dcea7255858b",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "policy_allowed_gate_evaluation",
+            "type": "policy",
+            "severity": "blocking",
+            "outcome": "fail",
+            "targetRef": "policy:gate-evaluation-policy",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "tool_policy",
+        "verdict": {
+          "gateId": "tool_policy",
+          "phase": "evidence",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Policy denied gate advancement"
+          ],
+          "findings": [
+            {
+              "id": "policy_allowed_gate_evaluation",
+              "message": "Policy denied gate advancement",
+              "severity": "blocking",
+              "targetRef": "policy:gate-evaluation-policy",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:8e12c8bc890de205786c9c1404b8436e249db7981c59e7775cd3dcea7255858b"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "tool_policy",
+          "reason": "Policy denied gate advancement"
+        }
+      }
+    },
+    {
+      "type": "gate.run.failed",
+      "payload": {
+        "gateId": "tool_policy",
+        "phase": "evidence",
+        "reason": "Policy denied gate advancement",
+        "originatingFindingIds": [
+          "policy_allowed_gate_evaluation"
+        ],
+        "decisionHash": "sha256:8e12c8bc890de205786c9c1404b8436e249db7981c59e7775cd3dcea7255858b"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_66e2b57798b070c1a964b9f2",
+      "kind": "gate",
+      "name": "gate.tool_policy",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:8e12c8bc890de205786c9c1404b8436e249db7981c59e7775cd3dcea7255858b",
+        "definitionHash": "sha256:83a53b317470e5dcf22ec93852e41150fba3c528ca5fe551f5837e498ab6f705",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "tool_policy",
+        "instructionKind": "fail_run",
+        "phase": "evidence",
+        "runId": "run-gates"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_4cc7cc19c84adf14b3cd603e",
+      "parentSpanId": "span_gate_66e2b57798b070c1a964b9f2",
+      "kind": "gate.input_resolution",
+      "name": "gate.tool_policy.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "tool_policy",
+        "phase": "evidence",
+        "inputRefHashes": {
+          "policy:gate-evaluation-policy": "sha256:9be067cb0d4cb77a56a9d54b3cd1e788f55169b300967285707f5543b863c3a0"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_1a1da47dc1d7430c57c934f8",
+      "parentSpanId": "span_gate_66e2b57798b070c1a964b9f2",
+      "kind": "gate.check",
+      "name": "gate.tool_policy.check.policy_allowed_gate_evaluation",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "policy_allowed_gate_evaluation",
+        "checkType": "policy",
+        "evidenceRefs": [],
+        "gateId": "tool_policy",
+        "outcome": "fail",
+        "phase": "evidence",
+        "severity": "blocking",
+        "targetRef": "policy:gate-evaluation-policy"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "tool_policy",
+        "phase": "evidence",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "fail_run"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "tool_policy",
+        "phase": "evidence"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "policy",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:83a53b317470e5dcf22ec93852e41150fba3c528ca5fe551f5837e498ab6f705",
+  "inputRefHashes": {
+    "policy:gate-evaluation-policy": "sha256:9be067cb0d4cb77a56a9d54b3cd1e788f55169b300967285707f5543b863c3a0"
+  },
+  "auditGaps": []
+}

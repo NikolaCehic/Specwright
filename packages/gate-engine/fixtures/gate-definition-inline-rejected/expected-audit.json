@@ -1,0 +1,176 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "gate_definition_inline_rejected",
+        "verdict": {
+          "gateId": "gate_definition_inline_rejected",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required"
+          ],
+          "findings": [
+            {
+              "id": "gate.definition.inline_rejected",
+              "message": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required",
+              "severity": "blocking",
+              "targetRef": "gate:gate_definition_inline_rejected",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:5d30356d29c76985b1c5f09d430a68ed03a08c9308c8e3448f0a29433d117fb8"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "gate_definition_inline_rejected",
+          "reason": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required"
+        },
+        "definitionHash": "sha256:cbe376309016576ebae899771d51dbde9fff5f2bc50777bf2fa93d1bca4f8ad6",
+        "inputRefHashes": {},
+        "decisionHash": "sha256:5d30356d29c76985b1c5f09d430a68ed03a08c9308c8e3448f0a29433d117fb8",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "gate_definition_inline_rejected",
+        "verdict": {
+          "gateId": "gate_definition_inline_rejected",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required"
+          ],
+          "findings": [
+            {
+              "id": "gate.definition.inline_rejected",
+              "message": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required",
+              "severity": "blocking",
+              "targetRef": "gate:gate_definition_inline_rejected",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:5d30356d29c76985b1c5f09d430a68ed03a08c9308c8e3448f0a29433d117fb8"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "gate_definition_inline_rejected",
+          "reason": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required"
+        }
+      }
+    },
+    {
+      "type": "gate.run.failed",
+      "payload": {
+        "gateId": "gate_definition_inline_rejected",
+        "phase": "verification",
+        "reason": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required",
+        "originatingFindingIds": [
+          "gate.definition.inline_rejected"
+        ],
+        "decisionHash": "sha256:5d30356d29c76985b1c5f09d430a68ed03a08c9308c8e3448f0a29433d117fb8"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_572d04137ffa9b36423f4119",
+      "kind": "gate",
+      "name": "gate.gate_definition_inline_rejected",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:5d30356d29c76985b1c5f09d430a68ed03a08c9308c8e3448f0a29433d117fb8",
+        "definitionHash": "sha256:cbe376309016576ebae899771d51dbde9fff5f2bc50777bf2fa93d1bca4f8ad6",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "gate_definition_inline_rejected",
+        "instructionKind": "fail_run",
+        "phase": "verification"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_b324e838d93e4e40db068f54",
+      "parentSpanId": "span_gate_572d04137ffa9b36423f4119",
+      "kind": "gate.input_resolution",
+      "name": "gate.gate_definition_inline_rejected.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "gate_definition_inline_rejected",
+        "phase": "verification",
+        "inputRefHashes": {},
+        "missingInputIds": []
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "gate_definition_inline_rejected",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "fail_run"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "gate_definition_inline_rejected",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "unknown",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:cbe376309016576ebae899771d51dbde9fff5f2bc50777bf2fa93d1bca4f8ad6",
+  "inputRefHashes": {},
+  "auditGaps": []
+}
