@@ -7,6 +7,8 @@ import {
   GateLifecycleInstructionSchema,
   GateRepairTaskSchema,
   GateVerdictSchema,
+  RuntimeEventEnvelopeSchema,
+  RuntimeEventSchema,
   type GateLifecycleInstruction,
   type GateRepairTask,
   type ToolCallRequest,
@@ -18,8 +20,13 @@ import {
   evaluateGateAsync,
   gateDecisionHashInput,
   hashDecision,
+  assertGateAuditReconstructable,
+  buildGateAuditRecord,
   type BrokerPort,
-  type EvaluateGateRequest
+  type EvaluateGateRequest,
+  type GateAuditEventProjection,
+  type GateAuditRecord,
+  type GateEvaluationResult
 } from "./index";
 import {
   assertBoundedRepairEnvelope,
@@ -363,6 +370,10 @@ describe("gate engine fixtures", () => {
       const fixtureDir = join(fixturesDir, fixtureName);
       const request = await readJson(join(fixtureDir, "request.json"));
       const expected = await readJson(join(fixtureDir, "expected-result.json"));
+      const expectedAudit =
+        fixtureName === "repair-tool-widening-rejected"
+          ? undefined
+          : await readJson(join(fixtureDir, "expected-audit.json"));
 
       if (fixtureName === "repair-tool-widening-rejected") {
         const boundedRequest = request as BoundedRepairEnvelopeFixtureRequest;
@@ -413,6 +424,13 @@ describe("gate engine fixtures", () => {
       expect(recomputedDecisionHash(result.verdict)).toBe(
         expected.verdict.decisionHash
       );
+
+      if (expectedAudit !== undefined) {
+        const audit = buildGateAuditRecord({ request, result });
+
+        expectAuditRecord(audit, request, result);
+        expect(audit).toEqual(expectedAudit);
+      }
     });
   }
 });
@@ -423,6 +441,7 @@ describe("model-assisted gate engine fixtures", () => {
       const fixtureDir = join(fixturesDir, fixture.name);
       const request = await readJson(join(fixtureDir, "request.json"));
       const expected = await readJson(join(fixtureDir, "expected-result.json"));
+      const expectedAudit = await readJson(join(fixtureDir, "expected-audit.json"));
       const recordedResult = await readOptionalJson<ToolCallResult>(
         join(fixtureDir, "recorded-result.json")
       );
@@ -452,6 +471,11 @@ describe("model-assisted gate engine fixtures", () => {
       expect(recomputedDecisionHash(result.verdict)).toBe(
         expected.verdict.decisionHash
       );
+
+      const audit = buildGateAuditRecord({ request, result });
+
+      expectAuditRecord(audit, request, result);
+      expect(audit).toEqual(expectedAudit);
     });
   }
 
@@ -669,6 +693,204 @@ describe("gate engine determinism", () => {
         expect(source).not.toMatch(forbiddenPattern);
       }
     }
+  });
+});
+
+describe("gate audit projection", () => {
+  test("emits sibling events and required metric families for fail-closed, review, and repair paths", async () => {
+    const missingDefinition = await auditForFixture("missing-gate-definition");
+    const unsupportedCheck = await auditForFixture("gate-check-unsupported-type");
+    const missingInput = await auditForFixture("missing-required-input");
+    const repairTask = await auditForFixture("artifact-schema-invalid");
+    const review = await auditForFixture("human-review-clarification");
+
+    expect(eventTypes(missingDefinition.audit)).toContain(
+      "gate.definition.missing"
+    );
+    expect(eventTypes(missingDefinition.audit)).toContain("gate.run.failed");
+    expect(eventTypes(unsupportedCheck.audit)).toContain(
+      "gate.check.unsupported"
+    );
+    expect(eventTypes(missingInput.audit)).toContain("gate.input.missing");
+    expect(eventTypes(repairTask.audit)).toContain(
+      "gate.repair_task.created"
+    );
+    expect(eventTypes(review.audit)).toContain("gate.review.requested");
+    expect(metricNames(missingDefinition.audit)).toContain(
+      "gate_fail_closed_total"
+    );
+    expect(metricNames(review.audit)).toContain("gate_review_wait_seconds");
+    expect(metricNames(repairTask.audit)).toContain(
+      "gate_repair_loop_iterations"
+    );
+  });
+
+  test("model-assisted findings link a tool span and rubric ref", async () => {
+    const fixtureDir = join(fixturesDir, "model-assisted-advisory-finding");
+    const request = await readJson(join(fixtureDir, "request.json"));
+    const recordedResult = await readJson(
+      join(fixtureDir, "recorded-result.json")
+    ) as ToolCallResult;
+    const replay = createReplayBroker(recordedResult);
+    const result = await evaluateGateAsync({
+      ...request,
+      broker: replay.broker
+    });
+    const audit = buildGateAuditRecord({ request, result });
+    const toolSpan = audit.spans.find((span) => span.kind === "tool");
+
+    expect(toolSpan).toBeDefined();
+    expect(toolSpan?.metadata).toMatchObject({
+      checkId: "model_review",
+      rubricRef: "rubric://verification/model-review@v1",
+      requestHash: result.modelAssisted?.calls[0]?.tool.requestHash,
+      resultHash: "sha256:recorded-advisory-result"
+    });
+    expect(assertGateAuditReconstructable(audit).ok).toBe(true);
+  });
+
+  test("linked re-evaluation carries prior failure linkage and causation id", async () => {
+    const fixtureDir = join(fixturesDir, "repair-loop-relinked");
+    const priorRequest = await readJson(
+      join(fixtureDir, "prior-fail-request.json")
+    );
+    const passRequest = await readJson(
+      join(fixtureDir, "linked-pass-request.json")
+    );
+    const expectedAudit = await readJson(
+      join(fixtureDir, "linked-pass-expected-audit.json")
+    );
+    const priorResult = evaluateGate(priorRequest);
+    const passResult = evaluateGate(passRequest);
+    const audit = buildGateAuditRecord({
+      request: passRequest,
+      result: passResult,
+      context: {
+        isReevaluation: true,
+        causationId: "event-prior-failing-gate",
+        priorFailure: {
+          eventId: "event-prior-failing-gate",
+          verdict: priorResult.verdict,
+          instruction: priorResult.instruction
+        }
+      }
+    });
+    const evaluated = gateEvaluatedEvent(audit);
+
+    expect(evaluated.causationId).toBe("event-prior-failing-gate");
+    expect(evaluated.payload.priorFailingVerdict).toMatchObject({
+      gateId: "repair_relinked",
+      decisionHash: priorResult.verdict.decisionHash,
+      eventId: "event-prior-failing-gate",
+      repairTaskId: "repair.repair_relinked",
+      successGate: "repair_relinked",
+      causationId: "event-prior-failing-gate",
+      createdFromFindingIds: ["plan_schema_valid"]
+    });
+    expect(audit.auditGaps).toEqual([]);
+    expect(assertGateAuditReconstructable(audit).ok).toBe(true);
+    expect(audit).toEqual(expectedAudit);
+  });
+
+  test("unlinked re-evaluation pass is flagged as an audit gap", async () => {
+    const request = await readJson(
+      join(fixturesDir, "repair-loop-relinked", "linked-pass-request.json")
+    );
+    const result = evaluateGate(request);
+    const audit = buildGateAuditRecord({
+      request,
+      result,
+      context: {
+        isReevaluation: true
+      }
+    });
+
+    expect(audit.auditGaps).toEqual([
+      {
+        code: "unlinked_reevaluation_pass",
+        gateId: "repair_relinked",
+        decisionHash: result.verdict.decisionHash,
+        message:
+          "Re-evaluation pass for gate repair_relinked lacks a linkable prior failing verdict"
+      }
+    ]);
+    expect(assertGateAuditReconstructable(audit)).toMatchObject({
+      ok: false,
+      findings: [
+        {
+          code: "unlinked_reevaluation_pass",
+          gateId: "repair_relinked"
+        }
+      ]
+    });
+  });
+
+  test("audit guard rejects an advancing instruction without gate.evaluated", () => {
+    const orphanInstruction = {
+      type: "gate.run.failed",
+      payload: {
+        gateId: "orphan_gate",
+        phase: "verification",
+        instruction: {
+          kind: "continue",
+          gateId: "orphan_gate"
+        },
+        reason: "not a real failure payload",
+        originatingFindingIds: [],
+        decisionHash: "sha256:orphan"
+      }
+    } as unknown as GateAuditEventProjection;
+
+    expect(
+      assertGateAuditReconstructable({
+        events: [orphanInstruction],
+        spans: []
+      })
+    ).toMatchObject({
+      ok: false,
+      findings: [
+        {
+          code: "missing_gate_evaluated",
+          gateId: "orphan_gate"
+        }
+      ]
+    });
+  });
+
+  test("audit guard detects hash mismatch and missing model tool span", async () => {
+    const fixtureDir = join(fixturesDir, "model-assisted-advisory-finding");
+    const request = await readJson(join(fixtureDir, "request.json"));
+    const recordedResult = await readJson(
+      join(fixtureDir, "recorded-result.json")
+    ) as ToolCallResult;
+    const replay = createReplayBroker(recordedResult);
+    const result = await evaluateGateAsync({
+      ...request,
+      broker: replay.broker
+    });
+    const audit = buildGateAuditRecord({ request, result });
+    const evaluated = gateEvaluatedEvent(audit);
+    const tampered: GateAuditEventProjection = {
+      ...evaluated,
+      payload: {
+        ...evaluated.payload,
+        verdict: {
+          ...evaluated.payload.verdict,
+          reasons: ["tampered reason"]
+        }
+      }
+    };
+
+    expect(
+      assertGateAuditReconstructable({
+        events: [tampered],
+        spans: audit.spans.filter((span) => span.kind !== "tool")
+      }).findings.map((finding) => finding.code)
+    ).toEqual([
+      "decision_hash_mismatch",
+      "model_assisted_tool_span_missing",
+      "model_assisted_rubric_missing"
+    ]);
   });
 });
 
@@ -924,6 +1146,106 @@ function expectInstructionPayloadSchema(
     default:
       return;
   }
+}
+
+function expectAuditRecord(
+  audit: GateAuditRecord,
+  request: EvaluateGateRequest,
+  result: GateEvaluationResult
+) {
+  const evaluated = gateEvaluatedEvent(audit);
+
+  expect(evaluated.payload).toMatchObject({
+    gateId: result.verdict.gateId,
+    verdict: result.verdict,
+    instruction: result.instruction,
+    decisionHash: result.verdict.decisionHash,
+    evaluator: result.verdict.evaluator
+  });
+  expect(evaluated.payload.definitionHash).toMatch(decisionHashPattern);
+  expect(Object.values(evaluated.payload.inputRefHashes)).toEqual(
+    Object.values(evaluated.payload.inputRefHashes).map((value) =>
+      expect.stringMatching(decisionHashPattern)
+    )
+  );
+  expect(evaluated.runtimePayload).toEqual({
+    gateId: result.verdict.gateId,
+    verdict: result.verdict,
+    instruction: result.instruction
+  });
+  expect(assertGateAuditReconstructable(audit).ok).toBe(true);
+
+  const runId = request.input?.runId ?? "run-gates";
+  const traceId = request.traceId ?? "trace-gate-audit";
+  const timestamp = result.verdict.evaluatedAt;
+  const richEnvelope = RuntimeEventEnvelopeSchema.parse({
+    id: "event-gate-audit-rich",
+    runId,
+    type: "gate.evaluated",
+    timestamp,
+    sequence: 1,
+    traceId,
+    payload: evaluated.payload
+  });
+  const runtimeEvent = RuntimeEventSchema.parse({
+    id: "event-gate-audit-runtime",
+    runId,
+    type: "gate.evaluated",
+    timestamp,
+    sequence: 1,
+    traceId,
+    payload: evaluated.runtimePayload
+  });
+  const runtimePayload = runtimeEvent.payload as {
+    verdict: {
+      evaluator: {
+        kind: string;
+      };
+    };
+  };
+
+  expect(richEnvelope.payload).toEqual(evaluated.payload);
+  expect(runtimePayload.verdict.evaluator.kind).toBe(
+    result.verdict.evaluator.kind
+  );
+}
+
+async function auditForFixture(fixtureName: string) {
+  const fixtureDir = join(fixturesDir, fixtureName);
+  const request = await readJson(join(fixtureDir, "request.json"));
+  const result = evaluateGate(request);
+  const audit = buildGateAuditRecord({ request, result });
+
+  expectAuditRecord(audit, request, result);
+
+  return { request, result, audit };
+}
+
+function gateEvaluatedEvent(audit: GateAuditRecord) {
+  const event = audit.events.find((candidate) => candidate.type === "gate.evaluated");
+
+  if (event === undefined || event.type !== "gate.evaluated") {
+    throw new Error("Audit record is missing gate.evaluated");
+  }
+
+  return event as GateAuditEventProjection & {
+    payload: GateAuditRecord["events"][number]["payload"] & {
+      verdict: GateEvaluationResult["verdict"];
+      instruction: GateEvaluationResult["instruction"];
+      definitionHash: string;
+      inputRefHashes: Record<string, string>;
+      priorFailingVerdict?: Record<string, unknown>;
+      auditGaps?: Array<Record<string, unknown>>;
+    };
+  };
+}
+
+function eventTypes(audit: GateAuditRecord) {
+  return audit.events.map((event) => event.type);
+}
+
+function metricNames(audit: GateAuditRecord) {
+  return audit.metrics.map((metric) => metric.name);
 }
 
 async function readJson(path: string) {

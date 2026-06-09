@@ -1,0 +1,268 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "eval_passed",
+        "verdict": {
+          "gateId": "eval_passed",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Blocking eval artifact_schema_eval failed"
+          ],
+          "findings": [
+            {
+              "id": "artifact_schema_eval_passed",
+              "message": "Blocking eval artifact_schema_eval failed",
+              "severity": "blocking",
+              "targetRef": "eval:artifact_schema_eval",
+              "evidenceRefs": [
+                "evidence:plan"
+              ],
+              "repairHint": "Repair the artifact and rerun the blocking eval."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:plan"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:30c966e5422361a8434a094bd5a0ec41b94b76e54746a766a9011c5902de4cad"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "eval_passed",
+          "repairTask": {
+            "id": "repair.eval_passed",
+            "gateId": "eval_passed",
+            "failedPhase": "verification",
+            "targetRef": "eval:artifact_schema_eval",
+            "problem": "Blocking eval artifact_schema_eval failed",
+            "requiredEvidenceRefs": [
+              "evidence:plan"
+            ],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "eval_passed",
+            "createdFromFindingIds": [
+              "artifact_schema_eval_passed"
+            ]
+          }
+        },
+        "definitionHash": "sha256:e83cc22daf3121e076211d6c60e6b22f05f6676072c3f9044bac3bb5227398ee",
+        "inputRefHashes": {
+          "eval:artifact_schema_eval": "sha256:5850bede9c23cc75599636fd843210ee1f47d13866f858326a23f5b7926fc6d7"
+        },
+        "decisionHash": "sha256:30c966e5422361a8434a094bd5a0ec41b94b76e54746a766a9011c5902de4cad",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "artifact_schema_eval_passed",
+            "type": "eval",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": [
+              "evidence:plan"
+            ]
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "eval_passed",
+        "verdict": {
+          "gateId": "eval_passed",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Blocking eval artifact_schema_eval failed"
+          ],
+          "findings": [
+            {
+              "id": "artifact_schema_eval_passed",
+              "message": "Blocking eval artifact_schema_eval failed",
+              "severity": "blocking",
+              "targetRef": "eval:artifact_schema_eval",
+              "evidenceRefs": [
+                "evidence:plan"
+              ],
+              "repairHint": "Repair the artifact and rerun the blocking eval."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:plan"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:30c966e5422361a8434a094bd5a0ec41b94b76e54746a766a9011c5902de4cad"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "eval_passed",
+          "repairTask": {
+            "id": "repair.eval_passed",
+            "gateId": "eval_passed",
+            "failedPhase": "verification",
+            "targetRef": "eval:artifact_schema_eval",
+            "problem": "Blocking eval artifact_schema_eval failed",
+            "requiredEvidenceRefs": [
+              "evidence:plan"
+            ],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "eval_passed",
+            "createdFromFindingIds": [
+              "artifact_schema_eval_passed"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.repair_task.created",
+      "payload": {
+        "gateId": "eval_passed",
+        "phase": "verification",
+        "repairTask": {
+          "id": "repair.eval_passed",
+          "gateId": "eval_passed",
+          "failedPhase": "verification",
+          "targetRef": "eval:artifact_schema_eval",
+          "problem": "Blocking eval artifact_schema_eval failed",
+          "requiredEvidenceRefs": [
+            "evidence:plan"
+          ],
+          "allowedTools": [],
+          "blockedTools": [],
+          "successGate": "eval_passed",
+          "createdFromFindingIds": [
+            "artifact_schema_eval_passed"
+          ]
+        },
+        "createdFromFindingIds": [
+          "artifact_schema_eval_passed"
+        ],
+        "decisionHash": "sha256:30c966e5422361a8434a094bd5a0ec41b94b76e54746a766a9011c5902de4cad"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_f9d506d3bc4557b5ab6e5ce4",
+      "kind": "gate",
+      "name": "gate.eval_passed",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:30c966e5422361a8434a094bd5a0ec41b94b76e54746a766a9011c5902de4cad",
+        "definitionHash": "sha256:e83cc22daf3121e076211d6c60e6b22f05f6676072c3f9044bac3bb5227398ee",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "eval_passed",
+        "instructionKind": "create_repair_task",
+        "phase": "verification",
+        "runId": "run-gates"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_fea1ead30ca0b6f335823422",
+      "parentSpanId": "span_gate_f9d506d3bc4557b5ab6e5ce4",
+      "kind": "gate.input_resolution",
+      "name": "gate.eval_passed.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "eval_passed",
+        "phase": "verification",
+        "inputRefHashes": {
+          "eval:artifact_schema_eval": "sha256:5850bede9c23cc75599636fd843210ee1f47d13866f858326a23f5b7926fc6d7"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_02932600175463b85a2ca83b",
+      "parentSpanId": "span_gate_f9d506d3bc4557b5ab6e5ce4",
+      "kind": "gate.check",
+      "name": "gate.eval_passed.check.artifact_schema_eval_passed",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "artifact_schema_eval_passed",
+        "checkType": "eval",
+        "evidenceRefs": [
+          "evidence:plan"
+        ],
+        "gateId": "eval_passed",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "eval_passed",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "create_repair_task"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "eval_passed",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "eval",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:e83cc22daf3121e076211d6c60e6b22f05f6676072c3f9044bac3bb5227398ee",
+  "inputRefHashes": {
+    "eval:artifact_schema_eval": "sha256:5850bede9c23cc75599636fd843210ee1f47d13866f858326a23f5b7926fc6d7"
+  },
+  "auditGaps": []
+}

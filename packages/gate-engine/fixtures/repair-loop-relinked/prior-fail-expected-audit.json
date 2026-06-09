@@ -1,0 +1,286 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "repair_relinked",
+        "verdict": {
+          "gateId": "repair_relinked",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Artifact schema validation failed"
+          ],
+          "findings": [
+            {
+              "id": "plan_schema_valid",
+              "message": "Artifact schema validation failed",
+              "severity": "blocking",
+              "targetRef": "artifact:plan",
+              "evidenceRefs": [
+                "evidence:plan"
+              ],
+              "repairHint": "Add the missing implementation steps."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:plan"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "repair_relinked",
+          "repairTask": {
+            "id": "repair.repair_relinked",
+            "gateId": "repair_relinked",
+            "failedPhase": "verification",
+            "targetRef": "artifact:plan",
+            "problem": "Artifact schema validation failed",
+            "requiredEvidenceRefs": [
+              "evidence:plan"
+            ],
+            "allowedTools": [
+              "fs.read"
+            ],
+            "blockedTools": [
+              "shell.exec"
+            ],
+            "successGate": "repair_relinked",
+            "createdFromFindingIds": [
+              "plan_schema_valid"
+            ]
+          }
+        },
+        "definitionHash": "sha256:7db6f648dcf3cb83de7480fedd84625821f3314e1d41bfbd7f7db3f701b44c41",
+        "inputRefHashes": {
+          "artifact:plan": "sha256:257a55d059a53753e867706175ea50b5b40b430cab44268dbbe67dc6ff73a784",
+          "evidence": "sha256:1f584bdcb30a71c0177006e06bf70e1bad38842fa1c3d64daa11117aa50bd812",
+          "evidence:evidence:plan": "sha256:b818a7308f3fe9a0c5a53b939ce276e87faa9494083e9679ac4e673af0ce794e"
+        },
+        "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "plan_schema_valid",
+            "type": "schema",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": [
+              "evidence:plan"
+            ]
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "repair_relinked",
+        "verdict": {
+          "gateId": "repair_relinked",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Artifact schema validation failed"
+          ],
+          "findings": [
+            {
+              "id": "plan_schema_valid",
+              "message": "Artifact schema validation failed",
+              "severity": "blocking",
+              "targetRef": "artifact:plan",
+              "evidenceRefs": [
+                "evidence:plan"
+              ],
+              "repairHint": "Add the missing implementation steps."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:plan"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "repair_relinked",
+          "repairTask": {
+            "id": "repair.repair_relinked",
+            "gateId": "repair_relinked",
+            "failedPhase": "verification",
+            "targetRef": "artifact:plan",
+            "problem": "Artifact schema validation failed",
+            "requiredEvidenceRefs": [
+              "evidence:plan"
+            ],
+            "allowedTools": [
+              "fs.read"
+            ],
+            "blockedTools": [
+              "shell.exec"
+            ],
+            "successGate": "repair_relinked",
+            "createdFromFindingIds": [
+              "plan_schema_valid"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.repair_task.created",
+      "payload": {
+        "gateId": "repair_relinked",
+        "phase": "verification",
+        "repairTask": {
+          "id": "repair.repair_relinked",
+          "gateId": "repair_relinked",
+          "failedPhase": "verification",
+          "targetRef": "artifact:plan",
+          "problem": "Artifact schema validation failed",
+          "requiredEvidenceRefs": [
+            "evidence:plan"
+          ],
+          "allowedTools": [
+            "fs.read"
+          ],
+          "blockedTools": [
+            "shell.exec"
+          ],
+          "successGate": "repair_relinked",
+          "createdFromFindingIds": [
+            "plan_schema_valid"
+          ]
+        },
+        "createdFromFindingIds": [
+          "plan_schema_valid"
+        ],
+        "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_c843234a12fcc0b18e885b48",
+      "kind": "gate",
+      "name": "gate.repair_relinked",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70",
+        "definitionHash": "sha256:7db6f648dcf3cb83de7480fedd84625821f3314e1d41bfbd7f7db3f701b44c41",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "repair_relinked",
+        "instructionKind": "create_repair_task",
+        "phase": "verification",
+        "runId": "run-repair-relinked"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_f64f20ec635582c6a2f6c195",
+      "parentSpanId": "span_gate_c843234a12fcc0b18e885b48",
+      "kind": "gate.input_resolution",
+      "name": "gate.repair_relinked.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "repair_relinked",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:plan": "sha256:257a55d059a53753e867706175ea50b5b40b430cab44268dbbe67dc6ff73a784",
+          "evidence": "sha256:1f584bdcb30a71c0177006e06bf70e1bad38842fa1c3d64daa11117aa50bd812",
+          "evidence:evidence:plan": "sha256:b818a7308f3fe9a0c5a53b939ce276e87faa9494083e9679ac4e673af0ce794e"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_cb6f997271bb760164c756e2",
+      "parentSpanId": "span_gate_c843234a12fcc0b18e885b48",
+      "kind": "gate.check",
+      "name": "gate.repair_relinked.check.plan_schema_valid",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "plan_schema_valid",
+        "checkType": "schema",
+        "evidenceRefs": [
+          "evidence:plan"
+        ],
+        "gateId": "repair_relinked",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "repair_relinked",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "create_repair_task"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "repair_relinked",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "schema",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:7db6f648dcf3cb83de7480fedd84625821f3314e1d41bfbd7f7db3f701b44c41",
+  "inputRefHashes": {
+    "artifact:plan": "sha256:257a55d059a53753e867706175ea50b5b40b430cab44268dbbe67dc6ff73a784",
+    "evidence": "sha256:1f584bdcb30a71c0177006e06bf70e1bad38842fa1c3d64daa11117aa50bd812",
+    "evidence:evidence:plan": "sha256:b818a7308f3fe9a0c5a53b939ce276e87faa9494083e9679ac4e673af0ce794e"
+  },
+  "auditGaps": []
+}

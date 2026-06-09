@@ -1,0 +1,236 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "context_sufficiency",
+        "verdict": {
+          "gateId": "context_sufficiency",
+          "phase": "evidence",
+          "status": "pass",
+          "severity": "blocking",
+          "reasons": [
+            "Gate context_sufficiency passed"
+          ],
+          "findings": [],
+          "evidenceRefs": [
+            "source:requirements"
+          ],
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc"
+        },
+        "instruction": {
+          "kind": "continue",
+          "gateId": "context_sufficiency"
+        },
+        "definitionHash": "sha256:1df9f99d0e23eb6f1c210579e9356273e27b0e4a89e2f9d72add37b54d10cc58",
+        "inputRefHashes": {
+          "artifact:context": "sha256:d8a9d4864f19cff1a11867df1522a199a82dc6238ddf09c03b601e899e670e68",
+          "evidence": "sha256:2d6a18f2d0daf183c47d74a23c5fac1ab83752468ab5f9bbf0c2b18b5729fc32",
+          "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
+          "runInput": "sha256:e7759fdee65f26c95c5e12a779647047cf04a131727cfe252a50b092dc3f7ebd"
+        },
+        "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "goal_known",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": []
+          },
+          {
+            "id": "source_authority_known",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": [
+              "source:requirements"
+            ]
+          },
+          {
+            "id": "context_evidence_covered",
+            "type": "evidence",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "context_sufficiency",
+        "verdict": {
+          "gateId": "context_sufficiency",
+          "phase": "evidence",
+          "status": "pass",
+          "severity": "blocking",
+          "reasons": [
+            "Gate context_sufficiency passed"
+          ],
+          "findings": [],
+          "evidenceRefs": [
+            "source:requirements"
+          ],
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc"
+        },
+        "instruction": {
+          "kind": "continue",
+          "gateId": "context_sufficiency"
+        }
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "kind": "gate",
+      "name": "gate.context_sufficiency",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc",
+        "definitionHash": "sha256:1df9f99d0e23eb6f1c210579e9356273e27b0e4a89e2f9d72add37b54d10cc58",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "context_sufficiency",
+        "instructionKind": "continue",
+        "phase": "evidence",
+        "runId": "run-gates"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_b1dfbfc67cfd621e2de8ff2f",
+      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "kind": "gate.input_resolution",
+      "name": "gate.context_sufficiency.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "context_sufficiency",
+        "phase": "evidence",
+        "inputRefHashes": {
+          "artifact:context": "sha256:d8a9d4864f19cff1a11867df1522a199a82dc6238ddf09c03b601e899e670e68",
+          "evidence": "sha256:2d6a18f2d0daf183c47d74a23c5fac1ab83752468ab5f9bbf0c2b18b5729fc32",
+          "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
+          "runInput": "sha256:e7759fdee65f26c95c5e12a779647047cf04a131727cfe252a50b092dc3f7ebd"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_6d7c1d2c4acb2c8018c86a96",
+      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "kind": "gate.check",
+      "name": "gate.context_sufficiency.check.goal_known",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "goal_known",
+        "checkType": "deterministic",
+        "evidenceRefs": [],
+        "gateId": "context_sufficiency",
+        "outcome": "pass",
+        "phase": "evidence",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_c0a216d79c41c0758eb16bd6",
+      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "kind": "gate.check",
+      "name": "gate.context_sufficiency.check.source_authority_known",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "source_authority_known",
+        "checkType": "deterministic",
+        "evidenceRefs": [
+          "source:requirements"
+        ],
+        "gateId": "context_sufficiency",
+        "outcome": "pass",
+        "phase": "evidence",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_cb48baef39f94300256cfa9a",
+      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "kind": "gate.check",
+      "name": "gate.context_sufficiency.check.context_evidence_covered",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "context_evidence_covered",
+        "checkType": "evidence",
+        "evidenceRefs": [],
+        "gateId": "context_sufficiency",
+        "outcome": "pass",
+        "phase": "evidence",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "context_sufficiency",
+        "phase": "evidence",
+        "status": "pass"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "continue"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "context_sufficiency",
+        "phase": "evidence"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    }
+  ],
+  "definitionHash": "sha256:1df9f99d0e23eb6f1c210579e9356273e27b0e4a89e2f9d72add37b54d10cc58",
+  "inputRefHashes": {
+    "artifact:context": "sha256:d8a9d4864f19cff1a11867df1522a199a82dc6238ddf09c03b601e899e670e68",
+    "evidence": "sha256:2d6a18f2d0daf183c47d74a23c5fac1ab83752468ab5f9bbf0c2b18b5729fc32",
+    "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
+    "runInput": "sha256:e7759fdee65f26c95c5e12a779647047cf04a131727cfe252a50b092dc3f7ebd"
+  },
+  "auditGaps": []
+}

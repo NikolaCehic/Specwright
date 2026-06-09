@@ -56,6 +56,44 @@ export {
   stableStringify
 } from "./decision-hash";
 export type { GateDecisionHashInput, HashDigest } from "./decision-hash";
+export {
+  assertGateAuditReconstructable,
+  buildGateAuditRecord,
+  hashGateDefinition,
+  hashInputRefs
+} from "./audit";
+export type {
+  BuildGateAuditRecordInput,
+  GateAuditContext,
+  GateAuditEventPayload,
+  GateAuditEventProjection,
+  GateAuditEventType,
+  GateAuditGuardFinding,
+  GateAuditGuardResult,
+  GateAuditRecord,
+  GateCheckOutcomeProjection,
+  GateDefinitionMissingPayload,
+  GateEvaluatedPayload,
+  GateEvaluatedRuntimePayload,
+  GateInputMissingPayload,
+  GateMetricSample,
+  GateMissingInputProjection,
+  GateRepairTaskCreatedPayload,
+  GateReviewRequestedPayload,
+  GateRunFailedPayload,
+  GateSpanDescriptor,
+  GateSpanKind,
+  GateSpanStatus,
+  GateUnsupportedCheckPayload
+} from "./audit";
+export { assertLinkable, linkReevaluation } from "./replay-linkage";
+export type {
+  GateAuditGap,
+  PriorFailingGateVerdictRef,
+  PriorFailingVerdictLink,
+  ReplayLinkageGuardResult,
+  ReplayLinkageInput
+} from "./replay-linkage";
 
 export const DEFAULT_EVALUATED_AT = "1970-01-01T00:00:00.000Z";
 export const DEFAULT_GATE_ENGINE_EVALUATOR = "specwright.gate-engine.v0";

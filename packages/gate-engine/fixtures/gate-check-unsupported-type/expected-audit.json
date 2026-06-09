@@ -1,0 +1,224 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "gate_check_unsupported_type",
+        "verdict": {
+          "gateId": "gate_check_unsupported_type",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate check unsupported_mode declares unknown type unsupported_mode"
+          ],
+          "findings": [
+            {
+              "id": "gate.check.unsupported_mode.unknown_type",
+              "message": "Gate check unsupported_mode declares unknown type unsupported_mode",
+              "severity": "blocking",
+              "targetRef": "gate:gate_check_unsupported_type/check:unsupported_mode",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:b50a9262f71298440e07c5b786aad5b82003f10611659c7fceba9fafe0dc1aee"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "gate_check_unsupported_type",
+          "reason": "Gate check unsupported_mode declares unknown type unsupported_mode"
+        },
+        "definitionHash": "sha256:0057ac1157142e7cc7e1b167303d95822258aaa15d150e1490ae2225578826da",
+        "inputRefHashes": {},
+        "decisionHash": "sha256:b50a9262f71298440e07c5b786aad5b82003f10611659c7fceba9fafe0dc1aee",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "unsupported_mode",
+            "type": "unsupported_mode",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "gate_check_unsupported_type",
+        "verdict": {
+          "gateId": "gate_check_unsupported_type",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate check unsupported_mode declares unknown type unsupported_mode"
+          ],
+          "findings": [
+            {
+              "id": "gate.check.unsupported_mode.unknown_type",
+              "message": "Gate check unsupported_mode declares unknown type unsupported_mode",
+              "severity": "blocking",
+              "targetRef": "gate:gate_check_unsupported_type/check:unsupported_mode",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:b50a9262f71298440e07c5b786aad5b82003f10611659c7fceba9fafe0dc1aee"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "gate_check_unsupported_type",
+          "reason": "Gate check unsupported_mode declares unknown type unsupported_mode"
+        }
+      }
+    },
+    {
+      "type": "gate.check.unsupported",
+      "payload": {
+        "gateId": "gate_check_unsupported_type",
+        "phase": "verification",
+        "unsupportedChecks": [
+          {
+            "id": "unsupported_mode",
+            "type": "unsupported_mode",
+            "reason": "Gate check unsupported_mode declares unknown type unsupported_mode"
+          }
+        ],
+        "decisionHash": "sha256:b50a9262f71298440e07c5b786aad5b82003f10611659c7fceba9fafe0dc1aee"
+      }
+    },
+    {
+      "type": "gate.run.failed",
+      "payload": {
+        "gateId": "gate_check_unsupported_type",
+        "phase": "verification",
+        "reason": "Gate check unsupported_mode declares unknown type unsupported_mode",
+        "originatingFindingIds": [
+          "gate.check.unsupported_mode.unknown_type"
+        ],
+        "decisionHash": "sha256:b50a9262f71298440e07c5b786aad5b82003f10611659c7fceba9fafe0dc1aee"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_c02bf6debe7633bd7f82dd48",
+      "kind": "gate",
+      "name": "gate.gate_check_unsupported_type",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:b50a9262f71298440e07c5b786aad5b82003f10611659c7fceba9fafe0dc1aee",
+        "definitionHash": "sha256:0057ac1157142e7cc7e1b167303d95822258aaa15d150e1490ae2225578826da",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "gate_check_unsupported_type",
+        "instructionKind": "fail_run",
+        "phase": "verification"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_a5033dc91da52f7da0c97a03",
+      "parentSpanId": "span_gate_c02bf6debe7633bd7f82dd48",
+      "kind": "gate.input_resolution",
+      "name": "gate.gate_check_unsupported_type.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "gate_check_unsupported_type",
+        "phase": "verification",
+        "inputRefHashes": {},
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_d1e4c8e3c9cac7e07d73a9b1",
+      "parentSpanId": "span_gate_c02bf6debe7633bd7f82dd48",
+      "kind": "gate.check",
+      "name": "gate.gate_check_unsupported_type.check.unsupported_mode",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "unsupported_mode",
+        "checkType": "unsupported_mode",
+        "evidenceRefs": [],
+        "gateId": "gate_check_unsupported_type",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "gate_check_unsupported_type",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "fail_run"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "gate_check_unsupported_type",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "unsupported_mode",
+        "severity": "blocking"
+      }
+    },
+    {
+      "name": "gate_fail_closed_total",
+      "value": 1,
+      "labels": {
+        "reason": "unsupported_check"
+      }
+    }
+  ],
+  "definitionHash": "sha256:0057ac1157142e7cc7e1b167303d95822258aaa15d150e1490ae2225578826da",
+  "inputRefHashes": {},
+  "auditGaps": []
+}

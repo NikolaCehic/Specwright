@@ -1,0 +1,260 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "model_assisted_redacted_projection",
+        "verdict": {
+          "gateId": "model_assisted_redacted_projection",
+          "phase": "verification",
+          "status": "pass",
+          "severity": "blocking",
+          "reasons": [
+            "Gate model_assisted_redacted_projection passed"
+          ],
+          "findings": [],
+          "evidenceRefs": [],
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "model_assisted",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:2e298493a6d097f02d58befbef8a23e98227b3d6c8eec7f4a985e4e8fbe893a9"
+        },
+        "instruction": {
+          "kind": "continue",
+          "gateId": "model_assisted_redacted_projection"
+        },
+        "definitionHash": "sha256:0f0b1e040fbc674bd3e3c1752f7faa762d1332f99ce6421bbde101d5c16dd13f",
+        "inputRefHashes": {
+          "artifact:private_notes": "sha256:8d143e623fc5d549aa0431fa0ba02241fbb9a3d580d2bc6f2aab0d163411b93a",
+          "artifact:summary": "sha256:86c0d7d982f8611c021cb0c4ba32ddd60329ffe438587b17d0aa5f77a95a27e4",
+          "runInput": "sha256:8739a38ec21fb7862ffd7d5931cd01d4f956f66eccc146b1fa5bea1b1a16be35"
+        },
+        "decisionHash": "sha256:2e298493a6d097f02d58befbef8a23e98227b3d6c8eec7f4a985e4e8fbe893a9",
+        "evaluator": {
+          "kind": "model_assisted",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "summary_text_present",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": []
+          },
+          {
+            "id": "model_review",
+            "type": "model_assisted",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": [],
+        "modelAssisted": {
+          "calls": [
+            {
+              "checkId": "model_review",
+              "modelCallId": "gate_model_0b4c74d52a5f67124e6ee7ce",
+              "rubric": {
+                "ref": "rubric://verification/model-review@v1",
+                "hash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000"
+              },
+              "outcome": "success",
+              "tool": {
+                "toolId": "model.review",
+                "toolVersion": "1.0.0",
+                "requestHash": "sha256:bfd43094c7ed158f41fefd9f56187dee32922d8f075b8b5e12a45c8f164937e8",
+                "resultHash": "sha256:recorded-redacted-result",
+                "argsHash": "sha256:recorded-redacted-args",
+                "cacheStatus": "miss",
+                "traceId": "trace_model_redacted",
+                "tokenBudget": 200,
+                "policyStatus": "allow"
+              }
+            }
+          ]
+        }
+      },
+      "runtimePayload": {
+        "gateId": "model_assisted_redacted_projection",
+        "verdict": {
+          "gateId": "model_assisted_redacted_projection",
+          "phase": "verification",
+          "status": "pass",
+          "severity": "blocking",
+          "reasons": [
+            "Gate model_assisted_redacted_projection passed"
+          ],
+          "findings": [],
+          "evidenceRefs": [],
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "model_assisted",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:2e298493a6d097f02d58befbef8a23e98227b3d6c8eec7f4a985e4e8fbe893a9"
+        },
+        "instruction": {
+          "kind": "continue",
+          "gateId": "model_assisted_redacted_projection"
+        }
+      },
+      "traceId": "trace_projection_request"
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_dfe2d5c857ad9caaaf60ab8a",
+      "kind": "gate",
+      "name": "gate.model_assisted_redacted_projection",
+      "status": "pass",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:2e298493a6d097f02d58befbef8a23e98227b3d6c8eec7f4a985e4e8fbe893a9",
+        "definitionHash": "sha256:0f0b1e040fbc674bd3e3c1752f7faa762d1332f99ce6421bbde101d5c16dd13f",
+        "evaluatorKind": "model_assisted",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "model_assisted_redacted_projection",
+        "instructionKind": "continue",
+        "phase": "verification",
+        "runId": "run-model-assisted",
+        "traceId": "trace_projection_request"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_d5157969e9e6da24595ff788",
+      "parentSpanId": "span_gate_dfe2d5c857ad9caaaf60ab8a",
+      "kind": "gate.input_resolution",
+      "name": "gate.model_assisted_redacted_projection.input_resolution",
+      "status": "success",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "model_assisted_redacted_projection",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:private_notes": "sha256:8d143e623fc5d549aa0431fa0ba02241fbb9a3d580d2bc6f2aab0d163411b93a",
+          "artifact:summary": "sha256:86c0d7d982f8611c021cb0c4ba32ddd60329ffe438587b17d0aa5f77a95a27e4",
+          "runInput": "sha256:8739a38ec21fb7862ffd7d5931cd01d4f956f66eccc146b1fa5bea1b1a16be35"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_c2cbc4550f89a0e7bf6860cb",
+      "parentSpanId": "span_gate_dfe2d5c857ad9caaaf60ab8a",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_redacted_projection.check.summary_text_present",
+      "status": "pass",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "summary_text_present",
+        "checkType": "deterministic",
+        "evidenceRefs": [],
+        "gateId": "model_assisted_redacted_projection",
+        "outcome": "pass",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_d6f3f9f93e7ecfff79b0c2f6",
+      "parentSpanId": "span_gate_dfe2d5c857ad9caaaf60ab8a",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_redacted_projection.check.model_review",
+      "status": "pass",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "model_review",
+        "checkType": "model_assisted",
+        "evidenceRefs": [],
+        "gateId": "model_assisted_redacted_projection",
+        "outcome": "pass",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_tool_cfee676dcb7ff5e1ad6ca41f",
+      "parentSpanId": "span_gate_check_d6f3f9f93e7ecfff79b0c2f6",
+      "kind": "tool",
+      "name": "gate.model_assisted_redacted_projection.tool.model_review",
+      "status": "success",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "argsHash": "sha256:recorded-redacted-args",
+        "brokerTraceId": "trace_model_redacted",
+        "cacheStatus": "miss",
+        "checkId": "model_review",
+        "gateId": "model_assisted_redacted_projection",
+        "modelCallId": "gate_model_0b4c74d52a5f67124e6ee7ce",
+        "outcome": "success",
+        "phase": "verification",
+        "policyStatus": "allow",
+        "requestHash": "sha256:bfd43094c7ed158f41fefd9f56187dee32922d8f075b8b5e12a45c8f164937e8",
+        "resultHash": "sha256:recorded-redacted-result",
+        "rubricHash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000",
+        "rubricRef": "rubric://verification/model-review@v1",
+        "tokenBudget": 200,
+        "toolId": "model.review",
+        "toolVersion": "1.0.0"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "model_assisted_redacted_projection",
+        "phase": "verification",
+        "status": "pass"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "continue"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "model_assisted_redacted_projection",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "model_assisted"
+      }
+    },
+    {
+      "name": "gate_model_assisted_calls_total",
+      "value": 1,
+      "labels": {
+        "outcome": "success"
+      }
+    }
+  ],
+  "definitionHash": "sha256:0f0b1e040fbc674bd3e3c1752f7faa762d1332f99ce6421bbde101d5c16dd13f",
+  "inputRefHashes": {
+    "artifact:private_notes": "sha256:8d143e623fc5d549aa0431fa0ba02241fbb9a3d580d2bc6f2aab0d163411b93a",
+    "artifact:summary": "sha256:86c0d7d982f8611c021cb0c4ba32ddd60329ffe438587b17d0aa5f77a95a27e4",
+    "runInput": "sha256:8739a38ec21fb7862ffd7d5931cd01d4f956f66eccc146b1fa5bea1b1a16be35"
+  },
+  "auditGaps": []
+}

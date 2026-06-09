@@ -1,0 +1,292 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "model_assisted_invalid_output",
+        "verdict": {
+          "gateId": "model_assisted_invalid_output",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Model-assisted check model_review output failed outputSchema validation"
+          ],
+          "findings": [
+            {
+              "id": "model_review",
+              "message": "Model-assisted check model_review output failed outputSchema validation",
+              "severity": "blocking",
+              "targetRef": "model_call:gate_model_2ecf89f616eb729d048c87fb",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "model_assisted",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "model_assisted_invalid_output",
+          "reason": "Model-assisted check model_review output failed outputSchema validation"
+        },
+        "definitionHash": "sha256:29b56cf43c70f0e4fb9ab9d11c802d09a66fd0760c1986c4ab15cacecbaa96a4",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:fea1546ca6a45212532e60999b84bb24e3afc3b3409831c0321ff6464f037b2f"
+        },
+        "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154",
+        "evaluator": {
+          "kind": "model_assisted",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "summary_text_present",
+            "type": "deterministic",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": []
+          },
+          {
+            "id": "model_review",
+            "type": "model_assisted",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": [],
+        "modelAssisted": {
+          "calls": [
+            {
+              "checkId": "model_review",
+              "modelCallId": "gate_model_2ecf89f616eb729d048c87fb",
+              "rubric": {
+                "ref": "rubric://verification/model-review@v1",
+                "hash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000"
+              },
+              "outcome": "invalid_output",
+              "tool": {
+                "toolId": "model.review",
+                "toolVersion": "1.0.0",
+                "requestHash": "sha256:3a41594ae50c0710626919e1703c79e560848aa9156ae121be3a653ef1bc8e61",
+                "resultHash": "sha256:recorded-invalid-result",
+                "argsHash": "sha256:recorded-invalid-args",
+                "cacheStatus": "miss",
+                "traceId": "trace_model_invalid",
+                "tokenBudget": 200,
+                "policyStatus": "allow"
+              }
+            }
+          ]
+        }
+      },
+      "runtimePayload": {
+        "gateId": "model_assisted_invalid_output",
+        "verdict": {
+          "gateId": "model_assisted_invalid_output",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Model-assisted check model_review output failed outputSchema validation"
+          ],
+          "findings": [
+            {
+              "id": "model_review",
+              "message": "Model-assisted check model_review output failed outputSchema validation",
+              "severity": "blocking",
+              "targetRef": "model_call:gate_model_2ecf89f616eb729d048c87fb",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "model_assisted",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "model_assisted_invalid_output",
+          "reason": "Model-assisted check model_review output failed outputSchema validation"
+        }
+      }
+    },
+    {
+      "type": "gate.run.failed",
+      "payload": {
+        "gateId": "model_assisted_invalid_output",
+        "phase": "verification",
+        "reason": "Model-assisted check model_review output failed outputSchema validation",
+        "originatingFindingIds": [
+          "model_review"
+        ],
+        "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_a555c29eb328f047f1500209",
+      "kind": "gate",
+      "name": "gate.model_assisted_invalid_output",
+      "status": "fail",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154",
+        "definitionHash": "sha256:29b56cf43c70f0e4fb9ab9d11c802d09a66fd0760c1986c4ab15cacecbaa96a4",
+        "evaluatorKind": "model_assisted",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "model_assisted_invalid_output",
+        "instructionKind": "fail_run",
+        "phase": "verification",
+        "runId": "run-model-assisted"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_5ba152320f1440c3282c3fc5",
+      "parentSpanId": "span_gate_a555c29eb328f047f1500209",
+      "kind": "gate.input_resolution",
+      "name": "gate.model_assisted_invalid_output.input_resolution",
+      "status": "success",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "model_assisted_invalid_output",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:fea1546ca6a45212532e60999b84bb24e3afc3b3409831c0321ff6464f037b2f"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_c3f1d8e8bc5328747f522bf4",
+      "parentSpanId": "span_gate_a555c29eb328f047f1500209",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_invalid_output.check.summary_text_present",
+      "status": "pass",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "summary_text_present",
+        "checkType": "deterministic",
+        "evidenceRefs": [],
+        "gateId": "model_assisted_invalid_output",
+        "outcome": "pass",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_2bea8ff393c57d4c1940200e",
+      "parentSpanId": "span_gate_a555c29eb328f047f1500209",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_invalid_output.check.model_review",
+      "status": "fail",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "model_review",
+        "checkType": "model_assisted",
+        "evidenceRefs": [],
+        "gateId": "model_assisted_invalid_output",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_tool_7d44de96275f2cd6d8793e7e",
+      "parentSpanId": "span_gate_check_2bea8ff393c57d4c1940200e",
+      "kind": "tool",
+      "name": "gate.model_assisted_invalid_output.tool.model_review",
+      "status": "fail",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "argsHash": "sha256:recorded-invalid-args",
+        "brokerTraceId": "trace_model_invalid",
+        "cacheStatus": "miss",
+        "checkId": "model_review",
+        "gateId": "model_assisted_invalid_output",
+        "modelCallId": "gate_model_2ecf89f616eb729d048c87fb",
+        "outcome": "invalid_output",
+        "phase": "verification",
+        "policyStatus": "allow",
+        "requestHash": "sha256:3a41594ae50c0710626919e1703c79e560848aa9156ae121be3a653ef1bc8e61",
+        "resultHash": "sha256:recorded-invalid-result",
+        "rubricHash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000",
+        "rubricRef": "rubric://verification/model-review@v1",
+        "tokenBudget": 200,
+        "toolId": "model.review",
+        "toolVersion": "1.0.0"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "model_assisted_invalid_output",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "fail_run"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "model_assisted_invalid_output",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "model_assisted"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "model_assisted",
+        "severity": "blocking"
+      }
+    },
+    {
+      "name": "gate_model_assisted_calls_total",
+      "value": 1,
+      "labels": {
+        "outcome": "invalid_output"
+      }
+    }
+  ],
+  "definitionHash": "sha256:29b56cf43c70f0e4fb9ab9d11c802d09a66fd0760c1986c4ab15cacecbaa96a4",
+  "inputRefHashes": {
+    "artifact:summary": "sha256:fea1546ca6a45212532e60999b84bb24e3afc3b3409831c0321ff6464f037b2f"
+  },
+  "auditGaps": []
+}

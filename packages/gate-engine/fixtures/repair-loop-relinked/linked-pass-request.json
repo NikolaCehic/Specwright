@@ -1,0 +1,69 @@
+{
+  "gateId": "repair_relinked",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "repair_relinked",
+    "phase": "verification",
+    "kind": "artifact",
+    "required": true,
+    "inputs": {
+      "artifacts": [
+        "plan"
+      ],
+      "evidence": true
+    },
+    "checks": [
+      {
+        "id": "plan_schema_valid",
+        "type": "schema",
+        "artifactId": "plan",
+        "path": "$.artifacts.plan",
+        "requiredFields": [
+          "content.title",
+          "content.steps"
+        ],
+        "repairHint": "Add the missing implementation steps."
+      }
+    ],
+    "onFail": {
+      "action": "create_repair_task",
+      "allowedTools": [
+        "fs.read"
+      ],
+      "blockedTools": [
+        "shell.exec"
+      ],
+      "successGate": "repair_relinked",
+      "maxRepairIterations": 3
+    }
+  },
+  "input": {
+    "runId": "run-repair-relinked",
+    "phase": "verification",
+    "repairLoopIterations": 1,
+    "artifacts": {
+      "plan": {
+        "artifactId": "plan",
+        "artifactType": "plan",
+        "schemaValid": true,
+        "evidenceRefs": [
+          "evidence:plan"
+        ],
+        "content": {
+          "title": "Repair-linked plan",
+          "steps": [
+            "Restore the missing plan details",
+            "Rerun the success gate"
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "refs": {
+        "evidence:plan": {
+          "id": "evidence:plan"
+        }
+      }
+    }
+  }
+}

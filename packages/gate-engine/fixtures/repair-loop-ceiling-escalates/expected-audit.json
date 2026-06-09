@@ -1,0 +1,249 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "repair_loop_ceiling",
+        "verdict": {
+          "gateId": "repair_loop_ceiling",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Artifact schema validation failed"
+          ],
+          "findings": [
+            {
+              "id": "loop_artifact_schema_valid",
+              "message": "Artifact schema validation failed",
+              "severity": "blocking",
+              "targetRef": "artifact:loop_artifact",
+              "evidenceRefs": [
+                "evidence:loop"
+              ],
+              "repairHint": "Repair the artifact before re-running the gate."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:loop"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:2c208fa77d15c582a140f77619d8d99f26259e7c5d1408526af197a9bb2567d4"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "repair_loop_ceiling",
+          "question": {
+            "id": "question.repair_loop_ceiling",
+            "gateId": "repair_loop_ceiling",
+            "phase": "verification",
+            "question": "Repair loop for gate repair_loop_ceiling reached iteration ceiling 2. Review the repeated failure: Artifact schema validation failed",
+            "requiredFor": "gate:repair_loop_ceiling"
+          }
+        },
+        "definitionHash": "sha256:deec4d70e5989d1db9fcb6b5ae2af8c8b3132b8539bd76c21ca1ecccab65a6cf",
+        "inputRefHashes": {
+          "artifact:loop_artifact": "sha256:c701eed54817568fd0846dde6eedfa398e48d710ff791c79766e6bf7626a1267"
+        },
+        "decisionHash": "sha256:2c208fa77d15c582a140f77619d8d99f26259e7c5d1408526af197a9bb2567d4",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "loop_artifact_schema_valid",
+            "type": "schema",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": [
+              "evidence:loop"
+            ]
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "repair_loop_ceiling",
+        "verdict": {
+          "gateId": "repair_loop_ceiling",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Artifact schema validation failed"
+          ],
+          "findings": [
+            {
+              "id": "loop_artifact_schema_valid",
+              "message": "Artifact schema validation failed",
+              "severity": "blocking",
+              "targetRef": "artifact:loop_artifact",
+              "evidenceRefs": [
+                "evidence:loop"
+              ],
+              "repairHint": "Repair the artifact before re-running the gate."
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:loop"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:2c208fa77d15c582a140f77619d8d99f26259e7c5d1408526af197a9bb2567d4"
+        },
+        "instruction": {
+          "kind": "pause_for_human",
+          "gateId": "repair_loop_ceiling",
+          "question": {
+            "id": "question.repair_loop_ceiling",
+            "gateId": "repair_loop_ceiling",
+            "phase": "verification",
+            "question": "Repair loop for gate repair_loop_ceiling reached iteration ceiling 2. Review the repeated failure: Artifact schema validation failed",
+            "requiredFor": "gate:repair_loop_ceiling"
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.review.requested",
+      "payload": {
+        "gateId": "repair_loop_ceiling",
+        "phase": "verification",
+        "reviewKind": "human_question",
+        "question": {
+          "id": "question.repair_loop_ceiling",
+          "gateId": "repair_loop_ceiling",
+          "phase": "verification",
+          "question": "Repair loop for gate repair_loop_ceiling reached iteration ceiling 2. Review the repeated failure: Artifact schema validation failed",
+          "requiredFor": "gate:repair_loop_ceiling"
+        },
+        "requiredFor": "gate:repair_loop_ceiling",
+        "decisionHash": "sha256:2c208fa77d15c582a140f77619d8d99f26259e7c5d1408526af197a9bb2567d4"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_67ceaafadd4f705683437b5d",
+      "kind": "gate",
+      "name": "gate.repair_loop_ceiling",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:2c208fa77d15c582a140f77619d8d99f26259e7c5d1408526af197a9bb2567d4",
+        "definitionHash": "sha256:deec4d70e5989d1db9fcb6b5ae2af8c8b3132b8539bd76c21ca1ecccab65a6cf",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "repair_loop_ceiling",
+        "instructionKind": "pause_for_human",
+        "phase": "verification",
+        "runId": "run-gates"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_8db5dda946108fbce0c2c3f5",
+      "parentSpanId": "span_gate_67ceaafadd4f705683437b5d",
+      "kind": "gate.input_resolution",
+      "name": "gate.repair_loop_ceiling.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "repair_loop_ceiling",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:loop_artifact": "sha256:c701eed54817568fd0846dde6eedfa398e48d710ff791c79766e6bf7626a1267"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_eaed87b174562f1e8bc8d1bd",
+      "parentSpanId": "span_gate_67ceaafadd4f705683437b5d",
+      "kind": "gate.check",
+      "name": "gate.repair_loop_ceiling.check.loop_artifact_schema_valid",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "loop_artifact_schema_valid",
+        "checkType": "schema",
+        "evidenceRefs": [
+          "evidence:loop"
+        ],
+        "gateId": "repair_loop_ceiling",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "repair_loop_ceiling",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "pause_for_human"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 2,
+      "labels": {
+        "gateId": "repair_loop_ceiling",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_review_wait_seconds",
+      "value": 0,
+      "labels": {
+        "gateId": "repair_loop_ceiling",
+        "kind": "pause_for_human",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "schema",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:deec4d70e5989d1db9fcb6b5ae2af8c8b3132b8539bd76c21ca1ecccab65a6cf",
+  "inputRefHashes": {
+    "artifact:loop_artifact": "sha256:c701eed54817568fd0846dde6eedfa398e48d710ff791c79766e6bf7626a1267"
+  },
+  "auditGaps": []
+}

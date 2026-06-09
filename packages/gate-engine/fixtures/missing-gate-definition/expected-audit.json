@@ -1,0 +1,193 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "missing_gate",
+        "verdict": {
+          "gateId": "missing_gate",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate definition missing_gate is missing"
+          ],
+          "findings": [
+            {
+              "id": "gate.definition.missing",
+              "message": "Gate definition missing_gate is missing",
+              "severity": "blocking",
+              "targetRef": "gate:missing_gate",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "missing_gate",
+          "reason": "Gate definition missing_gate is missing"
+        },
+        "definitionHash": "sha256:03079e8963a333469328dc5a21505562b9cdf239990e5a33d1fc2404bfb73c4f",
+        "inputRefHashes": {},
+        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "missing_gate",
+        "verdict": {
+          "gateId": "missing_gate",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Gate definition missing_gate is missing"
+          ],
+          "findings": [
+            {
+              "id": "gate.definition.missing",
+              "message": "Gate definition missing_gate is missing",
+              "severity": "blocking",
+              "targetRef": "gate:missing_gate",
+              "evidenceRefs": []
+            }
+          ],
+          "evidenceRefs": [],
+          "requiredAction": "fail_run",
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+        },
+        "instruction": {
+          "kind": "fail_run",
+          "gateId": "missing_gate",
+          "reason": "Gate definition missing_gate is missing"
+        }
+      }
+    },
+    {
+      "type": "gate.definition.missing",
+      "payload": {
+        "gateId": "missing_gate",
+        "phase": "verification",
+        "reason": "Gate definition missing_gate is missing",
+        "requiredAction": "fail_run",
+        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+      }
+    },
+    {
+      "type": "gate.run.failed",
+      "payload": {
+        "gateId": "missing_gate",
+        "phase": "verification",
+        "reason": "Gate definition missing_gate is missing",
+        "originatingFindingIds": [
+          "gate.definition.missing"
+        ],
+        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_c8a25e9c5c6030b1a5ff8334",
+      "kind": "gate",
+      "name": "gate.missing_gate",
+      "status": "fail",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1",
+        "definitionHash": "sha256:03079e8963a333469328dc5a21505562b9cdf239990e5a33d1fc2404bfb73c4f",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "missing_gate",
+        "instructionKind": "fail_run",
+        "phase": "verification"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_151c6545239787f83b0c5aca",
+      "parentSpanId": "span_gate_c8a25e9c5c6030b1a5ff8334",
+      "kind": "gate.input_resolution",
+      "name": "gate.missing_gate.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "missing_gate",
+        "phase": "verification",
+        "inputRefHashes": {},
+        "missingInputIds": []
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "missing_gate",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "fail_run"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "missing_gate",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "unknown",
+        "severity": "blocking"
+      }
+    },
+    {
+      "name": "gate_fail_closed_total",
+      "value": 1,
+      "labels": {
+        "reason": "missing_definition"
+      }
+    }
+  ],
+  "definitionHash": "sha256:03079e8963a333469328dc5a21505562b9cdf239990e5a33d1fc2404bfb73c4f",
+  "inputRefHashes": {},
+  "auditGaps": []
+}

@@ -1,0 +1,294 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "verdict": {
+          "gateId": "model_assisted_cannot_raise_fail_to_pass",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Eval source_fidelity returned fail; expected pass"
+          ],
+          "findings": [
+            {
+              "id": "blocking_eval_passed",
+              "message": "Eval source_fidelity returned fail; expected pass",
+              "severity": "blocking",
+              "targetRef": "eval:source_fidelity",
+              "evidenceRefs": [
+                "evidence:unsupported"
+              ]
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:unsupported"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:c9a4d82a4a8e2b5fcaafc45ab78cdae33ec950511a65f7271ffb56692e5d13e0"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "model_assisted_cannot_raise_fail_to_pass",
+          "repairTask": {
+            "id": "repair.model_assisted_cannot_raise_fail_to_pass",
+            "gateId": "model_assisted_cannot_raise_fail_to_pass",
+            "failedPhase": "verification",
+            "targetRef": "eval:source_fidelity",
+            "problem": "Eval source_fidelity returned fail; expected pass",
+            "requiredEvidenceRefs": [
+              "evidence:unsupported"
+            ],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "model_assisted_cannot_raise_fail_to_pass",
+            "createdFromFindingIds": [
+              "blocking_eval_passed"
+            ]
+          }
+        },
+        "definitionHash": "sha256:15e1a8c7fc980d87812ac45caebff951b42f7a0ca840d30d84c79a35c0116778",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:9c28ad95a0e26bba0eac5aad6e7b79df8220f9b76ca7e9185b33c6d6d86713de",
+          "eval:source_fidelity": "sha256:9ed3f7cc3de80c5221d53d9d0417a4d999e505850c2363380ef9bcbd8763d107"
+        },
+        "decisionHash": "sha256:c9a4d82a4a8e2b5fcaafc45ab78cdae33ec950511a65f7271ffb56692e5d13e0",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "blocking_eval_passed",
+            "type": "eval",
+            "severity": "blocking",
+            "outcome": "fail",
+            "evidenceRefs": [
+              "evidence:unsupported"
+            ]
+          },
+          {
+            "id": "model_review",
+            "type": "model_assisted",
+            "severity": "blocking",
+            "outcome": "skipped",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": []
+      },
+      "runtimePayload": {
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "verdict": {
+          "gateId": "model_assisted_cannot_raise_fail_to_pass",
+          "phase": "verification",
+          "status": "fail",
+          "severity": "blocking",
+          "reasons": [
+            "Eval source_fidelity returned fail; expected pass"
+          ],
+          "findings": [
+            {
+              "id": "blocking_eval_passed",
+              "message": "Eval source_fidelity returned fail; expected pass",
+              "severity": "blocking",
+              "targetRef": "eval:source_fidelity",
+              "evidenceRefs": [
+                "evidence:unsupported"
+              ]
+            }
+          ],
+          "evidenceRefs": [
+            "evidence:unsupported"
+          ],
+          "requiredAction": "repair",
+          "obligations": [],
+          "evaluatedAt": "2026-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:c9a4d82a4a8e2b5fcaafc45ab78cdae33ec950511a65f7271ffb56692e5d13e0"
+        },
+        "instruction": {
+          "kind": "create_repair_task",
+          "gateId": "model_assisted_cannot_raise_fail_to_pass",
+          "repairTask": {
+            "id": "repair.model_assisted_cannot_raise_fail_to_pass",
+            "gateId": "model_assisted_cannot_raise_fail_to_pass",
+            "failedPhase": "verification",
+            "targetRef": "eval:source_fidelity",
+            "problem": "Eval source_fidelity returned fail; expected pass",
+            "requiredEvidenceRefs": [
+              "evidence:unsupported"
+            ],
+            "allowedTools": [],
+            "blockedTools": [],
+            "successGate": "model_assisted_cannot_raise_fail_to_pass",
+            "createdFromFindingIds": [
+              "blocking_eval_passed"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "gate.repair_task.created",
+      "payload": {
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "phase": "verification",
+        "repairTask": {
+          "id": "repair.model_assisted_cannot_raise_fail_to_pass",
+          "gateId": "model_assisted_cannot_raise_fail_to_pass",
+          "failedPhase": "verification",
+          "targetRef": "eval:source_fidelity",
+          "problem": "Eval source_fidelity returned fail; expected pass",
+          "requiredEvidenceRefs": [
+            "evidence:unsupported"
+          ],
+          "allowedTools": [],
+          "blockedTools": [],
+          "successGate": "model_assisted_cannot_raise_fail_to_pass",
+          "createdFromFindingIds": [
+            "blocking_eval_passed"
+          ]
+        },
+        "createdFromFindingIds": [
+          "blocking_eval_passed"
+        ],
+        "decisionHash": "sha256:c9a4d82a4a8e2b5fcaafc45ab78cdae33ec950511a65f7271ffb56692e5d13e0"
+      }
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_01808e073f07bda395c6c9ca",
+      "kind": "gate",
+      "name": "gate.model_assisted_cannot_raise_fail_to_pass",
+      "status": "fail",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:c9a4d82a4a8e2b5fcaafc45ab78cdae33ec950511a65f7271ffb56692e5d13e0",
+        "definitionHash": "sha256:15e1a8c7fc980d87812ac45caebff951b42f7a0ca840d30d84c79a35c0116778",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "instructionKind": "create_repair_task",
+        "phase": "verification",
+        "runId": "run-model-assisted"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_d8f6a9a60ff52a54f5510f63",
+      "parentSpanId": "span_gate_01808e073f07bda395c6c9ca",
+      "kind": "gate.input_resolution",
+      "name": "gate.model_assisted_cannot_raise_fail_to_pass.input_resolution",
+      "status": "success",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:summary": "sha256:9c28ad95a0e26bba0eac5aad6e7b79df8220f9b76ca7e9185b33c6d6d86713de",
+          "eval:source_fidelity": "sha256:9ed3f7cc3de80c5221d53d9d0417a4d999e505850c2363380ef9bcbd8763d107"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_231af133b4420d075d6439ca",
+      "parentSpanId": "span_gate_01808e073f07bda395c6c9ca",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_cannot_raise_fail_to_pass.check.blocking_eval_passed",
+      "status": "fail",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "blocking_eval_passed",
+        "checkType": "eval",
+        "evidenceRefs": [
+          "evidence:unsupported"
+        ],
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "outcome": "fail",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    },
+    {
+      "spanId": "span_gate_check_83f9f233d1788b41651e216b",
+      "parentSpanId": "span_gate_01808e073f07bda395c6c9ca",
+      "kind": "gate.check",
+      "name": "gate.model_assisted_cannot_raise_fail_to_pass.check.model_review",
+      "status": "skipped",
+      "startedAt": "2026-01-01T00:00:00.000Z",
+      "endedAt": "2026-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "model_review",
+        "checkType": "model_assisted",
+        "evidenceRefs": [],
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "outcome": "skipped",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "phase": "verification",
+        "status": "fail"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "create_repair_task"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 0,
+      "labels": {
+        "gateId": "model_assisted_cannot_raise_fail_to_pass",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    },
+    {
+      "name": "gate_check_failures_total",
+      "value": 1,
+      "labels": {
+        "checkType": "eval",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "definitionHash": "sha256:15e1a8c7fc980d87812ac45caebff951b42f7a0ca840d30d84c79a35c0116778",
+  "inputRefHashes": {
+    "artifact:summary": "sha256:9c28ad95a0e26bba0eac5aad6e7b79df8220f9b76ca7e9185b33c6d6d86713de",
+    "eval:source_fidelity": "sha256:9ed3f7cc3de80c5221d53d9d0417a4d999e505850c2363380ef9bcbd8763d107"
+  },
+  "auditGaps": []
+}

@@ -1,0 +1,195 @@
+{
+  "events": [
+    {
+      "type": "gate.evaluated",
+      "payload": {
+        "gateId": "repair_relinked",
+        "verdict": {
+          "gateId": "repair_relinked",
+          "phase": "verification",
+          "status": "pass",
+          "severity": "blocking",
+          "reasons": [
+            "Gate repair_relinked passed"
+          ],
+          "findings": [],
+          "evidenceRefs": [
+            "evidence:plan"
+          ],
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:8fb5b67038baf9c79d0edd6d46b9a0482dbefd27bd02d006b56940c57cc81920"
+        },
+        "instruction": {
+          "kind": "continue",
+          "gateId": "repair_relinked"
+        },
+        "definitionHash": "sha256:7db6f648dcf3cb83de7480fedd84625821f3314e1d41bfbd7f7db3f701b44c41",
+        "inputRefHashes": {
+          "artifact:plan": "sha256:3a4b729c21449384596acf104bc02634fe7cf9abb08396856883ced1a949cdce",
+          "evidence": "sha256:1f584bdcb30a71c0177006e06bf70e1bad38842fa1c3d64daa11117aa50bd812",
+          "evidence:evidence:plan": "sha256:b818a7308f3fe9a0c5a53b939ce276e87faa9494083e9679ac4e673af0ce794e"
+        },
+        "decisionHash": "sha256:8fb5b67038baf9c79d0edd6d46b9a0482dbefd27bd02d006b56940c57cc81920",
+        "evaluator": {
+          "kind": "deterministic",
+          "ref": "specwright.gate-engine.v0"
+        },
+        "checks": [
+          {
+            "id": "plan_schema_valid",
+            "type": "schema",
+            "severity": "blocking",
+            "outcome": "pass",
+            "evidenceRefs": []
+          }
+        ],
+        "missingInputs": [],
+        "priorFailingVerdict": {
+          "gateId": "repair_relinked",
+          "phase": "verification",
+          "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70",
+          "findingIds": [
+            "plan_schema_valid"
+          ],
+          "createdFromFindingIds": [
+            "plan_schema_valid"
+          ],
+          "eventId": "event-prior-failing-gate",
+          "repairTaskId": "repair.repair_relinked",
+          "successGate": "repair_relinked",
+          "causationId": "event-prior-failing-gate"
+        }
+      },
+      "runtimePayload": {
+        "gateId": "repair_relinked",
+        "verdict": {
+          "gateId": "repair_relinked",
+          "phase": "verification",
+          "status": "pass",
+          "severity": "blocking",
+          "reasons": [
+            "Gate repair_relinked passed"
+          ],
+          "findings": [],
+          "evidenceRefs": [
+            "evidence:plan"
+          ],
+          "obligations": [],
+          "evaluatedAt": "1970-01-01T00:00:00.000Z",
+          "evaluator": {
+            "kind": "deterministic",
+            "ref": "specwright.gate-engine.v0"
+          },
+          "decisionHash": "sha256:8fb5b67038baf9c79d0edd6d46b9a0482dbefd27bd02d006b56940c57cc81920"
+        },
+        "instruction": {
+          "kind": "continue",
+          "gateId": "repair_relinked"
+        }
+      },
+      "causationId": "event-prior-failing-gate"
+    }
+  ],
+  "spans": [
+    {
+      "spanId": "span_gate_d5aaca7e9869a1aaf2d994bc",
+      "kind": "gate",
+      "name": "gate.repair_relinked",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "decisionHash": "sha256:8fb5b67038baf9c79d0edd6d46b9a0482dbefd27bd02d006b56940c57cc81920",
+        "definitionHash": "sha256:7db6f648dcf3cb83de7480fedd84625821f3314e1d41bfbd7f7db3f701b44c41",
+        "evaluatorKind": "deterministic",
+        "evaluatorRef": "specwright.gate-engine.v0",
+        "gateId": "repair_relinked",
+        "instructionKind": "continue",
+        "phase": "verification",
+        "runId": "run-repair-relinked"
+      }
+    },
+    {
+      "spanId": "span_gate_input_resolution_37c30552da4accd7c309d0c0",
+      "parentSpanId": "span_gate_d5aaca7e9869a1aaf2d994bc",
+      "kind": "gate.input_resolution",
+      "name": "gate.repair_relinked.input_resolution",
+      "status": "success",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "gateId": "repair_relinked",
+        "phase": "verification",
+        "inputRefHashes": {
+          "artifact:plan": "sha256:3a4b729c21449384596acf104bc02634fe7cf9abb08396856883ced1a949cdce",
+          "evidence": "sha256:1f584bdcb30a71c0177006e06bf70e1bad38842fa1c3d64daa11117aa50bd812",
+          "evidence:evidence:plan": "sha256:b818a7308f3fe9a0c5a53b939ce276e87faa9494083e9679ac4e673af0ce794e"
+        },
+        "missingInputIds": []
+      }
+    },
+    {
+      "spanId": "span_gate_check_32936084703c626a9d962655",
+      "parentSpanId": "span_gate_d5aaca7e9869a1aaf2d994bc",
+      "kind": "gate.check",
+      "name": "gate.repair_relinked.check.plan_schema_valid",
+      "status": "pass",
+      "startedAt": "1970-01-01T00:00:00.000Z",
+      "endedAt": "1970-01-01T00:00:00.000Z",
+      "metadata": {
+        "checkId": "plan_schema_valid",
+        "checkType": "schema",
+        "evidenceRefs": [],
+        "gateId": "repair_relinked",
+        "outcome": "pass",
+        "phase": "verification",
+        "severity": "blocking"
+      }
+    }
+  ],
+  "metrics": [
+    {
+      "name": "gate_evaluations_total",
+      "value": 1,
+      "labels": {
+        "gateId": "repair_relinked",
+        "phase": "verification",
+        "status": "pass"
+      }
+    },
+    {
+      "name": "gate_instruction_total",
+      "value": 1,
+      "labels": {
+        "kind": "continue"
+      }
+    },
+    {
+      "name": "gate_repair_loop_iterations",
+      "value": 1,
+      "labels": {
+        "gateId": "repair_relinked",
+        "phase": "verification"
+      }
+    },
+    {
+      "name": "gate_evaluation_duration_seconds",
+      "value": 0,
+      "labels": {
+        "kind": "deterministic"
+      }
+    }
+  ],
+  "definitionHash": "sha256:7db6f648dcf3cb83de7480fedd84625821f3314e1d41bfbd7f7db3f701b44c41",
+  "inputRefHashes": {
+    "artifact:plan": "sha256:3a4b729c21449384596acf104bc02634fe7cf9abb08396856883ced1a949cdce",
+    "evidence": "sha256:1f584bdcb30a71c0177006e06bf70e1bad38842fa1c3d64daa11117aa50bd812",
+    "evidence:evidence:plan": "sha256:b818a7308f3fe9a0c5a53b939ce276e87faa9494083e9679ac4e673af0ce794e"
+  },
+  "auditGaps": []
+}
