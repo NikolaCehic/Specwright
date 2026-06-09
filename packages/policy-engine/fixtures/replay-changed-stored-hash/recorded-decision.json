@@ -1,0 +1,8 @@
+{
+  "sourceFixture": "fs-read-allowed-in-evidence",
+  "hashAlgoVersion": "v1",
+  "requestHash": "sha256:8a7146cd676565093cdb2bd2d6854dbe6dae1ef13ddf7223692def46c7b87a77",
+  "policyBundleHash": "sha256:2830278d1b90b893c21e5395e2eec046237f40ebb9000510bd5547772062d37e",
+  "storedDecisionHash": "sha256:246d79c6f67f414d57376289fb42d6ac39e8b22869c0575e1ed90a0768891fd3",
+  "expectedDivergenceClass": "hash_mismatch"
+}

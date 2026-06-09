@@ -1,0 +1,23 @@
+{
+  "snapshots": {
+    "sourceTrust": {},
+    "approvals": {
+      "decisions": []
+    },
+    "budgets": {}
+  },
+  "action": {
+    "requestedScopes": [
+      "workspace:read"
+    ],
+    "args": {
+      "path": "src/index.ts"
+    },
+    "risk": "low",
+    "toolId": "fs.read",
+    "kind": "tool_call"
+  },
+  "phase": "evidence",
+  "runId": "run_policy_fixture",
+  "requestId": "req_fs_read_evidence"
+}
