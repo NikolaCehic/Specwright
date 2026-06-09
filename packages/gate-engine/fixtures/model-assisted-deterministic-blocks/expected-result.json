@@ -1,0 +1,47 @@
+{
+  "verdict": {
+    "gateId": "model_assisted_deterministic_blocks",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Summary text is required before model review"
+    ],
+    "findings": [
+      {
+        "id": "summary_text_present",
+        "message": "Summary text is required before model review",
+        "severity": "blocking",
+        "targetRef": "$.artifacts.summary.content.text",
+        "evidenceRefs": []
+      }
+    ],
+    "evidenceRefs": [],
+    "requiredAction": "repair",
+    "obligations": [],
+    "evaluatedAt": "2026-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f"
+  },
+  "instruction": {
+    "kind": "create_repair_task",
+    "gateId": "model_assisted_deterministic_blocks",
+    "repairTask": {
+      "id": "repair.model_assisted_deterministic_blocks",
+      "gateId": "model_assisted_deterministic_blocks",
+      "failedPhase": "verification",
+      "targetRef": "$.artifacts.summary.content.text",
+      "problem": "Summary text is required before model review",
+      "requiredEvidenceRefs": [],
+      "allowedTools": [],
+      "blockedTools": [],
+      "successGate": "model_assisted_deterministic_blocks",
+      "createdFromFindingIds": [
+        "summary_text_present"
+      ]
+    }
+  }
+}

@@ -311,7 +311,7 @@ export function extractRequestedSurface(input: {
 }): RequestedCapabilitySurface {
   const tools = manifestToolReferences(input.manifest);
   const requireApproval = manifestRequireApprovalReferences(input.manifest);
-  const toolDefinitions = input.tools.map((tool) => tool.id);
+  const toolDefinitions = manifestToolReferences(input.manifest);
   const policyEffects: string[] = [];
   const policyLayers: string[] = [];
   const runtimeInvariantToolIds: string[] = [];

@@ -1,0 +1,68 @@
+{
+  "gateId": "model_assisted_deterministic_blocks",
+  "phase": "verification",
+  "evaluatedAt": "2026-01-01T00:00:00.000Z",
+  "gateDefinitions": {
+    "model_assisted_deterministic_blocks": {
+      "id": "model_assisted_deterministic_blocks",
+      "phase": "verification",
+      "kind": "eval",
+      "required": true,
+      "checks": [
+        {
+          "id": "summary_text_present",
+          "type": "deterministic",
+          "path": "$.artifacts.summary.content.text",
+          "condition": "present",
+          "message": "Summary text is required before model review"
+        },
+        {
+          "id": "model_review",
+          "type": "model_assisted",
+          "modelTool": "model.review",
+          "inputSchema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": true
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "clean",
+                  "review",
+                  "blocking"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "rubric": {
+            "ref": "rubric://verification/model-review@v1",
+            "hash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000"
+          },
+          "allowedContextRefs": [
+            "$.artifacts.summary.content"
+          ],
+          "maxTokens": 200,
+          "onInvalidOutput": "fail"
+        }
+      ]
+    }
+  },
+  "input": {
+    "runId": "run-model-assisted",
+    "phase": "verification",
+    "artifacts": {
+      "summary": {
+        "artifactId": "summary",
+        "artifactType": "summary",
+        "content": {}
+      }
+    }
+  }
+}

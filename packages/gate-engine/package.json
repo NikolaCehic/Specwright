@@ -21,6 +21,7 @@
     "test": "bun test src/index.test.ts src/definition.test.ts"
   },
   "dependencies": {
-    "@specwright/schemas": "workspace:*"
+    "@specwright/schemas": "workspace:*",
+    "zod": "^3.22.4"
   }
 }

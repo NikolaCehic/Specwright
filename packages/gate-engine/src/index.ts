@@ -1,6 +1,9 @@
 import {
   GateLifecycleInstructionSchema,
   GateVerdictSchema,
+  ToolCallResultSchema,
+  type ToolCallRequest,
+  type ToolCallResult,
   type EvalVerdict,
   type GateApprovalRequest as ApprovalRequest,
   type GateDefinition,
@@ -17,11 +20,18 @@ import {
   type PolicyVerdict,
   type PolicyVerdictStatus
 } from "@specwright/schemas";
+import type { ZodTypeAny } from "zod";
 import {
   validateGateDefinition,
   type GateDefinitionFinding
 } from "./definition";
-import { gateDecisionHashInput, hashDecision } from "./decision-hash";
+import {
+  gateDecisionHashInput,
+  hashDecision,
+  hashJson,
+  stableStringify
+} from "./decision-hash";
+import { zodSchemaFromDeclaration } from "./schema-declaration";
 
 export type {
   GateApprovalRequest as ApprovalRequest,
@@ -62,6 +72,7 @@ export type HashedGateVerdict = GateVerdict & { decisionHash: string };
 export type GateEvaluationResult = {
   verdict: HashedGateVerdict;
   instruction: GateLifecycleInstruction;
+  modelAssisted?: ModelAssistedEvaluationProvenance;
 };
 
 type UnhashedGateVerdict = Omit<GateVerdict, "decisionHash">;
@@ -172,6 +183,22 @@ export type SupportedGateCheck =
   | PolicyStatusCheck
   | HumanReviewCheck;
 
+export type ModelAssistedCheck = GateCheckBase & {
+  type: "model_assisted";
+  modelTool: string;
+  inputSchema: unknown;
+  outputSchema: unknown;
+  rubric: {
+    ref: string;
+    hash: string;
+  };
+  allowedContextRefs: string[];
+  maxTokens: number;
+  onInvalidOutput?: "fail";
+};
+
+export type GateCheck = SupportedGateCheck | ModelAssistedCheck;
+
 export type GateFailureAction =
   | "repair"
   | "create_repair_task"
@@ -211,7 +238,7 @@ export type FixtureGateDefinition = {
   metadata?: GateDefinition["metadata"];
   severity?: GateSeverity;
   inputs?: unknown;
-  checks?: SupportedGateCheck[];
+  checks?: GateCheck[];
   onFail?: GateFailureBehavior | GateFailureAction;
   onPass?: GatePassBehavior;
 } & Record<string, unknown>;
@@ -226,6 +253,46 @@ export type EvaluateGateRequest = {
   input?: GateEvaluationInput;
   evaluatedAt?: Date | string;
   evaluatorRef?: string;
+  broker?: BrokerPort;
+  traceId?: string;
+};
+
+export type BrokerCallContext = {
+  traceId?: string;
+  runId?: string;
+};
+
+export type BrokerPort = (
+  request: ToolCallRequest,
+  context?: BrokerCallContext
+) => Promise<ToolCallResult>;
+
+export type ModelAssistedCallOutcome =
+  | "success"
+  | "invalid_output"
+  | "denied"
+  | "error";
+
+export type ModelAssistedCallProvenance = {
+  checkId: string;
+  modelCallId: string;
+  rubric: ModelAssistedCheck["rubric"];
+  outcome: ModelAssistedCallOutcome;
+  tool: {
+    toolId: string;
+    toolVersion?: string;
+    requestHash: string;
+    resultHash?: string;
+    argsHash?: string;
+    cacheStatus?: string;
+    traceId?: string;
+    tokenBudget: number;
+    policyStatus: string;
+  };
+};
+
+export type ModelAssistedEvaluationProvenance = {
+  calls: ModelAssistedCallProvenance[];
 };
 
 type CheckEvaluation =
@@ -237,6 +304,7 @@ type CheckEvaluation =
       status: "fail";
       finding: GateFinding;
       requiredAction?: GateRequiredAction | undefined;
+      bypassOnFail?: boolean | undefined;
       evidenceRefs: string[];
     }
   | {
@@ -312,9 +380,158 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
   }
 
   const checks = definition.checks ?? [];
-  const evaluations = checks.map((check) =>
+  const modelAssistedChecks = checks.filter(isModelAssistedCheck);
+
+  if (modelAssistedChecks.length > 0) {
+    const firstCheck = modelAssistedChecks[0] as ModelAssistedCheck;
+
+    return failClosed({
+      gateId,
+      phase,
+      evaluatedAt,
+      evaluatorRef,
+      reason: `Model-assisted gate check ${firstCheck.id} requires evaluateGateAsync`,
+      findingId: `gate.check.${firstCheck.id}.requires_async_entrypoint`,
+      targetRef: firstCheck.targetRef ?? `gate:${gateId}/check:${firstCheck.id}`,
+      requiredAction: "fail_run"
+    });
+  }
+
+  const evaluations = (checks as SupportedGateCheck[]).map((check) =>
     evaluateCheck(check, input, phase, severity)
   );
+  return aggregateEvaluations({
+    definition,
+    phase,
+    evaluatedAt,
+    evaluatorRef,
+    severity,
+    evaluations,
+    evaluatorKind: "deterministic"
+  });
+}
+
+export async function evaluateGateAsync(
+  request: EvaluateGateRequest
+): Promise<GateEvaluationResult> {
+  const resolvedDefinition = resolveGateDefinition(request);
+  const evaluatedAt = normalizeEvaluatedAt(request.evaluatedAt);
+  const phase =
+    request.phase ??
+    request.input?.phase ??
+    (resolvedDefinition.ok
+      ? resolvedDefinition.definition.phase
+      : resolvedDefinition.definitionPhase) ??
+    "unknown";
+  const evaluatorRef =
+    request.evaluatorRef ?? DEFAULT_GATE_ENGINE_EVALUATOR;
+
+  if (!resolvedDefinition.ok) {
+    return failClosed({
+      gateId: request.gateId,
+      phase,
+      evaluatedAt,
+      evaluatorRef,
+      reason: resolvedDefinition.finding.message,
+      findingId: resolvedDefinition.finding.id,
+      targetRef: resolvedDefinition.finding.targetRef,
+      requiredAction: "fail_run"
+    });
+  }
+
+  const definition = resolvedDefinition.definition;
+  const severity = gateSeverity(definition);
+  const input = request.input;
+  const missingInputs = findMissingInputs(definition.inputs, input);
+
+  if (missingInputs.length > 0) {
+    return buildFailingResult({
+      definition,
+      phase,
+      evaluatedAt,
+      evaluatorRef,
+      severity,
+      findings: missingInputs.map((missingInput) =>
+        makeFinding({
+          id: `input.${missingInput.id}.missing`,
+          severity,
+          message: missingInput.message,
+          targetRef: missingInput.targetRef
+        })
+      ),
+      defaultRequiredAction: "clarify"
+    });
+  }
+
+  const checks = definition.checks ?? [];
+  const deterministicChecks = checks.filter(
+    (check): check is SupportedGateCheck => !isModelAssistedCheck(check)
+  );
+  const modelAssistedChecks = checks.filter(isModelAssistedCheck);
+  const deterministicEvaluations = deterministicChecks.map((check) =>
+    evaluateCheck(check, input, phase, severity)
+  );
+  const deterministicFailed = deterministicEvaluations.some(
+    (evaluation) => evaluation.status === "fail"
+  );
+
+  if (deterministicFailed || modelAssistedChecks.length === 0) {
+    return aggregateEvaluations({
+      definition,
+      phase,
+      evaluatedAt,
+      evaluatorRef,
+      severity,
+      evaluations: deterministicEvaluations,
+      evaluatorKind: "deterministic"
+    });
+  }
+
+  const modelEvaluations: CheckEvaluation[] = [];
+  const calls: ModelAssistedCallProvenance[] = [];
+
+  for (const check of modelAssistedChecks) {
+    const evaluated = await evaluateModelAssistedCheck({
+      check,
+      definition,
+      input,
+      phase,
+      severity,
+      broker: request.broker,
+      evaluatedAt,
+      traceId: request.traceId
+    });
+    modelEvaluations.push(evaluated.evaluation);
+    calls.push(evaluated.provenance);
+  }
+
+  return aggregateEvaluations({
+    definition,
+    phase,
+    evaluatedAt,
+    evaluatorRef,
+    severity,
+    evaluations: [...deterministicEvaluations, ...modelEvaluations],
+    evaluatorKind: "model_assisted",
+    modelAssisted: {
+      calls
+    }
+  });
+}
+
+function aggregateEvaluations(input: {
+  definition: FixtureGateDefinition;
+  phase: string;
+  evaluatedAt: string;
+  evaluatorRef: string;
+  severity: GateSeverity;
+  evaluations: CheckEvaluation[];
+  evaluatorKind: GateVerdict["evaluator"]["kind"];
+  modelAssisted?: ModelAssistedEvaluationProvenance;
+}): GateEvaluationResult {
+  const { definition, phase, evaluatedAt, evaluatorRef, severity, evaluations } =
+    input;
+  const gateId = definition.id;
   const failed = evaluations.filter(
     (evaluation): evaluation is Extract<CheckEvaluation, { status: "fail" }> =>
       evaluation.status === "fail"
@@ -330,16 +547,31 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
   );
 
   if (failed.length > 0) {
-    return buildFailingResult({
+    const failClosedEvaluations = failed.filter(
+      (evaluation) => evaluation.bypassOnFail === true
+    );
+    const bypassOnFail = failClosedEvaluations.length > 0;
+    const orderedFailed = bypassOnFail
+      ? [
+          ...failClosedEvaluations,
+          ...failed.filter((evaluation) => evaluation.bypassOnFail !== true)
+        ]
+      : failed;
+
+    return buildFailingResult(withOptionalModelAssisted({
       definition,
       phase,
       evaluatedAt,
       evaluatorRef,
       severity,
-      findings: failed.map((evaluation) => evaluation.finding),
+      findings: orderedFailed.map((evaluation) => evaluation.finding),
       evidenceRefs,
-      defaultRequiredAction: firstRequiredAction(failed) ?? "repair"
-    });
+      defaultRequiredAction: bypassOnFail
+        ? "fail_run"
+        : firstRequiredAction(failed) ?? "repair",
+      evaluatorKind: input.evaluatorKind,
+      bypassOnFail
+    }, input.modelAssisted));
   }
 
   if (needsReview.length > 0) {
@@ -358,12 +590,12 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
       obligations,
       evaluatedAt,
       evaluator: {
-        kind: "deterministic",
+        kind: input.evaluatorKind,
         ref: evaluatorRef
       }
     });
 
-    return validatedGateResult({
+    return validatedGateResult(withOptionalModelAssisted({
       verdict,
       instruction: instructionForNeedsReview({
         definition,
@@ -371,7 +603,7 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
         verdict,
         requiredAction
       })
-    });
+    }, input.modelAssisted));
   }
 
   const passObligations = definition.onPass?.obligations ?? [];
@@ -386,15 +618,15 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
     obligations: passObligations,
     evaluatedAt,
     evaluator: {
-      kind: "deterministic",
+      kind: input.evaluatorKind,
       ref: evaluatorRef
     }
   });
 
-  return validatedGateResult({
+  return validatedGateResult(withOptionalModelAssisted({
     verdict,
     instruction: instructionForPass(definition, phase)
-  });
+  }, input.modelAssisted));
 }
 
 function evaluateCheck(
@@ -755,6 +987,528 @@ function unsupportedCheck(
   };
 }
 
+async function evaluateModelAssistedCheck(input: {
+  check: ModelAssistedCheck;
+  definition: FixtureGateDefinition;
+  input: GateEvaluationInput | undefined;
+  phase: string;
+  severity: GateSeverity;
+  broker?: BrokerPort | undefined;
+  evaluatedAt: string;
+  traceId?: string | undefined;
+}): Promise<{
+  evaluation: CheckEvaluation;
+  provenance: ModelAssistedCallProvenance;
+}> {
+  const { check, definition, phase, severity } = input;
+  const contract = validateModelAssistedContract(check);
+  const modelCallId = modelCallIdFor({
+    gateId: definition.id,
+    check,
+    phase,
+    input: input.input
+  });
+  const baseTool = {
+    toolId: check.modelTool || "undeclared",
+    requestHash: hashJson({
+      gateId: definition.id,
+      checkId: check.id,
+      modelCallId,
+      phase
+    }),
+    tokenBudget: Number.isFinite(check.maxTokens) ? check.maxTokens : 0,
+    policyStatus: "not_requested"
+  };
+
+  if (!contract.ok) {
+    return failClosedModelCheck({
+      check,
+      severity,
+      modelCallId,
+      rubric: fallbackRubric(check),
+      outcome: "invalid_output",
+      message: contract.message,
+      tool: baseTool
+    });
+  }
+
+  if (input.broker === undefined) {
+    return failClosedModelCheck({
+      check,
+      severity,
+      modelCallId,
+      rubric: contract.rubric,
+      outcome: "error",
+      message: `Model-assisted check ${check.id} requires an injected broker`,
+      tool: baseTool
+    });
+  }
+
+  const projection = projectModelContext(check, input.input);
+  const parsedProjection = contract.inputSchema.safeParse(projection.context);
+
+  if (!parsedProjection.success) {
+    return failClosedModelCheck({
+      check,
+      severity,
+      modelCallId,
+      rubric: contract.rubric,
+      outcome: "invalid_output",
+      message: `Model-assisted check ${check.id} context failed inputSchema validation`,
+      tool: baseTool
+    });
+  }
+
+  const request: ToolCallRequest = {
+    toolId: contract.modelTool,
+    args: {
+      context: parsedProjection.data,
+      rubric: contract.rubric,
+      maxTokens: contract.maxTokens
+    },
+    reason: `Evaluate model-assisted gate check ${check.id} for gate ${definition.id}`,
+    idempotencyKey: hashJson({
+      gateId: definition.id,
+      phase,
+      checkId: check.id,
+      rubricHash: contract.rubric.hash,
+      context: parsedProjection.data
+    }),
+    requestedBy: {
+      phase,
+      gateId: definition.id,
+      modelCallId
+    }
+  };
+  const requestHash = hashJson(request);
+  let result: ToolCallResult;
+
+  try {
+    result = ToolCallResultSchema.parse(
+      await input.broker(request, brokerContext(input.traceId, input.input?.runId))
+    );
+  } catch {
+    return failClosedModelCheck({
+      check,
+      severity,
+      modelCallId,
+      rubric: contract.rubric,
+      outcome: "error",
+      message: `Model-assisted check ${check.id} broker call failed`,
+      tool: {
+        ...baseTool,
+        toolId: contract.modelTool,
+        requestHash,
+        policyStatus: "error"
+      }
+    });
+  }
+
+  const tool = modelToolProvenance({
+    check,
+    result,
+    requestHash,
+    tokenBudget: contract.maxTokens
+  });
+
+  if (result.status !== "success") {
+    const outcome = result.status === "denied" ? "denied" : "error";
+
+    return failClosedModelCheck({
+      check,
+      severity,
+      modelCallId,
+      rubric: contract.rubric,
+      outcome,
+      message:
+        result.error?.message ??
+        `Model-assisted check ${check.id} returned ${result.status}`,
+      tool
+    });
+  }
+
+  if (
+    result.output === undefined ||
+    stableStringify(result.output).length > Math.max(1, contract.maxTokens) * 16
+  ) {
+    return failClosedModelCheck({
+      check,
+      severity,
+      modelCallId,
+      rubric: contract.rubric,
+      outcome: "invalid_output",
+      message: `Model-assisted check ${check.id} returned absent or oversized output`,
+      tool
+    });
+  }
+
+  const parsedOutput = contract.outputSchema.safeParse(result.output);
+
+  if (!parsedOutput.success) {
+    return failClosedModelCheck({
+      check,
+      severity,
+      modelCallId,
+      rubric: contract.rubric,
+      outcome: "invalid_output",
+      message: `Model-assisted check ${check.id} output failed outputSchema validation`,
+      tool
+    });
+  }
+
+  return {
+    evaluation: evaluationFromModelOutput({
+      check,
+      output: parsedOutput.data,
+      severity
+    }),
+    provenance: {
+      checkId: check.id,
+      modelCallId,
+      rubric: contract.rubric,
+      outcome: "success",
+      tool
+    }
+  };
+}
+
+function failClosedModelCheck(input: {
+  check: ModelAssistedCheck;
+  severity: GateSeverity;
+  modelCallId: string;
+  rubric: ModelAssistedCheck["rubric"];
+  outcome: ModelAssistedCallOutcome;
+  message: string;
+  tool: ModelAssistedCallProvenance["tool"];
+}): {
+  evaluation: CheckEvaluation;
+  provenance: ModelAssistedCallProvenance;
+} {
+  const finding = makeFinding({
+    id: input.check.id,
+    severity: input.check.severity ?? input.severity,
+    message: input.message,
+    targetRef: input.check.targetRef ?? `model_call:${input.modelCallId}`,
+    evidenceRefs: input.check.evidenceRefs,
+    repairHint: input.check.repairHint
+  });
+
+  return {
+    evaluation: {
+      status: "fail",
+      finding,
+      requiredAction: "fail_run",
+      bypassOnFail: true,
+      evidenceRefs: input.check.evidenceRefs ?? []
+    },
+    provenance: {
+      checkId: input.check.id,
+      modelCallId: input.modelCallId,
+      rubric: input.rubric,
+      outcome: input.outcome,
+      tool: input.tool
+    }
+  };
+}
+
+function evaluationFromModelOutput(input: {
+  check: ModelAssistedCheck;
+  output: unknown;
+  severity: GateSeverity;
+}): CheckEvaluation {
+  const output = isRecord(input.output) ? input.output : {};
+  const status = String(
+    output.status ?? output.outcome ?? output.verdict ?? "review"
+  );
+  const message =
+    typeof output.message === "string"
+      ? output.message
+      : input.check.message ?? `Model-assisted check ${input.check.id} flagged review`;
+  const evidenceRefs = Array.isArray(output.evidenceRefs)
+    ? output.evidenceRefs.filter(isString)
+    : input.check.evidenceRefs ?? [];
+  const targetRef =
+    typeof output.targetRef === "string"
+      ? output.targetRef
+      : input.check.targetRef;
+  const repairHint =
+    typeof output.repairHint === "string"
+      ? output.repairHint
+      : input.check.repairHint;
+
+  if (status === "clean" || status === "pass") {
+    return {
+      status: "pass",
+      evidenceRefs
+    };
+  }
+
+  if (status === "blocking" || status === "fail") {
+    return {
+      status: "fail",
+      finding: makeFinding({
+        id: input.check.id,
+        severity: input.check.severity ?? input.severity,
+        message,
+        targetRef,
+        evidenceRefs,
+        repairHint
+      }),
+      requiredAction: input.check.requiredAction ?? "repair",
+      evidenceRefs
+    };
+  }
+
+  return {
+    status: "needs_review",
+    finding: makeFinding({
+      id: input.check.id,
+      severity: input.check.severity ?? input.severity,
+      message,
+      targetRef,
+      evidenceRefs,
+      repairHint
+    }),
+    requiredAction: "clarify",
+    evidenceRefs
+  };
+}
+
+function modelToolProvenance(input: {
+  check: ModelAssistedCheck;
+  result: ToolCallResult;
+  requestHash: string;
+  tokenBudget: number;
+}): ModelAssistedCallProvenance["tool"] {
+  const resultHash = input.result.provenance.resultHash ?? hashJson(input.result);
+
+  return {
+    toolId: input.result.provenance.toolId,
+    toolVersion: input.result.provenance.toolVersion,
+    requestHash: input.requestHash,
+    resultHash,
+    argsHash: input.result.provenance.argsHash,
+    cacheStatus: input.result.provenance.cacheStatus,
+    traceId: input.result.provenance.traceId,
+    tokenBudget: input.tokenBudget,
+    policyStatus: policyStatusForToolResult(input.result.status)
+  };
+}
+
+function policyStatusForToolResult(status: ToolCallResult["status"]) {
+  switch (status) {
+    case "success":
+      return "allow";
+    case "denied":
+    case "approval_required":
+      return status;
+    case "failed":
+      return "error";
+  }
+}
+
+function brokerContext(
+  traceId: string | undefined,
+  runId: string | undefined
+): BrokerCallContext {
+  return {
+    ...(traceId === undefined ? {} : { traceId }),
+    ...(runId === undefined ? {} : { runId })
+  };
+}
+
+function validateModelAssistedContract(
+  check: ModelAssistedCheck
+):
+  | {
+      ok: true;
+      modelTool: string;
+      inputSchema: ZodTypeAny;
+      outputSchema: ZodTypeAny;
+      rubric: ModelAssistedCheck["rubric"];
+      maxTokens: number;
+    }
+  | { ok: false; message: string } {
+  if (!isNonEmptyString(check.modelTool)) {
+    return { ok: false, message: `Model-assisted check ${check.id} is missing modelTool` };
+  }
+
+  if (
+    !isRecord(check.rubric) ||
+    !isNonEmptyString(check.rubric.ref) ||
+    !isNonEmptyString(check.rubric.hash)
+  ) {
+    return { ok: false, message: `Model-assisted check ${check.id} is missing rubric ref/hash` };
+  }
+
+  if (!Array.isArray(check.allowedContextRefs)) {
+    return { ok: false, message: `Model-assisted check ${check.id} is missing allowedContextRefs` };
+  }
+
+  if (!Number.isFinite(check.maxTokens) || check.maxTokens <= 0) {
+    return { ok: false, message: `Model-assisted check ${check.id} is missing maxTokens` };
+  }
+
+  const inputSchema = zodSchemaFromDeclaration(check.inputSchema);
+  const outputSchema = zodSchemaFromDeclaration(check.outputSchema);
+
+  if (inputSchema === undefined || outputSchema === undefined) {
+    return { ok: false, message: `Model-assisted check ${check.id} has malformed inputSchema or outputSchema` };
+  }
+
+  return {
+    ok: true,
+    modelTool: check.modelTool,
+    inputSchema,
+    outputSchema,
+    rubric: check.rubric,
+    maxTokens: check.maxTokens
+  };
+}
+
+function projectModelContext(
+  check: ModelAssistedCheck,
+  input: GateEvaluationInput | undefined
+) {
+  const scope = evaluationScope(input);
+  const context: Record<string, unknown> = {};
+
+  for (const ref of check.allowedContextRefs) {
+    if (!isNonEmptyString(ref)) {
+      continue;
+    }
+
+    const value = ref.startsWith("$.")
+      ? readPathValues(scope, ref)[0]
+      : inputValueByName(ref, input);
+    const redacted = redactForModel(value);
+
+    if (redacted === undefined) {
+      continue;
+    }
+
+    if (ref.startsWith("$.")) {
+      assignProjectionPath(context, ref, redacted);
+    } else {
+      context[ref] = redacted;
+    }
+  }
+
+  return { context };
+}
+
+function redactForModel(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => redactForModel(entry))
+      .filter((entry) => entry !== undefined);
+  }
+
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  if (isRestrictedRedactionRecord(value)) {
+    return undefined;
+  }
+
+  const redacted: Record<string, unknown> = {};
+
+  for (const [key, entry] of Object.entries(value)) {
+    if (isSecretLikeKey(key)) {
+      continue;
+    }
+
+    const redactedEntry = redactForModel(entry);
+
+    if (
+      redactedEntry !== undefined &&
+      !(isRecord(redactedEntry) && Object.keys(redactedEntry).length === 0)
+    ) {
+      redacted[key] = redactedEntry;
+    }
+  }
+
+  return redacted;
+}
+
+function assignProjectionPath(
+  target: Record<string, unknown>,
+  ref: string,
+  value: unknown
+) {
+  const segments = ref
+    .slice(2)
+    .split(".")
+    .map((segment) => segment.replace(/\[\*\]$/, ""));
+  let current = target;
+
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index] as string;
+
+    if (index === segments.length - 1) {
+      current[segment] = value;
+      return;
+    }
+
+    const next = current[segment];
+
+    if (!isRecord(next)) {
+      current[segment] = {};
+    }
+
+    current = current[segment] as Record<string, unknown>;
+  }
+}
+
+function modelCallIdFor(input: {
+  gateId: string;
+  check: ModelAssistedCheck;
+  phase: string;
+  input: GateEvaluationInput | undefined;
+}) {
+  const digest = hashJson({
+    gateId: input.gateId,
+    phase: input.phase,
+    checkId: input.check.id,
+    rubricHash: fallbackRubric(input.check).hash,
+    allowedContextRefs: input.check.allowedContextRefs,
+    context: projectModelContext(input.check, input.input).context
+  }).slice("sha256:".length, "sha256:".length + 24);
+
+  return `gate_model_${digest}`;
+}
+
+function fallbackRubric(check: ModelAssistedCheck): ModelAssistedCheck["rubric"] {
+  return {
+    ref: isRecord(check.rubric) && isNonEmptyString(check.rubric.ref)
+      ? check.rubric.ref
+      : "undeclared",
+    hash: isRecord(check.rubric) && isNonEmptyString(check.rubric.hash)
+      ? check.rubric.hash
+      : "undeclared"
+  };
+}
+
+function isModelAssistedCheck(check: GateCheck): check is ModelAssistedCheck {
+  return check.type === "model_assisted";
+}
+
+function isRestrictedRedactionRecord(value: Record<string, unknown>) {
+  return (
+    value.redactionClass === "secret" ||
+    value.redactionClass === "restricted" ||
+    value.redaction === "secret" ||
+    value.redaction === "restricted"
+  );
+}
+
+function isSecretLikeKey(key: string) {
+  return /(?:secret|token|password|credential|api[_-]?key|authorization|private[_-]?key)/i.test(
+    key
+  );
+}
+
 function buildFailingResult(input: {
   definition: FixtureGateDefinition;
   phase: string;
@@ -764,10 +1518,14 @@ function buildFailingResult(input: {
   findings: GateFinding[];
   evidenceRefs?: string[];
   defaultRequiredAction: GateRequiredAction;
+  evaluatorKind?: GateVerdict["evaluator"]["kind"];
+  modelAssisted?: ModelAssistedEvaluationProvenance;
+  bypassOnFail?: boolean;
 }): GateEvaluationResult {
   const requiredAction = requiredActionFor(
     input.definition.onFail,
-    input.defaultRequiredAction
+    input.defaultRequiredAction,
+    input.bypassOnFail === true
   );
   const evidenceRefs = uniqueStrings([
     ...(input.evidenceRefs ?? []),
@@ -786,12 +1544,12 @@ function buildFailingResult(input: {
     obligations,
     evaluatedAt: input.evaluatedAt,
     evaluator: {
-      kind: "deterministic",
+      kind: input.evaluatorKind ?? "deterministic",
       ref: input.evaluatorRef
     }
   });
 
-  return validatedGateResult({
+  return validatedGateResult(withOptionalModelAssisted({
     verdict,
     instruction: instructionForFailure({
       definition: input.definition,
@@ -799,7 +1557,7 @@ function buildFailingResult(input: {
       verdict,
       requiredAction
     })
-  });
+  }, input.modelAssisted));
 }
 
 function failClosed(input: {
@@ -846,10 +1604,28 @@ function failClosed(input: {
 }
 
 function validatedGateResult(input: GateEvaluationResult): GateEvaluationResult {
-  return {
+  const result: GateEvaluationResult = {
     verdict: parseHashedGateVerdict(input.verdict),
     instruction: GateLifecycleInstructionSchema.parse(input.instruction)
   };
+
+  if (input.modelAssisted !== undefined) {
+    result.modelAssisted = input.modelAssisted;
+  }
+
+  return result;
+}
+
+function withOptionalModelAssisted<T extends object>(
+  value: T,
+  modelAssisted: ModelAssistedEvaluationProvenance | undefined
+): T & { modelAssisted?: ModelAssistedEvaluationProvenance } {
+  return modelAssisted === undefined
+    ? value
+    : {
+        ...value,
+        modelAssisted
+      };
 }
 
 function instructionForPass(
@@ -1497,8 +2273,13 @@ function gateSeverity(definition: FixtureGateDefinition): GateSeverity {
 
 function requiredActionFor(
   onFail: FixtureGateDefinition["onFail"],
-  fallback: GateRequiredAction
+  fallback: GateRequiredAction,
+  bypassOnFail = false
 ): GateRequiredAction {
+  if (bypassOnFail) {
+    return fallback;
+  }
+
   const action = typeof onFail === "string" ? onFail : onFail?.action;
 
   switch (action) {
@@ -1578,6 +2359,10 @@ function uniqueStrings(values: readonly string[]) {
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

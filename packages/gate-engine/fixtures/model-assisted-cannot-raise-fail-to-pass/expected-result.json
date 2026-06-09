@@ -1,0 +1,53 @@
+{
+  "verdict": {
+    "gateId": "model_assisted_cannot_raise_fail_to_pass",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Eval source_fidelity returned fail; expected pass"
+    ],
+    "findings": [
+      {
+        "id": "blocking_eval_passed",
+        "message": "Eval source_fidelity returned fail; expected pass",
+        "severity": "blocking",
+        "targetRef": "eval:source_fidelity",
+        "evidenceRefs": [
+          "evidence:unsupported"
+        ]
+      }
+    ],
+    "evidenceRefs": [
+      "evidence:unsupported"
+    ],
+    "requiredAction": "repair",
+    "obligations": [],
+    "evaluatedAt": "2026-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:c9a4d82a4a8e2b5fcaafc45ab78cdae33ec950511a65f7271ffb56692e5d13e0"
+  },
+  "instruction": {
+    "kind": "create_repair_task",
+    "gateId": "model_assisted_cannot_raise_fail_to_pass",
+    "repairTask": {
+      "id": "repair.model_assisted_cannot_raise_fail_to_pass",
+      "gateId": "model_assisted_cannot_raise_fail_to_pass",
+      "failedPhase": "verification",
+      "targetRef": "eval:source_fidelity",
+      "problem": "Eval source_fidelity returned fail; expected pass",
+      "requiredEvidenceRefs": [
+        "evidence:unsupported"
+      ],
+      "allowedTools": [],
+      "blockedTools": [],
+      "successGate": "model_assisted_cannot_raise_fail_to_pass",
+      "createdFromFindingIds": [
+        "blocking_eval_passed"
+      ]
+    }
+  }
+}

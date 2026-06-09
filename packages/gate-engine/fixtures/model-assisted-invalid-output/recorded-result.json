@@ -1,0 +1,15 @@
+{
+  "toolCallId": "toolcall_model_review_invalid",
+  "status": "success",
+  "output": {
+    "status": "surprising"
+  },
+  "provenance": {
+    "toolId": "model.review",
+    "toolVersion": "1.0.0",
+    "argsHash": "sha256:recorded-invalid-args",
+    "resultHash": "sha256:recorded-invalid-result",
+    "cacheStatus": "miss",
+    "traceId": "trace_model_invalid"
+  }
+}

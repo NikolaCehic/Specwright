@@ -43,9 +43,10 @@ evals:
   - source_fidelity
   - completeness_required_sections
 metadata:
-  description: Minimal source-bound planning harness for runtime strictness.
+  description: Minimal source-bound planning harness for runtime strictness, with passive model-assisted gate examples kept out of the active v0 path.
   omittedFutureTools:
-    model.generate: Omitted until model tool schemas and a broker adapter exist.
+    model.generate: Broad generation remains omitted from v0.
+    model.review: Constrained advisory review remains example-only until async runtime broker injection is available in the active path.
   deniedByOmission:
     - shell.exec
     - fs.write

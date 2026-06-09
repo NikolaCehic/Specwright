@@ -1,0 +1,20 @@
+{
+  "toolCallId": "toolcall_model_review_advisory",
+  "status": "success",
+  "output": {
+    "status": "review",
+    "message": "Clarify whether the implementation claim is source-backed before packaging.",
+    "targetRef": "artifact:summary",
+    "evidenceRefs": [
+      "evidence:summary"
+    ]
+  },
+  "provenance": {
+    "toolId": "model.review",
+    "toolVersion": "1.0.0",
+    "argsHash": "sha256:recorded-advisory-args",
+    "resultHash": "sha256:recorded-advisory-result",
+    "cacheStatus": "miss",
+    "traceId": "trace_model_advisory"
+  }
+}
