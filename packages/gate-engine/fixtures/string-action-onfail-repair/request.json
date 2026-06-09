@@ -1,0 +1,30 @@
+{
+  "gateId": "string_onfail_repair",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "string_onfail_repair",
+    "phase": "verification",
+    "kind": "artifact",
+    "required": true,
+    "checks": [
+      {
+        "id": "required_field_present",
+        "type": "deterministic",
+        "path": "$.runInput.requiredField",
+        "condition": "present",
+        "message": "Required run input field is missing",
+        "targetRef": "input:requiredField",
+        "evidenceRefs": [
+          "evidence:string-action"
+        ],
+        "repairHint": "Populate the required field."
+      }
+    ],
+    "onFail": "create_repair_task"
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "verification",
+    "runInput": {}
+  }
+}

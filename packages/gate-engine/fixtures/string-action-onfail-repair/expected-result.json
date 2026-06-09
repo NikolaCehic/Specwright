@@ -1,0 +1,54 @@
+{
+  "verdict": {
+    "gateId": "string_onfail_repair",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Required run input field is missing"
+    ],
+    "findings": [
+      {
+        "id": "required_field_present",
+        "message": "Required run input field is missing",
+        "severity": "blocking",
+        "targetRef": "input:requiredField",
+        "evidenceRefs": [
+          "evidence:string-action"
+        ],
+        "repairHint": "Populate the required field."
+      }
+    ],
+    "evidenceRefs": [
+      "evidence:string-action"
+    ],
+    "requiredAction": "repair",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:1c06ba9a2744f6a27a4266c3ac1674486d220d91f2346a45d3c009621bc56334"
+  },
+  "instruction": {
+    "kind": "create_repair_task",
+    "gateId": "string_onfail_repair",
+    "repairTask": {
+      "id": "repair.string_onfail_repair",
+      "gateId": "string_onfail_repair",
+      "failedPhase": "verification",
+      "targetRef": "input:requiredField",
+      "problem": "Required run input field is missing",
+      "requiredEvidenceRefs": [
+        "evidence:string-action"
+      ],
+      "allowedTools": [],
+      "blockedTools": [],
+      "successGate": "string_onfail_repair",
+      "createdFromFindingIds": [
+        "required_field_present"
+      ]
+    }
+  }
+}

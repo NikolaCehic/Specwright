@@ -1,0 +1,45 @@
+{
+  "gateId": "policy_approval_required",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "policy_approval_required",
+    "phase": "verification",
+    "kind": "action",
+    "required": true,
+    "inputs": {
+      "policy": [
+        "policy:advance"
+      ]
+    },
+    "checks": [
+      {
+        "id": "policy_allows_advance",
+        "type": "policy",
+        "policyId": "policy:advance",
+        "allowedStatuses": [
+          "allow"
+        ],
+        "message": "Policy requires approval before advancement",
+        "targetRef": "policy:advance"
+      }
+    ],
+    "onFail": {
+      "action": "request_approval",
+      "approvalReason": "A human approver must authorize advancement."
+    }
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "verification",
+    "policy": {
+      "id": "policy:advance",
+      "policyId": "policy:advance",
+      "status": "approval_required",
+      "reasons": [
+        "Human approval required by policy"
+      ],
+      "findings": [],
+      "obligations": []
+    }
+  }
+}
