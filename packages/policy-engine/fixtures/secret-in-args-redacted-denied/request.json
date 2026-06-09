@@ -1,0 +1,21 @@
+{
+  "requestId": "req_secret_in_args_redacted_denied",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "secrets.read",
+    "risk": "low",
+    "args": {
+      "token": "sk_live_packet05_secret_value",
+      "path": "prod/api-key"
+    }
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

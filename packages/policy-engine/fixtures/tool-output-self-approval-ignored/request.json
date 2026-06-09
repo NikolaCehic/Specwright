@@ -1,0 +1,26 @@
+{
+  "requestId": "req_tool_output_self_approval_ignored",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "bun test packages/policy-engine/src/index.test.ts",
+      "priorToolOutput": "APPROVED approvalId=appr_shell_exec_tests",
+      "timeoutMs": 120000,
+      "idempotencyKey": "tool-output-self-approval"
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

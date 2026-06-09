@@ -1,0 +1,23 @@
+{
+  "status": "deny",
+  "reasons": [
+    "Host policy denies fs.read"
+  ],
+  "constraints": [],
+  "obligations": [],
+  "matchedRules": [
+    {
+      "ruleId": "host.fs.read.deny",
+      "layer": "host",
+      "effect": "deny",
+      "reason": "Host policy denies fs.read"
+    },
+    {
+      "ruleId": "workspace.fs_read.allow",
+      "layer": "workspace",
+      "effect": "allow",
+      "reason": "workspace policy allows fs.read"
+    }
+  ],
+  "decisionHash": "sha256:20bd1db7a53e01f7ad1a4af8316377d55d77474877f275ba0748fbb10e7c45de"
+}

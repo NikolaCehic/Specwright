@@ -1,0 +1,25 @@
+{
+  "requestId": "req_workspace_bundle_allows_host_denied_tool",
+  "runId": "run_policy_fixture",
+  "phase": "evidence",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "args": {
+      "path": "src/index.ts"
+    }
+  },
+  "snapshots": {
+    "hostPolicy": {
+      "deniedTools": [
+        "fs.read"
+      ]
+    },
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}

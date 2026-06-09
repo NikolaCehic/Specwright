@@ -1,0 +1,31 @@
+{
+  "requestId": "req_mismatched_approval_id_ineffective",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "bun test packages/policy-engine/src/index.test.ts",
+      "timeoutMs": 120000,
+      "idempotencyKey": "mismatched-approval"
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": [
+        {
+          "approvalId": "appr_other_shell_exec",
+          "decision": "approved",
+          "humanMessage": "This approval targets a different request."
+        }
+      ]
+    },
+    "sourceTrust": {}
+  }
+}

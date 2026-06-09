@@ -1,0 +1,20 @@
+{
+  "id": "fixture.host-allowlist-absence",
+  "description": "A lower-layer shell allow cannot admit a tool absent from the host allowlist.",
+  "toolPolicy": {
+    "shell.exec": {
+      "default": "allow",
+      "risk": "high",
+      "reason": "shell.exec would otherwise be allowed by the bundle",
+      "allowedPhases": [
+        "verification"
+      ],
+      "requiredScopes": [
+        "shell:exec"
+      ],
+      "allowedScopes": [
+        "shell:exec"
+      ]
+    }
+  }
+}

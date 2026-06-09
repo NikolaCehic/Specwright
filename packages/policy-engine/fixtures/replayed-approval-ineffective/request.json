@@ -1,0 +1,31 @@
+{
+  "requestId": "req_replayed_approval_ineffective",
+  "runId": "run_policy_fixture",
+  "phase": "verification",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "shell.exec",
+    "risk": "high",
+    "args": {
+      "command": "bun test packages/policy-engine/src/index.test.ts",
+      "timeoutMs": 120000,
+      "idempotencyKey": "replayed-approval"
+    },
+    "requestedScopes": [
+      "shell:exec"
+    ]
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": [
+        {
+          "approvalId": "appr_shell_exec_tests_prior_run",
+          "decision": "approved",
+          "humanMessage": "Prior-run approval ids do not satisfy this request."
+        }
+      ]
+    },
+    "sourceTrust": {}
+  }
+}

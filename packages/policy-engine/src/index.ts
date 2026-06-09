@@ -904,9 +904,27 @@ function addBudgetPolicyMatches(
 
   for (const rule of budgetPolicy) {
     const requested = budgetCosts[rule.resource] ?? 0;
-    const used = readBudgetUsed(request.snapshots?.budgets, rule.resource);
+    const usage = readBudgetUsage(request.snapshots?.budgets, rule.resource);
 
-    if (requested > 0 && used + requested > rule.max) {
+    if (requested <= 0) {
+      continue;
+    }
+
+    if (usage === undefined) {
+      matches.push({
+        ruleId: `budget.${rule.resource}.missing_snapshot`,
+        layer: "harness",
+        effect: "deny",
+        reason: `Budget snapshot is missing for resource ${rule.resource}`,
+        constraints: [],
+        obligations: [],
+        sequence
+      });
+      sequence += 1;
+      continue;
+    }
+
+    if (usage.used + requested > rule.max) {
       matches.push({
         ruleId: rule.id,
         layer: rule.layer ?? "harness",
@@ -1143,14 +1161,16 @@ function approvalDecisionConstraints(
 }
 
 function actionRisk(request: PolicyRequest): PolicyRisk {
-  if (request.action.risk !== undefined) {
-    return request.action.risk;
-  }
+  return higherRisk(intrinsicActionRisk(request), request.action.risk);
+}
 
-  switch (request.action.toolId) {
+function intrinsicActionRisk(request: PolicyRequest): PolicyRisk {
+  switch (request.action.toolId ?? request.action.kind) {
     case "fs.read":
     case "fs.list":
       return "low";
+    case "tool_call":
+      return "medium";
     case "shell.exec":
     case "git.commit":
     case "git.push":
@@ -1164,18 +1184,38 @@ function actionRisk(request: PolicyRequest): PolicyRisk {
   }
 }
 
-function readBudgetUsed(budgets: BudgetState | undefined, resource: string) {
+function higherRisk(
+  baseline: PolicyRisk,
+  callerSupplied: PolicyRisk | undefined
+): PolicyRisk {
+  if (callerSupplied === undefined) {
+    return baseline;
+  }
+
+  return riskRank(callerSupplied) > riskRank(baseline)
+    ? callerSupplied
+    : baseline;
+}
+
+function riskRank(risk: PolicyRisk) {
+  return POLICY_RISKS.indexOf(risk);
+}
+
+function readBudgetUsage(
+  budgets: BudgetState | undefined,
+  resource: string
+): { used: number } | undefined {
   const value = budgets?.[resource];
 
   if (typeof value === "number") {
-    return value;
+    return { used: value };
   }
 
   if (isRecord(value) && typeof value.used === "number") {
-    return value.used;
+    return { used: value.used };
   }
 
-  return 0;
+  return undefined;
 }
 
 function withSourceRule(

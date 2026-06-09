@@ -1,0 +1,4 @@
+{
+  "id": "fixture.action-kind-without-tool-id",
+  "description": "A critical action kind without a tool id has no matching allow rule."
+}

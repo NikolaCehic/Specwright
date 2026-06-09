@@ -18,11 +18,14 @@ import {
 } from "./index";
 import "./bundle-load.test";
 import "./conformance.test";
+import "./fail-closed.test";
+import "./abuse-cases.test";
 import "./decision-hash.test";
 import "./determinism.test";
 import "./mutation.test";
 import "./pattern-safety.test";
 import "./replay.test";
+import "./failure-class-coverage.test";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
 
@@ -50,7 +53,19 @@ const fixtureCases = [
   "replay-equivalent-fs-read",
   "replay-changed-stored-hash",
   "replay-input-drift",
-  "replay-unpinned-bundle"
+  "replay-unpinned-bundle",
+  "self-lowered-risk-still-denied",
+  "mismatched-approval-id-ineffective",
+  "replayed-approval-ineffective",
+  "rejected-approval-ineffective",
+  "missing-budget-snapshot-denied",
+  "unmetered-resource-denied",
+  "injected-source-text-requests-deploy-denied",
+  "host-allowlist-absence-denied",
+  "workspace-bundle-allows-host-denied-tool",
+  "secret-in-args-redacted-denied",
+  "tool-output-self-approval-ignored",
+  "action-kind-without-tool-id-denied"
 ];
 const recordProjectionCases = [
   {

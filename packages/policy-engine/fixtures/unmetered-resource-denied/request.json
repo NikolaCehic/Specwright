@@ -1,0 +1,26 @@
+{
+  "requestId": "req_unmetered_resource_denied",
+  "runId": "run_policy_fixture",
+  "phase": "evidence",
+  "action": {
+    "kind": "tool_call",
+    "toolId": "fs.read",
+    "risk": "low",
+    "args": {
+      "path": "src/index.ts"
+    },
+    "requestedScopes": [
+      "workspace:read"
+    ],
+    "budgetCosts": {
+      "gpuSeconds": 1
+    }
+  },
+  "snapshots": {
+    "budgets": {},
+    "approvals": {
+      "decisions": []
+    },
+    "sourceTrust": {}
+  }
+}
