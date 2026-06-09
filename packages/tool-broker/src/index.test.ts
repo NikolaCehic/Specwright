@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { resolve } from "node:path";
 import type { FixturePolicyBundle } from "@specwright/policy-engine";
+import "./capability-registry.test";
 import {
   createDefaultCapabilityRegistry,
   createToolBroker,
