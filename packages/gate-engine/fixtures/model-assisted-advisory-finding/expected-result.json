@@ -1,0 +1,68 @@
+{
+  "verdict": {
+    "gateId": "model_assisted_review",
+    "phase": "verification",
+    "status": "needs_review",
+    "severity": "blocking",
+    "reasons": [
+      "Clarify whether the implementation claim is source-backed before packaging."
+    ],
+    "findings": [
+      {
+        "id": "model_review",
+        "message": "Clarify whether the implementation claim is source-backed before packaging.",
+        "severity": "blocking",
+        "targetRef": "artifact:summary",
+        "evidenceRefs": [
+          "evidence:summary"
+        ]
+      }
+    ],
+    "evidenceRefs": [
+      "evidence:summary"
+    ],
+    "requiredAction": "clarify",
+    "obligations": [],
+    "evaluatedAt": "2026-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "model_assisted",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:55d68e236a348d4620e371934401bd66ddef099c2189ecfa7842b4529d8bb88b"
+  },
+  "instruction": {
+    "kind": "pause_for_human",
+    "gateId": "model_assisted_review",
+    "question": {
+      "id": "question.model_assisted_review",
+      "gateId": "model_assisted_review",
+      "phase": "verification",
+      "question": "Clarify whether the implementation claim is source-backed before packaging.",
+      "requiredFor": "gate:model_assisted_review"
+    }
+  },
+  "modelAssisted": {
+    "calls": [
+      {
+        "checkId": "model_review",
+        "modelCallId": "gate_model_f9c543545fd88459f34b6dfd",
+        "rubric": {
+          "ref": "rubric://verification/model-review@v1",
+          "hash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000"
+        },
+        "outcome": "success",
+        "tool": {
+          "toolId": "model.review",
+          "toolVersion": "1.0.0",
+          "requestHash": "sha256:cbfc4811d2991b547b84b0e11dbce5ff460c2a8d098c1a04d256f59868d9f3a9",
+          "resultHash": "sha256:recorded-advisory-result",
+          "argsHash": "sha256:recorded-advisory-args",
+          "cacheStatus": "miss",
+          "traceId": "trace_model_advisory",
+          "tokenBudget": 200,
+          "policyStatus": "allow"
+        }
+      }
+    ]
+  }
+}

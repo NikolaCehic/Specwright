@@ -294,7 +294,7 @@ phases:
     expect(first.schemaVersion).toBe(SUPPORTED_HARNESS_SCHEMA_VERSION);
     expect(first.specHash).toStartWith("sha256:");
     expect(first.specHash).toBe(
-      "sha256:d878da67ae18d763e9f61bad0e3f15a883f78cd77ac17823a0a4a67e35847135"
+      "sha256:b29c8e3e58717c6c97bdf6029278cc6763cb0bc3492ff40a67ff7aaf0d4be456"
     );
     expect(first.specHash).toBe(second.specHash);
     expect(first.phases.map((phase) => phase.id)).toEqual([
@@ -310,7 +310,8 @@ phases:
       "evidence.context_sufficiency",
       "planning.plan_schema",
       "verification.required_evals",
-      "packaging.run_report"
+      "packaging.run_report",
+      "verification.model_review"
     ]);
     expect(first.policies.map((policy) => policy.id)).toEqual([
       "source_bound_v0"
@@ -318,7 +319,8 @@ phases:
     expect(first.tools.map((tool) => tool.id)).toEqual([
       "fs.list",
       "fs.read",
-      "eval.run"
+      "eval.run",
+      "model.review"
     ]);
     expect(first.tools.some((tool) => tool.id === "model.generate")).toBe(false);
     expect(first.artifacts.map((artifact) => artifact.id)).toEqual([
@@ -571,9 +573,20 @@ phases:
           grantId: "grant.specwright.default.broader.0.1.0",
           packageId: "specwright.default",
           versionPins: ["0.1.0"],
-          allowedTools: ["eval.run", "fs.list", "fs.read", "model.generate"],
+          allowedTools: [
+            "eval.run",
+            "fs.list",
+            "fs.read",
+            "model.generate",
+            "model.review"
+          ],
           allowedRequireApproval: [],
-          allowedToolDefinitions: ["eval.run", "fs.list", "fs.read"],
+          allowedToolDefinitions: [
+            "eval.run",
+            "fs.list",
+            "fs.read",
+            "model.review"
+          ],
           allowedPolicyEffects: ["allow", "deny"],
           allowedPolicyLayers: ["harness", "runtime_invariant"],
           allowedRuntimeInvariantToolIds: [
@@ -630,7 +643,7 @@ phases:
       resolved: []
     });
     expect(record.snapshot.specHash).toBe(
-      "sha256:d878da67ae18d763e9f61bad0e3f15a883f78cd77ac17823a0a4a67e35847135"
+      "sha256:b29c8e3e58717c6c97bdf6029278cc6763cb0bc3492ff40a67ff7aaf0d4be456"
     );
     expect(events).toHaveLength(0);
   });
@@ -674,7 +687,7 @@ phases:
     ]);
     expect(first.snapshot.specHash).toStartWith("sha256:");
     expect(first.snapshot.specHash).not.toBe(
-      "sha256:d878da67ae18d763e9f61bad0e3f15a883f78cd77ac17823a0a4a67e35847135"
+      "sha256:2aaf5b2c377b3eb99cd50d74497bc46440dc5b27a9892d20978fd7968947ed44"
     );
     expect(first.snapshot.specHash).toBe(second.snapshot.specHash);
     expect("dependencies" in first.snapshot).toBe(false);

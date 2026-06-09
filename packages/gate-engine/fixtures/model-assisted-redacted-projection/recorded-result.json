@@ -1,0 +1,15 @@
+{
+  "toolCallId": "toolcall_model_review_redacted",
+  "status": "success",
+  "output": {
+    "status": "clean"
+  },
+  "provenance": {
+    "toolId": "model.review",
+    "toolVersion": "1.0.0",
+    "argsHash": "sha256:recorded-redacted-args",
+    "resultHash": "sha256:recorded-redacted-result",
+    "cacheStatus": "miss",
+    "traceId": "trace_model_redacted"
+  }
+}

@@ -4,6 +4,7 @@ import {
   type GateCheckType,
   type GateKind
 } from "@specwright/schemas";
+import { zodSchemaFromDeclaration } from "./schema-declaration";
 
 export const KNOWN_GATE_KINDS: readonly GateKind[] = GateKindSchema.options;
 export const KNOWN_CHECK_TYPES: readonly GateCheckType[] =
@@ -115,6 +116,97 @@ function validateChecks(
         }
       };
     }
+
+    if (check.type === "model_assisted") {
+      const modelAssistedValidation = validateModelAssistedCheck(
+        check,
+        gateId,
+        checkKey
+      );
+
+      if (!modelAssistedValidation.ok) {
+        return modelAssistedValidation;
+      }
+    }
+  }
+
+  return { ok: true };
+}
+
+function validateModelAssistedCheck(
+  check: Record<string, unknown>,
+  gateId: string,
+  checkKey: string
+): GateDefinitionValidationResult {
+  if (!isNonEmptyString(check.modelTool)) {
+    return invalidModelAssistedCheck(
+      gateId,
+      checkKey,
+      "missing_modelTool",
+      `Gate definition ${gateId} model-assisted check ${checkKey} must declare a non-empty modelTool`
+    );
+  }
+
+  if (zodSchemaFromDeclaration(check.inputSchema) === undefined) {
+    return invalidModelAssistedCheck(
+      gateId,
+      checkKey,
+      "invalid_inputSchema",
+      `Gate definition ${gateId} model-assisted check ${checkKey} must declare a supported inputSchema`
+    );
+  }
+
+  if (zodSchemaFromDeclaration(check.outputSchema) === undefined) {
+    return invalidModelAssistedCheck(
+      gateId,
+      checkKey,
+      "invalid_outputSchema",
+      `Gate definition ${gateId} model-assisted check ${checkKey} must declare a supported outputSchema`
+    );
+  }
+
+  if (
+    !isRecord(check.rubric) ||
+    !isNonEmptyString(check.rubric.ref) ||
+    !isNonEmptyString(check.rubric.hash)
+  ) {
+    return invalidModelAssistedCheck(
+      gateId,
+      checkKey,
+      "invalid_rubric",
+      `Gate definition ${gateId} model-assisted check ${checkKey} must declare rubric.ref and rubric.hash`
+    );
+  }
+
+  if (
+    !isStringArray(check.allowedContextRefs) ||
+    check.allowedContextRefs.length === 0 ||
+    check.allowedContextRefs.some((ref) => !isNonEmptyString(ref))
+  ) {
+    return invalidModelAssistedCheck(
+      gateId,
+      checkKey,
+      "invalid_allowedContextRefs",
+      `Gate definition ${gateId} model-assisted check ${checkKey} must declare non-empty allowedContextRefs`
+    );
+  }
+
+  if (!isPositiveInteger(check.maxTokens)) {
+    return invalidModelAssistedCheck(
+      gateId,
+      checkKey,
+      "invalid_maxTokens",
+      `Gate definition ${gateId} model-assisted check ${checkKey} must declare a positive integer maxTokens`
+    );
+  }
+
+  if (!isValidOnInvalidOutput(check.onInvalidOutput)) {
+    return invalidModelAssistedCheck(
+      gateId,
+      checkKey,
+      "invalid_onInvalidOutput",
+      `Gate definition ${gateId} model-assisted check ${checkKey} must declare onInvalidOutput as fail until retry behavior is implemented`
+    );
   }
 
   return { ok: true };
@@ -256,6 +348,22 @@ function malformedOnPass(gateId: string): GateDefinitionValidationResult {
   };
 }
 
+function invalidModelAssistedCheck(
+  gateId: string,
+  checkKey: string,
+  suffix: string,
+  message: string
+): GateDefinitionValidationResult {
+  return {
+    ok: false,
+    finding: {
+      id: `gate.check.${checkKey}.${suffix}`,
+      message,
+      targetRef: `gate:${gateId}/check:${checkKey}`
+    }
+  };
+}
+
 function checkAddress(check: unknown, index: number) {
   if (isRecord(check) && isNonEmptyString(check.id)) {
     return check.id;
@@ -266,6 +374,14 @@ function checkAddress(check: unknown, index: number) {
 
 function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((entry) => typeof entry === "string");
+}
+
+function isPositiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
+function isValidOnInvalidOutput(value: unknown) {
+  return value === undefined || value === "fail";
 }
 
 function isNonEmptyString(value: unknown): value is string {

@@ -1,5 +1,5 @@
 id: verification
-description: Run deterministic evals against the plan and evidence graph.
+description: Run deterministic evals against the plan and evidence graph while the model-assisted example remains out of the active v0 path.
 gates:
   - verification.required_evals
 tools:

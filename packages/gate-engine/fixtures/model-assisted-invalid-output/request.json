@@ -1,0 +1,111 @@
+{
+  "gateId": "model_assisted_invalid_output",
+  "phase": "verification",
+  "evaluatedAt": "2026-01-01T00:00:00.000Z",
+  "gateDefinitions": {
+    "model_assisted_invalid_output": {
+      "id": "model_assisted_invalid_output",
+      "phase": "verification",
+      "kind": "eval",
+      "required": true,
+      "inputs": {
+        "artifacts": [
+          "summary"
+        ]
+      },
+      "checks": [
+        {
+          "id": "summary_text_present",
+          "type": "deterministic",
+          "path": "$.artifacts.summary.content.text",
+          "condition": "present"
+        },
+        {
+          "id": "model_review",
+          "type": "model_assisted",
+          "modelTool": "model.review",
+          "inputSchema": {
+            "type": "object",
+            "required": [
+              "artifacts"
+            ],
+            "properties": {
+              "artifacts": {
+                "type": "object",
+                "required": [
+                  "summary"
+                ],
+                "properties": {
+                  "summary": {
+                    "type": "object",
+                    "required": [
+                      "content"
+                    ],
+                    "properties": {
+                      "content": {
+                        "type": "object",
+                        "required": [
+                          "text"
+                        ],
+                        "properties": {
+                          "text": {
+                            "type": "string"
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "outputSchema": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "enum": [
+                  "clean",
+                  "review",
+                  "blocking"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "rubric": {
+            "ref": "rubric://verification/model-review@v1",
+            "hash": "sha256:rubricmodelreview000000000000000000000000000000000000000000000"
+          },
+          "allowedContextRefs": [
+            "$.artifacts.summary.content"
+          ],
+          "maxTokens": 200,
+          "onInvalidOutput": "fail"
+        }
+      ]
+    }
+  },
+  "input": {
+    "runId": "run-model-assisted",
+    "phase": "verification",
+    "artifacts": {
+      "summary": {
+        "artifactId": "summary",
+        "artifactType": "summary",
+        "content": {
+          "text": "The report is ready for model review."
+        }
+      }
+    }
+  }
+}

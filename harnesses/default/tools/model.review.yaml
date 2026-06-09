@@ -1,0 +1,65 @@
+id: model.review
+kind: model
+description: Constrained advisory review tool retained for the passive verification.model_review example.
+version: 0.1.0
+inputSchema:
+  type: object
+  additionalProperties: false
+  required:
+    - context
+    - rubric
+    - maxTokens
+  properties:
+    context:
+      type: object
+    rubric:
+      type: object
+      additionalProperties: false
+      required:
+        - ref
+        - hash
+      properties:
+        ref:
+          type: string
+        hash:
+          type: string
+    maxTokens:
+      type: integer
+outputSchema:
+  type: object
+  additionalProperties: false
+  required:
+    - status
+    - message
+  properties:
+    status:
+      enum:
+        - clean
+        - review
+        - blocking
+    message:
+      type: string
+    targetRef:
+      type: string
+    evidenceRefs:
+      type: array
+      items:
+        type: string
+adapter: adapters/model/review
+risk: medium
+policy:
+  allowedPhases:
+    - verification
+  approval: none
+  scopes: ["model:review", "evidence:read"]
+  limits:
+    timeoutMs: 30000
+    maxTokens: 200
+observability:
+  recordArgs: true
+  recordResultHash: true
+  redact:
+    - secrets
+metadata:
+  exampleOnly: true
+  note: Passive example tool definition kept so the inactive verification.model_review gate remains internally consistent.

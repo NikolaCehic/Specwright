@@ -1,5 +1,5 @@
 id: source_bound_v0
-description: Read-only source discovery plus deterministic eval execution for the default v0 harness.
+description: Read-only source discovery plus deterministic eval execution for the default v0 harness while the model-assisted example remains passive.
 scopes: ["workspace:read", "evidence:read", "eval:run"]
 tools:
   - fs.list
