@@ -17,6 +17,9 @@ import {
 } from "@specwright/schemas";
 import { z, type ZodTypeAny } from "zod";
 
+declare function setTimeout(handler: () => void, timeout?: number): unknown;
+declare function clearTimeout(timeoutId: unknown): void;
+
 export const TOOL_BROKER_VERSION = "0.1.0";
 export const FILESYSTEM_ADAPTER_VERSION = "0.1.0";
 export const DEFAULT_FS_READ_MAX_BYTES = 200_000;
@@ -343,6 +346,7 @@ export type ToolCallContext = {
   cwd?: string;
   traceId?: string;
   runMode?: string;
+  approvalDeadlineAt?: string | number | Date;
   policyBundle?: FixturePolicyBundle | readonly FixturePolicyBundle[];
   snapshots?: PolicyRequest["snapshots"];
 };
@@ -371,12 +375,14 @@ export class ToolBroker {
     requestLike: ToolCallRequest | unknown,
     context: ToolCallContext = {}
   ): Promise<ToolCallResult> {
-    const parsedRequest = ToolCallRequestSchema.safeParse(requestLike);
+    // Stage 0: establish trace and pre-validation provenance.
     const traceId = context.traceId ?? `trace_${randomUUID()}`;
     const requestedToolId = readStringProperty(requestLike, "toolId") ?? "unknown";
     const rawArgs = readProperty(requestLike, "args");
     const unresolvedArgsHash = hashValue(rawArgs);
 
+    // Stage 1: validate the request envelope before resolving anything.
+    const parsedRequest = ToolCallRequestSchema.safeParse(requestLike);
     if (!parsedRequest.success) {
       return buildToolResult({
         toolCallId: createToolCallId(),
@@ -396,6 +402,8 @@ export class ToolBroker {
 
     const request = parsedRequest.data;
     const argsHash = hashValue(request.args);
+
+    // Stage 2: resolve the declared capability. Discovery is not permission.
     const definition = this.registry.resolve(request.toolId);
 
     if (definition === undefined) {
@@ -415,6 +423,7 @@ export class ToolBroker {
       });
     }
 
+    // Stage 3: validate args against the registered capability contract.
     const parsedArgs = definition.inputSchema.safeParse(request.args);
     if (!parsedArgs.success) {
       return buildToolResult({
@@ -433,6 +442,7 @@ export class ToolBroker {
       });
     }
 
+    // Stage 4: authorize via the policy engine, failing closed on errors.
     const policyRequest = buildPolicyRequest({
       request,
       args: parsedArgs.data,
@@ -482,7 +492,45 @@ export class ToolBroker {
       });
     }
 
+    // Stage 5: coordinate approval without deciding policy in the broker.
     if (policyVerdict.status === "approval_required") {
+      const approvalId = approvalIdFromVerdict(policyVerdict);
+      const approvalDecision = findApprovalDecision(context, approvalId);
+
+      if (approvalDecision?.decision === "rejected") {
+        return buildToolResult({
+          toolCallId: createToolCallId(),
+          status: "denied",
+          toolId: definition.id,
+          toolVersion: definition.version,
+          argsHash,
+          cacheStatus: "bypass",
+          traceId,
+          error: {
+            code: "approval_rejected",
+            message: `Approval ${approvalId} was rejected.`,
+            retryable: false
+          }
+        });
+      }
+
+      if (isApprovalDeadlineElapsed(context, approvalDecision)) {
+        return buildToolResult({
+          toolCallId: createToolCallId(),
+          status: "denied",
+          toolId: definition.id,
+          toolVersion: definition.version,
+          argsHash,
+          cacheStatus: "bypass",
+          traceId,
+          error: {
+            code: "approval_timeout",
+            message: `Approval ${approvalId} timed out before execution.`,
+            retryable: false
+          }
+        });
+      }
+
       return buildToolResult({
         toolCallId: createToolCallId(),
         status: "approval_required",
@@ -493,14 +541,41 @@ export class ToolBroker {
         traceId,
         error: {
           code: "approval_required",
-          message:
-            policyVerdict.reasons.join("; ") ||
-            `Policy requires approval ${policyVerdict.approvalId}.`,
+          message: approvalRequiredMessage(policyVerdict, approvalId),
           retryable: false
         }
       });
     }
 
+    const satisfiedApprovalId = satisfiedApprovalIdFromVerdict(
+      policyVerdict,
+      context
+    );
+    if (
+      satisfiedApprovalId !== undefined &&
+      isApprovalDeadlineElapsed(
+        context,
+        findApprovalDecision(context, satisfiedApprovalId)
+      )
+    ) {
+      return buildToolResult({
+        toolCallId: createToolCallId(),
+        status: "denied",
+        toolId: definition.id,
+        toolVersion: definition.version,
+        argsHash,
+        cacheStatus: "bypass",
+        traceId,
+        error: {
+          code: "approval_timeout",
+          message: `Approval ${satisfiedApprovalId} timed out before execution.`,
+          retryable: false
+        }
+      });
+    }
+
+    // Stage 6 cache is not implemented in this packet; cacheStatus stays bypass.
+    // Stage 7: execute the adapter under broker-computed limits and deadline.
     const adapterResult = await this.executeAdapter({
       definition,
       args: parsedArgs.data,
@@ -523,6 +598,7 @@ export class ToolBroker {
       });
     }
 
+    // Stage 8: validate adapter output before exposing it to callers.
     const parsedOutput = definition.outputSchema.safeParse(adapterResult.output);
     if (!parsedOutput.success) {
       return buildToolResult({
@@ -543,6 +619,7 @@ export class ToolBroker {
 
     const output = parsedOutput.data;
 
+    // Stages 10 and 11: construct provenance and parse the result schema.
     return buildToolResult({
       toolCallId: createToolCallId(),
       status: "success",
@@ -564,22 +641,157 @@ export class ToolBroker {
     policyVerdict: PolicyVerdict;
     traceId: string;
   }) {
+    const limits = computeLimits(
+      input.definition,
+      input.args,
+      input.policyVerdict
+    );
+    const startedAt = Date.now();
+
     try {
-      return await input.definition.adapter.execute({
-        args: input.args,
-        runContext: {
-          runId: input.context.runId ?? this.runId,
-          phase: input.request.requestedBy.phase,
-          cwd: input.context.cwd ?? this.workspaceRoot,
-          workspaceRoot: this.workspaceRoot,
-          traceId: input.traceId
-        },
-        limits: computeLimits(input.definition, input.args, input.policyVerdict)
-      });
+      return await withAdapterDeadline(
+        input.definition.adapter.execute({
+          args: input.args,
+          runContext: {
+            runId: input.context.runId ?? this.runId,
+            phase: input.request.requestedBy.phase,
+            cwd: input.context.cwd ?? this.workspaceRoot,
+            workspaceRoot: this.workspaceRoot,
+            traceId: input.traceId
+          },
+          limits
+        }),
+        limits.timeoutMs,
+        startedAt
+      );
     } catch (error) {
-      return adapterFailureFromUnknown(error);
+      return adapterFailureFromUnknown(error, startedAt);
     }
   }
+}
+
+async function withAdapterDeadline(
+  adapterPromise: Promise<AdapterExecutionResult>,
+  timeoutMs: number,
+  startedAt: number
+) {
+  let timeoutId: unknown;
+  const timeoutPromise = new Promise<AdapterExecutionResult>((resolveTimeout) => {
+    timeoutId = setTimeout(() => {
+      resolveTimeout(
+        adapterFailure(
+          "timeout",
+          `Tool adapter exceeded ${timeoutMs}ms timeout.`,
+          true,
+          startedAt
+        )
+      );
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([adapterPromise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
+function approvalIdFromVerdict(verdict: PolicyVerdict) {
+  return verdict.approvalId ?? "approval_required";
+}
+
+function approvalRequiredMessage(
+  verdict: PolicyVerdict,
+  approvalId: string
+) {
+  const reasons = verdict.reasons.join("; ");
+
+  return reasons.length > 0
+    ? `${reasons} Approval ${approvalId} is required.`
+    : `Policy requires approval ${approvalId}.`;
+}
+
+function findApprovalDecision(context: ToolCallContext, approvalId: string) {
+  return approvalDecisionsFromContext(context).find(
+    (decision) => decision.approvalId === approvalId
+  );
+}
+
+function satisfiedApprovalIdFromVerdict(
+  verdict: PolicyVerdict,
+  context: ToolCallContext
+) {
+  if (verdict.status !== "allow") {
+    return undefined;
+  }
+
+  return approvalDecisionsFromContext(context)
+    .filter(
+      (decision) =>
+        decision.decision === "approved" ||
+        decision.decision === "approved_with_changes"
+    )
+    .find((decision) =>
+      verdict.matchedRules.some(
+        (rule) => rule.ruleId === `approval.${decision.approvalId}.approved`
+      )
+    )?.approvalId;
+}
+
+function approvalDecisionsFromContext(context: ToolCallContext) {
+  const approvals = context.snapshots?.approvals;
+
+  if (Array.isArray(approvals)) {
+    return approvals.filter(isApprovalDecisionLike);
+  }
+
+  if (isRecord(approvals) && Array.isArray(approvals.decisions)) {
+    return approvals.decisions.filter(isApprovalDecisionLike);
+  }
+
+  return [];
+}
+
+function isApprovalDecisionLike(value: unknown): value is {
+  approvalId: string;
+  decision: "approved" | "rejected" | "approved_with_changes";
+  expiresAt?: string;
+} {
+  return (
+    isRecord(value) &&
+    typeof value.approvalId === "string" &&
+    (value.decision === "approved" ||
+      value.decision === "rejected" ||
+      value.decision === "approved_with_changes")
+  );
+}
+
+function isApprovalDeadlineElapsed(
+  context: ToolCallContext,
+  decision:
+    | {
+        expiresAt?: string;
+      }
+    | undefined
+) {
+  return [context.approvalDeadlineAt, decision?.expiresAt].some((deadline) =>
+    isElapsedDeadline(deadline)
+  );
+}
+
+function isElapsedDeadline(deadline: string | number | Date | undefined) {
+  if (deadline === undefined) {
+    return false;
+  }
+
+  const deadlineMs =
+    deadline instanceof Date
+      ? deadline.getTime()
+      : typeof deadline === "number"
+        ? deadline
+        : Date.parse(deadline);
+
+  return Number.isFinite(deadlineMs) && deadlineMs <= Date.now();
 }
 
 export function createToolBroker(options: ToolBrokerOptions) {
@@ -894,7 +1106,7 @@ function buildPolicyRequest(input: {
   return request;
 }
 
-function computeLimits(
+export function computeLimits(
   definition: CapabilityDefinition,
   args: unknown,
   verdict: PolicyVerdict
@@ -936,7 +1148,12 @@ function readPositiveNumber(value: unknown, key: string) {
   }
 
   const candidate = value[key];
-  return typeof candidate === "number" && candidate > 0 ? candidate : undefined;
+  return typeof candidate === "number" &&
+    Number.isInteger(candidate) &&
+    candidate > 0 &&
+    Number.isFinite(candidate)
+    ? candidate
+    : undefined;
 }
 
 function buildToolResult(input: {
