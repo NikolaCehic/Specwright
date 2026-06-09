@@ -2,8 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import {
+  GateApprovalRequestSchema,
+  GateHumanQuestionSchema,
   GateLifecycleInstructionSchema,
+  GateRepairTaskSchema,
   GateVerdictSchema,
+  type GateLifecycleInstruction,
+  type GateRepairTask,
   type ToolCallRequest,
   type ToolCallResult,
   type GateVerdict
@@ -16,6 +21,11 @@ import {
   type BrokerPort,
   type EvaluateGateRequest
 } from "./index";
+import {
+  assertBoundedRepairEnvelope,
+  type GovernedRepairEnvelope,
+  repairInstructionForBoundedEnvelope
+} from "./repair-envelope";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
 const decisionHashPattern = /^sha256:[0-9a-f]{64}$/;
@@ -33,7 +43,12 @@ const fixtureCases = [
   "gate-kind-unknown",
   "gate-check-unsupported-type",
   "gate-onfail-malformed",
-  "gate-onpass-malformed"
+  "gate-onpass-malformed",
+  "needs-review-approval-required",
+  "human-review-clarification",
+  "repair-loop-ceiling-escalates",
+  "repair-tool-widening-rejected",
+  "string-action-onfail-repair"
 ];
 const modelAssistedFixtureCases = [
   {
@@ -331,6 +346,12 @@ type ReplayBroker = {
   calls: ToolCallRequest[];
 };
 
+type BoundedRepairEnvelopeFixtureRequest = {
+  gateId: string;
+  governed: GovernedRepairEnvelope;
+  repairTask: GateRepairTask;
+};
+
 type ModelAssistedFixtureDefinition = {
   onFail?: unknown;
   checks?: Array<Record<string, unknown>>;
@@ -343,12 +364,48 @@ describe("gate engine fixtures", () => {
       const request = await readJson(join(fixtureDir, "request.json"));
       const expected = await readJson(join(fixtureDir, "expected-result.json"));
 
+      if (fixtureName === "repair-tool-widening-rejected") {
+        const boundedRequest = request as BoundedRepairEnvelopeFixtureRequest;
+        const expectedInstruction = expected as GateLifecycleInstruction;
+        const result = repairInstructionForBoundedEnvelope({
+          gateId: boundedRequest.gateId,
+          governed: boundedRequest.governed,
+          repairTask: boundedRequest.repairTask
+        });
+
+        expect(GateRepairTaskSchema.parse(boundedRequest.repairTask)).toEqual(
+          boundedRequest.repairTask
+        );
+        expect(GateLifecycleInstructionSchema.parse(result)).toEqual(result);
+        expect(
+          assertBoundedRepairEnvelope(
+            boundedRequest.governed,
+            boundedRequest.repairTask
+          )
+        ).toEqual({
+          ok: false,
+          reason: expectedInstruction.reason
+        });
+        expect(result).toEqual(expectedInstruction);
+        expect(
+          repairInstructionForBoundedEnvelope({
+            gateId: boundedRequest.gateId,
+            governed: boundedRequest.governed,
+            repairTask: boundedRequest.repairTask
+          })
+        ).toEqual(result);
+        expect("repairTask" in result).toBe(false);
+
+        return;
+      }
+
       const result = evaluateGate(request);
 
       expect(GateVerdictSchema.parse(result.verdict)).toEqual(result.verdict);
       expect(GateLifecycleInstructionSchema.parse(result.instruction)).toEqual(
         result.instruction
       );
+      expectInstructionPayloadSchema(result.instruction);
       expect(result.verdict.decisionHash).toMatch(decisionHashPattern);
       expect(result.verdict.evaluator.kind).toBe("deterministic");
       expect(result).toEqual(expected);
@@ -380,6 +437,7 @@ describe("model-assisted gate engine fixtures", () => {
       expect(GateLifecycleInstructionSchema.parse(result.instruction)).toEqual(
         result.instruction
       );
+      expectInstructionPayloadSchema(result.instruction);
       expect(result.verdict.decisionHash).toMatch(decisionHashPattern);
       expect(result).toEqual(expected);
       expect(replay.calls).toHaveLength(fixture.expectedCalls);
@@ -532,6 +590,40 @@ describe("model-assisted gate engine fixtures", () => {
 });
 
 describe("gate engine determinism", () => {
+  test("approval request emission does not alter check verdicts", async () => {
+    const request = await readJson(
+      join(fixturesDir, "needs-review-approval-required", "request.json")
+    ) as EvaluateGateRequest & {
+      gateDefinition: {
+        onFail?: {
+          approvalReason?: string;
+        };
+      };
+    };
+    const baseline = evaluateGate(request);
+    const changedApprovalCopy = cloneJson(request);
+
+    changedApprovalCopy.gateDefinition.onFail = {
+      ...changedApprovalCopy.gateDefinition.onFail,
+      approvalReason: "Different approval request copy."
+    };
+
+    const changed = evaluateGate(changedApprovalCopy);
+
+    expect(changed.verdict).toEqual(baseline.verdict);
+    expect(changed.instruction).toEqual({
+      kind: "request_approval",
+      gateId: request.gateId,
+      approvalRequest: {
+        id: `approval.${request.gateId}`,
+        gateId: request.gateId,
+        phase: "verification",
+        reason: "Different approval request copy.",
+        requiredFor: `gate:${request.gateId}`
+      }
+    });
+  });
+
   test("ignores wall clock when evaluatedAt is not supplied", async () => {
     const request = await readJson(
       join(fixturesDir, "context-sufficiency-pass", "request.json")
@@ -577,6 +669,128 @@ describe("gate engine determinism", () => {
         expect(source).not.toMatch(forbiddenPattern);
       }
     }
+  });
+});
+
+describe("bounded repair envelope guard", () => {
+  const governed = {
+    allowedTools: ["fs.read"],
+    blockedTools: ["shell.exec"]
+  };
+  const repairTask: GateRepairTask = {
+    id: "repair.bounded",
+    gateId: "bounded",
+    failedPhase: "verification",
+    problem: "Bounded repair failed",
+    requiredEvidenceRefs: [],
+    allowedTools: ["fs.read"],
+    blockedTools: ["shell.exec"],
+    successGate: "bounded",
+    createdFromFindingIds: ["finding.bounded"],
+    targetRef: "artifact:bounded"
+  };
+
+  test("rejects repair tasks that add allowed tools outside the governed envelope", () => {
+    const widenedRepairTask = {
+      ...repairTask,
+      allowedTools: ["fs.read", "shell.exec"]
+    };
+
+    expect(
+      assertBoundedRepairEnvelope(governed, widenedRepairTask)
+    ).toEqual({
+      ok: false,
+      reason: "Repair task for gate bounded exceeded its governed allowed tool envelope"
+    });
+    expect(
+      repairInstructionForBoundedEnvelope({
+        gateId: "bounded",
+        governed,
+        repairTask: widenedRepairTask
+      })
+    ).toEqual({
+      kind: "fail_run",
+      gateId: "bounded",
+      reason: "Repair task for gate bounded exceeded its governed allowed tool envelope"
+    });
+  });
+
+  test("rejects repair tasks that drop governed blocked tools", () => {
+    const droppedBlockedToolRepairTask = {
+      ...repairTask,
+      blockedTools: []
+    };
+
+    expect(
+      assertBoundedRepairEnvelope(governed, droppedBlockedToolRepairTask)
+    ).toEqual({
+      ok: false,
+      reason: "Repair task for gate bounded dropped blocked tools from its governed envelope"
+    });
+    const instruction = repairInstructionForBoundedEnvelope({
+      gateId: "bounded",
+      governed,
+      repairTask: droppedBlockedToolRepairTask
+    });
+
+    expect(instruction).toEqual({
+      kind: "fail_run",
+      gateId: "bounded",
+      reason: "Repair task for gate bounded dropped blocked tools from its governed envelope"
+    });
+    expect("repairTask" in instruction).toBe(false);
+  });
+
+  test("fails closed when the governed envelope is internally contradictory", () => {
+    const contradictoryGoverned = {
+      allowedTools: ["fs.read", "shell.exec"],
+      blockedTools: ["shell.exec"]
+    };
+
+    expect(
+      assertBoundedRepairEnvelope(contradictoryGoverned, {
+        ...repairTask,
+        allowedTools: contradictoryGoverned.allowedTools,
+        blockedTools: contradictoryGoverned.blockedTools
+      })
+    ).toEqual({
+      ok: false,
+      reason:
+        "Repair task for gate bounded cannot be emitted because its governed tool envelope is internally contradictory"
+    });
+    expect(
+      repairInstructionForBoundedEnvelope({
+        gateId: "bounded",
+        governed: contradictoryGoverned,
+        repairTask: {
+          ...repairTask,
+          allowedTools: contradictoryGoverned.allowedTools,
+          blockedTools: contradictoryGoverned.blockedTools
+        }
+      })
+    ).toEqual({
+      kind: "fail_run",
+      gateId: "bounded",
+      reason:
+        "Repair task for gate bounded cannot be emitted because its governed tool envelope is internally contradictory"
+    });
+  });
+
+  test("accepts repair tasks that preserve the governed tool envelope", () => {
+    expect(assertBoundedRepairEnvelope(governed, repairTask)).toEqual({
+      ok: true
+    });
+    expect(
+      repairInstructionForBoundedEnvelope({
+        gateId: "bounded",
+        governed,
+        repairTask
+      })
+    ).toEqual({
+      kind: "create_repair_task",
+      gateId: "bounded",
+      repairTask
+    });
   });
 });
 
@@ -687,6 +901,30 @@ describe("unsupported check defense in depth", () => {
     });
   });
 });
+
+function expectInstructionPayloadSchema(
+  instruction: ReturnType<typeof evaluateGate>["instruction"]
+) {
+  switch (instruction.kind) {
+    case "create_repair_task":
+      expect(GateRepairTaskSchema.parse(instruction.repairTask)).toEqual(
+        instruction.repairTask
+      );
+      return;
+    case "pause_for_human":
+      expect(GateHumanQuestionSchema.parse(instruction.question)).toEqual(
+        instruction.question
+      );
+      return;
+    case "request_approval":
+      expect(GateApprovalRequestSchema.parse(instruction.approvalRequest)).toEqual(
+        instruction.approvalRequest
+      );
+      return;
+    default:
+      return;
+  }
+}
 
 async function readJson(path: string) {
   return JSON.parse(await readFile(path, "utf8")) as never;

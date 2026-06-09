@@ -1,0 +1,40 @@
+{
+  "verdict": {
+    "gateId": "policy_approval_required",
+    "phase": "verification",
+    "status": "needs_review",
+    "severity": "blocking",
+    "reasons": [
+      "Policy requires approval before advancement"
+    ],
+    "findings": [
+      {
+        "id": "policy_allows_advance",
+        "message": "Policy requires approval before advancement",
+        "severity": "blocking",
+        "targetRef": "policy:advance",
+        "evidenceRefs": []
+      }
+    ],
+    "evidenceRefs": [],
+    "requiredAction": "approve",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:dd30d9bd8bf19c6f50f2f21adc72cd30a9870a5abe24d3dbe8d5e1e4d1351074"
+  },
+  "instruction": {
+    "kind": "request_approval",
+    "gateId": "policy_approval_required",
+    "approvalRequest": {
+      "id": "approval.policy_approval_required",
+      "gateId": "policy_approval_required",
+      "phase": "verification",
+      "reason": "A human approver must authorize advancement.",
+      "requiredFor": "gate:policy_approval_required"
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "verdict": {
+    "gateId": "repair_loop_ceiling",
+    "phase": "verification",
+    "status": "fail",
+    "severity": "blocking",
+    "reasons": [
+      "Artifact schema validation failed"
+    ],
+    "findings": [
+      {
+        "id": "loop_artifact_schema_valid",
+        "message": "Artifact schema validation failed",
+        "severity": "blocking",
+        "targetRef": "artifact:loop_artifact",
+        "evidenceRefs": [
+          "evidence:loop"
+        ],
+        "repairHint": "Repair the artifact before re-running the gate."
+      }
+    ],
+    "evidenceRefs": [
+      "evidence:loop"
+    ],
+    "requiredAction": "repair",
+    "obligations": [],
+    "evaluatedAt": "1970-01-01T00:00:00.000Z",
+    "evaluator": {
+      "kind": "deterministic",
+      "ref": "specwright.gate-engine.v0"
+    },
+    "decisionHash": "sha256:2c208fa77d15c582a140f77619d8d99f26259e7c5d1408526af197a9bb2567d4"
+  },
+  "instruction": {
+    "kind": "pause_for_human",
+    "gateId": "repair_loop_ceiling",
+    "question": {
+      "id": "question.repair_loop_ceiling",
+      "gateId": "repair_loop_ceiling",
+      "phase": "verification",
+      "question": "Repair loop for gate repair_loop_ceiling reached iteration ceiling 2. Review the repeated failure: Artifact schema validation failed",
+      "requiredFor": "gate:repair_loop_ceiling"
+    }
+  }
+}

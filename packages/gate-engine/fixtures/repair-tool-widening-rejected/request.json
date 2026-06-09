@@ -1,0 +1,32 @@
+{
+  "gateId": "repair_tool_widening",
+  "governed": {
+    "allowedTools": [
+      "fs.read"
+    ],
+    "blockedTools": [
+      "shell.exec"
+    ]
+  },
+  "repairTask": {
+    "id": "repair.repair_tool_widening",
+    "gateId": "repair_tool_widening",
+    "failedPhase": "verification",
+    "problem": "Repair attempted to widen beyond governed tools",
+    "requiredEvidenceRefs": [
+      "evidence:repair-widening"
+    ],
+    "allowedTools": [
+      "fs.read",
+      "shell.exec"
+    ],
+    "blockedTools": [
+      "shell.exec"
+    ],
+    "successGate": "repair_tool_widening",
+    "createdFromFindingIds": [
+      "unsafe_repair_needed"
+    ],
+    "targetRef": "artifact:plan_artifact"
+  }
+}

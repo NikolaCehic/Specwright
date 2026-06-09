@@ -1,0 +1,54 @@
+{
+  "gateId": "repair_loop_ceiling",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "repair_loop_ceiling",
+    "phase": "verification",
+    "kind": "artifact",
+    "required": true,
+    "inputs": {
+      "artifacts": [
+        "loop_artifact"
+      ]
+    },
+    "checks": [
+      {
+        "id": "loop_artifact_schema_valid",
+        "type": "schema",
+        "artifactId": "loop_artifact",
+        "path": "$.artifacts.loop_artifact",
+        "requiredFields": [
+          "content.title"
+        ],
+        "repairHint": "Repair the artifact before re-running the gate."
+      }
+    ],
+    "onFail": {
+      "action": "create_repair_task",
+      "allowedTools": [
+        "fs.read"
+      ],
+      "blockedTools": [
+        "shell.exec"
+      ],
+      "successGate": "repair_loop_ceiling",
+      "maxRepairIterations": 2
+    }
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "verification",
+    "repairLoopIterations": 2,
+    "artifacts": {
+      "loop_artifact": {
+        "artifactId": "loop_artifact",
+        "artifactType": "plan",
+        "schemaValid": false,
+        "evidenceRefs": [
+          "evidence:loop"
+        ],
+        "content": {}
+      }
+    }
+  }
+}

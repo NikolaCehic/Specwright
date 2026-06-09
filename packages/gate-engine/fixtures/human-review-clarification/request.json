@@ -1,0 +1,27 @@
+{
+  "gateId": "human_review_clarification",
+  "phase": "verification",
+  "gateDefinition": {
+    "id": "human_review_clarification",
+    "phase": "verification",
+    "kind": "action",
+    "required": true,
+    "checks": [
+      {
+        "id": "human_review_required",
+        "type": "human_review",
+        "question": "Should this phase proceed after human inspection?",
+        "targetRef": "phase:verification"
+      }
+    ],
+    "onFail": {
+      "action": "pause_for_human",
+      "questionTemplate": "Please clarify whether verification can proceed.",
+      "expectedAnswerSchema": "schema://answers/verification-clarification@v1"
+    }
+  },
+  "input": {
+    "runId": "run-gates",
+    "phase": "verification"
+  }
+}

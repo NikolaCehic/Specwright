@@ -1,0 +1,5 @@
+{
+  "kind": "fail_run",
+  "gateId": "repair_tool_widening",
+  "reason": "Repair task for gate repair_tool_widening exceeded its governed allowed tool envelope"
+}

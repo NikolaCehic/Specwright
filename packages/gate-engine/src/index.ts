@@ -31,6 +31,7 @@ import {
   hashJson,
   stableStringify
 } from "./decision-hash";
+import { repairInstructionForBoundedEnvelope } from "./repair-envelope";
 import { zodSchemaFromDeclaration } from "./schema-declaration";
 
 export type {
@@ -58,6 +59,7 @@ export type { GateDecisionHashInput, HashDigest } from "./decision-hash";
 
 export const DEFAULT_EVALUATED_AT = "1970-01-01T00:00:00.000Z";
 export const DEFAULT_GATE_ENGINE_EVALUATOR = "specwright.gate-engine.v0";
+export const DEFAULT_MAX_REPAIR_ITERATIONS = 3;
 
 export type GateLifecycleInstructionKind =
   | "continue"
@@ -113,6 +115,7 @@ export type GatePolicySnapshot =
 export type GateEvaluationInput = {
   runId?: string;
   phase?: string;
+  repairLoopIterations?: number;
   runInput?: Record<string, unknown>;
   data?: Record<string, unknown>;
   artifacts?: Record<string, GateArtifactSnapshot>;
@@ -219,6 +222,7 @@ export type GateFailureBehavior = {
   blockedTools?: string[];
   successGate?: string;
   requiredEvidenceRefs?: string[];
+  maxRepairIterations?: number;
   expectedAnswerSchema?: string;
   obligations?: GateObligation[];
 };
@@ -375,6 +379,7 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
           targetRef: missingInput.targetRef
         })
       ),
+      gateInput: input,
       defaultRequiredAction: "clarify"
     });
   }
@@ -407,6 +412,7 @@ export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult
     evaluatorRef,
     severity,
     evaluations,
+    gateInput: input,
     evaluatorKind: "deterministic"
   });
 }
@@ -459,6 +465,7 @@ export async function evaluateGateAsync(
           targetRef: missingInput.targetRef
         })
       ),
+      gateInput: input,
       defaultRequiredAction: "clarify"
     });
   }
@@ -483,6 +490,7 @@ export async function evaluateGateAsync(
       evaluatorRef,
       severity,
       evaluations: deterministicEvaluations,
+      gateInput: input,
       evaluatorKind: "deterministic"
     });
   }
@@ -512,6 +520,7 @@ export async function evaluateGateAsync(
     evaluatorRef,
     severity,
     evaluations: [...deterministicEvaluations, ...modelEvaluations],
+    gateInput: input,
     evaluatorKind: "model_assisted",
     modelAssisted: {
       calls
@@ -526,6 +535,7 @@ function aggregateEvaluations(input: {
   evaluatorRef: string;
   severity: GateSeverity;
   evaluations: CheckEvaluation[];
+  gateInput?: GateEvaluationInput | undefined;
   evaluatorKind: GateVerdict["evaluator"]["kind"];
   modelAssisted?: ModelAssistedEvaluationProvenance;
 }): GateEvaluationResult {
@@ -566,6 +576,7 @@ function aggregateEvaluations(input: {
       severity,
       findings: orderedFailed.map((evaluation) => evaluation.finding),
       evidenceRefs,
+      gateInput: input.gateInput,
       defaultRequiredAction: bypassOnFail
         ? "fail_run"
         : firstRequiredAction(failed) ?? "repair",
@@ -1517,6 +1528,7 @@ function buildFailingResult(input: {
   severity: GateSeverity;
   findings: GateFinding[];
   evidenceRefs?: string[];
+  gateInput?: GateEvaluationInput | undefined;
   defaultRequiredAction: GateRequiredAction;
   evaluatorKind?: GateVerdict["evaluator"]["kind"];
   modelAssisted?: ModelAssistedEvaluationProvenance;
@@ -1555,7 +1567,8 @@ function buildFailingResult(input: {
       definition: input.definition,
       phase: input.phase,
       verdict,
-      requiredAction
+      requiredAction,
+      gateInput: input.gateInput
     })
   }, input.modelAssisted));
 }
@@ -1659,13 +1672,11 @@ function instructionForNeedsReview(input: {
     return {
       kind: "request_approval",
       gateId: input.definition.id,
-      approvalRequest: {
-        id: `approval.${input.definition.id}`,
-        gateId: input.definition.id,
-        phase: input.phase,
-        reason: firstReason(input.verdict),
-        requiredFor: `gate:${input.definition.id}`
-      }
+      approvalRequest: approvalRequestFor(
+        input.definition,
+        input.phase,
+        input.verdict
+      )
     };
   }
 
@@ -1680,6 +1691,7 @@ function instructionForFailure(input: {
   definition: FixtureGateDefinition;
   phase: string;
   verdict: GateVerdict;
+  gateInput?: GateEvaluationInput | undefined;
   requiredAction: GateRequiredAction;
 }): GateLifecycleInstruction {
   switch (input.requiredAction) {
@@ -1693,22 +1705,41 @@ function instructionForFailure(input: {
       return {
         kind: "request_approval",
         gateId: input.definition.id,
-        approvalRequest: {
-          id: `approval.${input.definition.id}`,
-          gateId: input.definition.id,
-          phase: input.phase,
-          reason:
-            onFailObject(input.definition.onFail)?.approvalReason ??
-            firstReason(input.verdict),
-          requiredFor: `gate:${input.definition.id}`
-        }
+        approvalRequest: approvalRequestFor(
+          input.definition,
+          input.phase,
+          input.verdict
+        )
       };
     case "repair":
-      return {
-        kind: "create_repair_task",
-        gateId: input.definition.id,
-        repairTask: repairTaskFor(input.definition, input.phase, input.verdict)
-      };
+      if (
+        repairLoopIterations(input.gateInput) >=
+        maxRepairIterations(input.definition.onFail)
+      ) {
+        return {
+          kind: "pause_for_human",
+          gateId: input.definition.id,
+          question: questionFor(
+            input.definition,
+            input.phase,
+            input.verdict,
+            repairLoopCeilingQuestion(input.definition, input.verdict)
+          )
+        };
+      }
+
+      {
+        const repairTask = repairTaskFor(
+          input.definition,
+          input.phase,
+          input.verdict
+        );
+        return repairInstructionForBoundedEnvelope({
+          gateId: input.definition.id,
+          governed: onFailObject(input.definition.onFail),
+          repairTask
+        });
+      }
     case "fail_run":
       return {
         kind: "fail_run",
@@ -1721,14 +1752,16 @@ function instructionForFailure(input: {
 function questionFor(
   definition: FixtureGateDefinition,
   phase: string,
-  verdict: GateVerdict
+  verdict: GateVerdict,
+  questionOverride?: string | undefined
 ): HumanQuestion {
   const onFail = onFailObject(definition.onFail);
   const base = {
     id: `question.${definition.id}`,
     gateId: definition.id,
     phase,
-    question: onFail?.questionTemplate ?? firstReason(verdict),
+    question:
+      questionOverride ?? onFail?.questionTemplate ?? firstReason(verdict),
     requiredFor: `gate:${definition.id}`
   };
 
@@ -1740,6 +1773,21 @@ function questionFor(
   }
 
   return base;
+}
+
+function approvalRequestFor(
+  definition: FixtureGateDefinition,
+  phase: string,
+  verdict: GateVerdict
+): ApprovalRequest {
+  return {
+    id: `approval.${definition.id}`,
+    gateId: definition.id,
+    phase,
+    reason:
+      onFailObject(definition.onFail)?.approvalReason ?? firstReason(verdict),
+    requiredFor: `gate:${definition.id}`
+  };
 }
 
 function repairTaskFor(
@@ -1773,6 +1821,26 @@ function repairTaskFor(
   }
 
   return base;
+}
+
+function repairLoopIterations(input: GateEvaluationInput | undefined) {
+  return nonNegativeInteger(input?.repairLoopIterations) ?? 0;
+}
+
+function maxRepairIterations(onFail: FixtureGateDefinition["onFail"]) {
+  return (
+    positiveInteger(onFailObject(onFail)?.maxRepairIterations) ??
+    DEFAULT_MAX_REPAIR_ITERATIONS
+  );
+}
+
+function repairLoopCeilingQuestion(
+  definition: FixtureGateDefinition,
+  verdict: GateVerdict
+) {
+  return `Repair loop for gate ${definition.id} reached iteration ceiling ${maxRepairIterations(
+    definition.onFail
+  )}. Review the repeated failure: ${firstReason(verdict)}`;
 }
 
 function compactVerdict(verdict: UnhashedGateVerdict): HashedGateVerdict {
@@ -2363,6 +2431,18 @@ function isString(value: unknown): value is string {
 
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function nonNegativeInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0
+    ? value
+    : undefined;
+}
+
+function positiveInteger(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
