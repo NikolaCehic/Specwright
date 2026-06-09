@@ -16,8 +16,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json --pretty false",
+    "lint:gates": "bun src/lint.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json --pretty false",
-    "test": "bun test src/index.test.ts"
+    "test": "bun test src/index.test.ts src/definition.test.ts"
   },
   "dependencies": {
     "@specwright/schemas": "workspace:*"

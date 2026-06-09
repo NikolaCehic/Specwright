@@ -1,0 +1,18 @@
+{
+  "gateId": "gate_check_unsupported_type",
+  "phase": "verification",
+  "gateDefinitions": {
+    "gate_check_unsupported_type": {
+      "id": "gate_check_unsupported_type",
+      "phase": "verification",
+      "kind": "eval",
+      "required": true,
+      "checks": [
+        {
+          "id": "unsupported_mode",
+          "type": "unsupported_mode"
+        }
+      ]
+    }
+  }
+}

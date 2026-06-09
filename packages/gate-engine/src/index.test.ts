@@ -5,7 +5,7 @@ import {
   GateLifecycleInstructionSchema,
   GateVerdictSchema
 } from "@specwright/schemas";
-import { evaluateGate } from "./index";
+import { evaluateGate, type EvaluateGateRequest } from "./index";
 
 const fixturesDir = join(import.meta.dir, "../fixtures");
 
@@ -15,7 +15,13 @@ const fixtureCases = [
   "artifact-schema-invalid",
   "eval-passed-failed",
   "policy-denial-blocks",
-  "missing-gate-definition"
+  "missing-gate-definition",
+  "gate-definition-id-mismatch",
+  "gate-definition-inline-rejected",
+  "gate-kind-unknown",
+  "gate-check-unsupported-type",
+  "gate-onfail-malformed",
+  "gate-onpass-malformed"
 ];
 
 describe("gate engine fixtures", () => {
@@ -35,6 +41,46 @@ describe("gate engine fixtures", () => {
       expect(evaluateGate(request)).toEqual(result);
     });
   }
+});
+
+describe("unsupported check defense in depth", () => {
+  test("known but unevaluated check types still fail_run if reached", () => {
+    const request = {
+      gateId: "model_assisted_backstop",
+      phase: "verification",
+      gateDefinitions: {
+        model_assisted_backstop: {
+          id: "model_assisted_backstop",
+          phase: "verification",
+          kind: "eval",
+          required: true,
+          checks: [
+            {
+              id: "model_assisted_check",
+              type: "model_assisted"
+            }
+          ],
+          onFail: {
+            action: "fail_run"
+          }
+        }
+      }
+    } as unknown as EvaluateGateRequest;
+
+    const result = evaluateGate(request);
+
+    expect(result.verdict.status).toBe("fail");
+    expect(result.verdict.requiredAction).toBe("fail_run");
+    expect(result.verdict.findings[0]?.id).toBe("model_assisted_check");
+    expect(result.verdict.findings[0]?.message).toBe(
+      "Unsupported gate check type model_assisted"
+    );
+    expect(result.instruction).toEqual({
+      kind: "fail_run",
+      gateId: "model_assisted_backstop",
+      reason: "Unsupported gate check type model_assisted"
+    });
+  });
 });
 
 async function readJson(path: string) {

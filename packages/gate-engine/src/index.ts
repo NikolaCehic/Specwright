@@ -17,6 +17,10 @@ import {
   type PolicyVerdict,
   type PolicyVerdictStatus
 } from "@specwright/schemas";
+import {
+  validateGateDefinition,
+  type GateDefinitionFinding
+} from "./definition";
 
 export type {
   GateApprovalRequest as ApprovalRequest,
@@ -235,26 +239,41 @@ type MissingInput = {
   targetRef?: string | undefined;
 };
 
+type GateDefinitionResolution =
+  | { ok: true; definition: FixtureGateDefinition }
+  | {
+      ok: false;
+      finding: GateDefinitionFinding;
+      definitionPhase?: string | undefined;
+    };
+
 export function evaluateGate(request: EvaluateGateRequest): GateEvaluationResult {
-  const definition = resolveGateDefinition(request);
+  const resolvedDefinition = resolveGateDefinition(request);
   const evaluatedAt = normalizeEvaluatedAt(request.evaluatedAt);
-  const phase = request.phase ?? request.input?.phase ?? definition?.phase ?? "unknown";
+  const phase =
+    request.phase ??
+    request.input?.phase ??
+    (resolvedDefinition.ok
+      ? resolvedDefinition.definition.phase
+      : resolvedDefinition.definitionPhase) ??
+    "unknown";
   const evaluatorRef =
     request.evaluatorRef ?? DEFAULT_GATE_ENGINE_EVALUATOR;
 
-  if (definition === undefined) {
+  if (!resolvedDefinition.ok) {
     return failClosed({
       gateId: request.gateId,
       phase,
       evaluatedAt,
       evaluatorRef,
-      reason: `Gate definition ${request.gateId} is missing`,
-      findingId: "gate.definition.missing",
-      targetRef: `gate:${request.gateId}`,
+      reason: resolvedDefinition.finding.message,
+      findingId: resolvedDefinition.finding.id,
+      targetRef: resolvedDefinition.finding.targetRef,
       requiredAction: "fail_run"
     });
   }
 
+  const definition = resolvedDefinition.definition;
   const gateId = definition.id;
   const severity = gateSeverity(definition);
   const input = request.input;
@@ -1006,26 +1025,94 @@ function makeFinding(input: {
   };
 }
 
-function resolveGateDefinition(
-  request: EvaluateGateRequest
-): FixtureGateDefinition | undefined {
+function resolveGateDefinition(request: EvaluateGateRequest): GateDefinitionResolution {
   if (request.gateDefinition !== undefined) {
-    return request.gateDefinition.id === request.gateId
-      ? request.gateDefinition
-      : undefined;
+    if (request.gateDefinition.id !== request.gateId) {
+      return rejectDefinition(
+        "gate.definition.id_mismatch",
+        `Gate definition ${request.gateDefinition.id} does not match requested gate ${request.gateId}`,
+        request.gateId,
+        request.gateDefinition.phase
+      );
+    }
+
+    if (request.gateDefinitions !== undefined) {
+      return rejectDefinition(
+        "gate.definition.inline_rejected",
+        `Gate definition ${request.gateId} was provided inline when a governed source is required`,
+        request.gateId,
+        request.gateDefinition.phase
+      );
+    }
+
+    return validateResolvedGateDefinition(request.gateDefinition);
   }
 
   const definitions = request.gateDefinitions;
 
   if (definitions === undefined) {
-    return undefined;
+    return missingDefinition(request.gateId);
   }
 
-  if (Array.isArray(definitions)) {
-    return definitions.find((definition) => definition.id === request.gateId);
+  const definition = Array.isArray(definitions)
+    ? definitions.find((candidate) => candidate.id === request.gateId)
+    : (definitions as Record<string, FixtureGateDefinition>)[request.gateId];
+
+  if (definition === undefined) {
+    return missingDefinition(request.gateId);
   }
 
-  return (definitions as Record<string, FixtureGateDefinition>)[request.gateId];
+  if (definition.id !== request.gateId) {
+    return rejectDefinition(
+      "gate.definition.id_mismatch",
+      `Gate definition ${definition.id} does not match requested gate ${request.gateId}`,
+      request.gateId,
+      definition.phase
+    );
+  }
+
+  return validateResolvedGateDefinition(definition);
+}
+
+function validateResolvedGateDefinition(
+  definition: FixtureGateDefinition
+): GateDefinitionResolution {
+  const validation = validateGateDefinition(definition);
+
+  if (validation.ok) {
+    return { ok: true, definition };
+  }
+
+  return {
+    ok: false,
+    finding: validation.finding,
+    definitionPhase: definition.phase
+  };
+}
+
+function missingDefinition(gateId: string): GateDefinitionResolution {
+  return rejectDefinition(
+    "gate.definition.missing",
+    `Gate definition ${gateId} is missing`,
+    gateId
+  );
+}
+
+function rejectDefinition(
+  findingId: string,
+  message: string,
+  gateId: string,
+  definitionPhase?: string | undefined
+): GateDefinitionResolution {
+  return {
+    ok: false,
+    finding: {
+      id: findingId,
+      message,
+      targetRef: `gate:${gateId}`
+    },
+    definitionPhase
+  };
 }
 
 function findMissingInputs(
