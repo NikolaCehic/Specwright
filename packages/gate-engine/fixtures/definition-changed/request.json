@@ -1,0 +1,21 @@
+{
+  "gateId": "definition_version_gate",
+  "pinnedDefinitionHash": "sha256:dc673f9ef48a3350509d3f86be10cc712ed856462c8d55116ca4505a39ae14cf",
+  "currentDefinition": {
+    "id": "definition_version_gate",
+    "phase": "verification",
+    "kind": "exit",
+    "required": true,
+    "inputs": [
+      "run_input"
+    ],
+    "checks": [
+      {
+        "id": "goal_present",
+        "type": "deterministic",
+        "path": "$.run_input.task",
+        "condition": "present"
+      }
+    ]
+  }
+}

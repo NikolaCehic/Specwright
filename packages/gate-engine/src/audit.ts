@@ -15,6 +15,10 @@ import {
   type HashDigest
 } from "./decision-hash";
 import {
+  hashGateDefinition as hashResolvedGateDefinition,
+  hashMissingGateDefinition
+} from "./definition-hash";
+import {
   assertLinkable,
   type GateAuditGap,
   type PriorFailingGateVerdictRef,
@@ -243,7 +247,7 @@ export function buildGateAuditRecord(
   const { request, result } = input;
   const context = input.context ?? {};
   const definition = gateDefinitionForAudit(request);
-  const definitionHash = hashGateDefinition(request);
+  const definitionHash = hashGateDefinitionForRequest(request);
   const inputRefHashes = hashInputRefs(request.input);
   const missingInputs = missingInputsForAudit(definition?.inputs, request.input, result.verdict);
   const checks = checkOutcomesFor(definition?.checks ?? [], result);
@@ -311,15 +315,12 @@ export function buildGateAuditRecord(
   };
 }
 
-export function hashGateDefinition(request: EvaluateGateRequest): HashDigest {
+function hashGateDefinitionForRequest(request: EvaluateGateRequest): HashDigest {
   const definition = gateDefinitionForAudit(request);
 
-  return hashJson(
-    definition ?? {
-      gateId: request.gateId,
-      missing: true
-    }
-  );
+  return definition === undefined
+    ? hashMissingGateDefinition(request.gateId)
+    : hashResolvedGateDefinition(definition);
 }
 
 export function hashInputRefs(

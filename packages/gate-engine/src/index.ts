@@ -31,6 +31,7 @@ import {
   hashJson,
   stableStringify
 } from "./decision-hash";
+import { DEFAULT_GATE_ENGINE_EVALUATOR } from "./evaluator-identity";
 import { repairInstructionForBoundedEnvelope } from "./repair-envelope";
 import { zodSchemaFromDeclaration } from "./schema-declaration";
 
@@ -59,7 +60,6 @@ export type { GateDecisionHashInput, HashDigest } from "./decision-hash";
 export {
   assertGateAuditReconstructable,
   buildGateAuditRecord,
-  hashGateDefinition,
   hashInputRefs
 } from "./audit";
 export type {
@@ -86,6 +86,84 @@ export type {
   GateSpanStatus,
   GateUnsupportedCheckPayload
 } from "./audit";
+export {
+  CompatibilityClassSchema,
+  EngineChangelogEntrySchema
+} from "./compatibility";
+export type {
+  CompatibilityClass,
+  EngineChangelogEntry
+} from "./compatibility";
+export { detectDefinitionChange } from "./definition-change";
+export type {
+  GateDefinitionChangeResult,
+  GateDefinitionChangedSignal
+} from "./definition-change";
+export {
+  governedGateDefinitionProjection,
+  hashGateDefinition,
+  hashMissingGateDefinition
+} from "./definition-hash";
+export {
+  DEFAULT_GATE_ENGINE_EVALUATOR,
+  DEFAULT_GATE_ENGINE_EVALUATOR_IDENTITY,
+  GATE_ENGINE_EVALUATOR_ID,
+  GATE_ENGINE_EVALUATOR_IDENTITY_KIND,
+  LEGACY_V0_EVALUATOR_REF,
+  GateEngineEvaluatorIdentitySchema,
+  parseEvaluatorRef,
+  serializeCanonicalEvaluatorRef,
+  serializeEvaluatorRef
+} from "./evaluator-identity";
+export type { GateEngineEvaluatorIdentity } from "./evaluator-identity";
+export {
+  BASELINE_ENGINE_CHANGELOG_ENTRY,
+  ENGINE_CHANGELOG,
+  LATEST_ENGINE_CHANGELOG_ENTRY,
+  assertEngineChangelogInvariants
+} from "./engine-changelog";
+export type {
+  EngineChangelogInvariantFinding,
+  EngineChangelogInvariantResult
+} from "./engine-changelog";
+export {
+  FIXTURE_GOVERNANCE_MANIFEST_VERSION,
+  FixtureGovernanceManifestEntrySchema,
+  FixtureGovernanceManifestSchema,
+  FixtureGovernedFileSchema,
+  assertFixtureGovernance,
+  collectFixtureGovernanceState,
+  hashFixtureFileContents,
+  readFixtureGovernanceManifest
+} from "./fixture-governance";
+export type {
+  FixtureGovernanceFinding,
+  FixtureGovernanceGuardResult,
+  FixtureGovernanceManifest,
+  FixtureGovernanceManifestEntry,
+  FixtureGovernedFile
+} from "./fixture-governance";
+export {
+  GATE_CONTRACT_VERSION,
+  GATE_ENGINE_EVALUATOR_VERSION,
+  SEMVER_PATTERN,
+  VERDICT_SEMANTICS_VERSION_RULE,
+  assertVerdictSemanticsVersionBump,
+  compareSemverStrings,
+  isSemverString,
+  parseSemverString
+} from "./gate-contract-version";
+export type { SemverString } from "./gate-contract-version";
+export {
+  MigrationDescriptorSchema,
+  ReplayImpactSchema,
+  validateMigrationDescriptor
+} from "./migration-descriptor";
+export type {
+  MigrationDescriptor,
+  MigrationDescriptorValidationResult,
+  ReplayImpact
+} from "./migration-descriptor";
 export { assertLinkable, linkReevaluation } from "./replay-linkage";
 export type {
   GateAuditGap,
@@ -96,7 +174,6 @@ export type {
 } from "./replay-linkage";
 
 export const DEFAULT_EVALUATED_AT = "1970-01-01T00:00:00.000Z";
-export const DEFAULT_GATE_ENGINE_EVALUATOR = "specwright.gate-engine.v0";
 export const DEFAULT_MAX_REPAIR_ITERATIONS = 3;
 
 export type GateLifecycleInstructionKind =

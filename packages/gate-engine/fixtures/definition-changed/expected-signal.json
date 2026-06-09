@@ -1,0 +1,7 @@
+{
+  "changed": true,
+  "gateId": "definition_version_gate",
+  "from": "sha256:dc673f9ef48a3350509d3f86be10cc712ed856462c8d55116ca4505a39ae14cf",
+  "to": "sha256:d40af805843e441d497db2ebdcf6df08e8b40e57861695c5701b08a86a77d1da",
+  "signal": "gate.definition.changed"
+}
