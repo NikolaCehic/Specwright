@@ -755,6 +755,17 @@ const ToolCallRedactionSummarySchema = z
   })
   .strict();
 
+const ToolCallCacheProvenanceSchema = z
+  .object({
+    status: CacheStatusSchema,
+    key: nonEmptyString.optional(),
+    keyInputs: z.record(z.string(), z.unknown()).optional(),
+    entryCreatedAt: nonEmptyString.optional(),
+    invalidationReason: nonEmptyString.optional(),
+    writeError: nonEmptyString.optional()
+  })
+  .strict();
+
 export const ToolCallResultSchema = z
   .object({
     toolCallId: nonEmptyString,
@@ -781,7 +792,8 @@ export const ToolCallResultSchema = z
         approvalId: nonEmptyString.optional(),
         spanId: nonEmptyString.optional(),
         eventIds: z.array(nonEmptyString).optional(),
-        redactionSummary: ToolCallRedactionSummarySchema.optional()
+        redactionSummary: ToolCallRedactionSummarySchema.optional(),
+        cache: ToolCallCacheProvenanceSchema.optional()
       })
       .strict()
   })

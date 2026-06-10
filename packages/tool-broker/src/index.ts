@@ -186,6 +186,59 @@ export type CapabilityDefinition = {
   isolationTier: IsolationTier;
 };
 
+export type ToolCacheMetadata = {
+  sourceHashes?: Record<string, string>;
+  harnessSpecHash?: string;
+  modelVersion?: string;
+};
+
+export type ToolCacheKeyInputs = {
+  toolId: string;
+  toolVersion: string;
+  argsHash: string;
+  harnessSpecHash: string;
+  sourceHashes?: Record<string, string>;
+  modelVersion?: string;
+};
+
+export type ToolCacheProvenance = {
+  status: CacheStatus;
+  key?: string;
+  keyInputs?: ToolCacheKeyInputs;
+  entryCreatedAt?: string;
+  invalidationReason?: string;
+  writeError?: string;
+};
+
+export type ToolResultCacheEntry = {
+  key: string;
+  keyInputs: ToolCacheKeyInputs;
+  output: unknown;
+  resultHash: string;
+  adapterVersion: string;
+  createdAt: string;
+  redactionSummary?: RedactionSummary;
+};
+
+export type ToolResultCacheStore = {
+  get(
+    key: string
+  ): Promise<ToolResultCacheEntry | undefined> | ToolResultCacheEntry | undefined;
+  set(entry: ToolResultCacheEntry): Promise<void> | void;
+};
+
+export class InMemoryToolResultCacheStore implements ToolResultCacheStore {
+  private readonly entries = new Map<string, ToolResultCacheEntry>();
+
+  get(key: string) {
+    return cloneCacheEntry(this.entries.get(key));
+  }
+
+  set(entry: ToolResultCacheEntry) {
+    this.entries.set(entry.key, cloneCacheEntry(entry) ?? entry);
+  }
+}
+
 const CapabilityKindSchema = z.enum(CAPABILITY_KINDS);
 const IsolationTierSchema = z.union([
   z.literal(0),
@@ -339,6 +392,7 @@ export type ToolBrokerOptions = {
   registry?: CapabilityRegistry;
   policyBundle?: FixturePolicyBundle | readonly FixturePolicyBundle[];
   policyEngine?: PolicyEvaluator;
+  cacheStore?: ToolResultCacheStore;
 };
 
 export type ToolCallContext = {
@@ -351,6 +405,7 @@ export type ToolCallContext = {
   approvalDeadlineAt?: string | number | Date;
   policyBundle?: FixturePolicyBundle | readonly FixturePolicyBundle[];
   snapshots?: PolicyRequest["snapshots"];
+  cache?: ToolCacheMetadata;
 };
 
 export class ToolBroker {
@@ -361,12 +416,14 @@ export class ToolBroker {
     | FixturePolicyBundle
     | readonly FixturePolicyBundle[];
   private readonly policyEngine: PolicyEvaluator;
+  private readonly cacheStore: ToolResultCacheStore;
 
   constructor(options: ToolBrokerOptions) {
     this.workspaceRoot = resolve(options.workspaceRoot);
     this.runId = options.runId ?? "run_unspecified";
     this.registry = options.registry ?? createDefaultCapabilityRegistry();
     this.policyEngine = options.policyEngine ?? evaluatePolicy;
+    this.cacheStore = options.cacheStore ?? new InMemoryToolResultCacheStore();
 
     if (options.policyBundle !== undefined) {
       this.policyBundle = options.policyBundle;
@@ -587,7 +644,34 @@ export class ToolBroker {
       });
     }
 
-    // Stage 6 cache is not implemented in this packet; cacheStatus stays bypass.
+    // Stage 6: authorized cache lookup before adapter execution.
+    const cacheLookup = await this.lookupCachedResult({
+      definition,
+      args: parsedArgs.data,
+      context
+    });
+
+    if (cacheLookup.status === "hit") {
+      return buildToolResult({
+        toolCallId: createToolCallId(),
+        status: "success",
+        toolId: definition.id,
+        toolVersion: definition.version,
+        argsHash,
+        resultHash: cacheLookup.resultHash,
+        cacheStatus: "hit",
+        cache: cacheLookup.cache,
+        traceId,
+        adapterVersion: cacheLookup.entry.adapterVersion,
+        decisionHash: policyVerdict.decisionHash,
+        approvalId: executedApprovalId,
+        spanId: context.spanId,
+        eventIds: context.eventIds,
+        redactionSummary: cacheLookup.entry.redactionSummary,
+        output: cacheLookup.output
+      });
+    }
+
     // Stage 7: execute the adapter under broker-computed limits and deadline.
     const adapterResult = await this.executeAdapter({
       definition,
@@ -605,7 +689,8 @@ export class ToolBroker {
         toolId: definition.id,
         toolVersion: definition.version,
         argsHash,
-        cacheStatus: "bypass",
+        cacheStatus: cacheLookup.cacheStatus,
+        cache: cacheLookup.cache,
         traceId,
         adapterVersion: definition.adapter.version,
         decisionHash: policyVerdict.decisionHash,
@@ -625,7 +710,8 @@ export class ToolBroker {
         toolId: definition.id,
         toolVersion: definition.version,
         argsHash,
-        cacheStatus: "bypass",
+        cacheStatus: cacheLookup.cacheStatus,
+        cache: cacheLookup.cache,
         traceId,
         adapterVersion: definition.adapter.version,
         decisionHash: policyVerdict.decisionHash,
@@ -650,7 +736,8 @@ export class ToolBroker {
         toolId: definition.id,
         toolVersion: definition.version,
         argsHash,
-        cacheStatus: "bypass",
+        cacheStatus: cacheLookup.cacheStatus,
+        cache: cacheLookup.cache,
         traceId,
         adapterVersion: definition.adapter.version,
         decisionHash: policyVerdict.decisionHash,
@@ -675,7 +762,8 @@ export class ToolBroker {
         toolId: definition.id,
         toolVersion: definition.version,
         argsHash,
-        cacheStatus: "bypass",
+        cacheStatus: cacheLookup.cacheStatus,
+        cache: cacheLookup.cache,
         traceId,
         adapterVersion: definition.adapter.version,
         decisionHash: policyVerdict.decisionHash,
@@ -691,6 +779,14 @@ export class ToolBroker {
     }
 
     const redactedOutput = parsedRedactedOutput.data;
+    const resultHash = hashValue(redactedOutput);
+    const cache = await this.writeCacheEntry({
+      lookup: cacheLookup,
+      output: redactedOutput,
+      resultHash,
+      adapterVersion: definition.adapter.version,
+      redactionSummary: redactionResult.summary
+    });
 
     // Stages 10 and 11: construct provenance and parse the result schema.
     return buildToolResult({
@@ -699,8 +795,9 @@ export class ToolBroker {
       toolId: definition.id,
       toolVersion: definition.version,
       argsHash,
-      resultHash: hashValue(redactedOutput),
-      cacheStatus: "bypass",
+      resultHash,
+      cacheStatus: cacheLookup.cacheStatus,
+      cache,
       traceId,
       adapterVersion: definition.adapter.version,
       decisionHash: policyVerdict.decisionHash,
@@ -747,6 +844,251 @@ export class ToolBroker {
       return adapterFailureFromUnknown(error, startedAt);
     }
   }
+
+  private async lookupCachedResult(input: {
+    definition: CapabilityDefinition;
+    args: unknown;
+    context: ToolCallContext;
+  }): Promise<CacheLookupResult> {
+    if (input.definition.cache.enabled !== true) {
+      return {
+        status: "bypass",
+        cacheStatus: "bypass"
+      };
+    }
+
+    const keyInputs = buildCacheKeyInputs(input);
+    const key = deriveCacheKey(keyInputs);
+    const baseCache: ToolCacheProvenance = {
+      status: "miss",
+      key,
+      keyInputs
+    };
+
+    let entry: ToolResultCacheEntry | undefined;
+    try {
+      entry = await this.cacheStore.get(key);
+    } catch (error) {
+      return {
+        status: "bypass",
+        cacheStatus: "bypass",
+        cache: {
+          ...baseCache,
+          status: "bypass",
+          invalidationReason: cacheReason("cache_get_error", error)
+        }
+      };
+    }
+
+    if (entry === undefined) {
+      return {
+        status: "miss",
+        cacheStatus: "miss",
+        key,
+        keyInputs,
+        cache: baseCache
+      };
+    }
+
+    const keyMatch = entry.key === key;
+    const keyInputsMatch = hashValue(entry.keyInputs) === hashValue(keyInputs);
+    if (!keyMatch || !keyInputsMatch) {
+      return {
+        status: "bypass",
+        cacheStatus: "bypass",
+        cache: {
+          ...baseCache,
+          status: "bypass",
+          invalidationReason: "cache_key_mismatch"
+        }
+      };
+    }
+
+    const parsedOutput = input.definition.outputSchema.safeParse(entry.output);
+    if (!parsedOutput.success) {
+      return {
+        status: "bypass",
+        cacheStatus: "bypass",
+        cache: {
+          ...baseCache,
+          status: "bypass",
+          invalidationReason: `cache_output_invalid: ${formatZodIssues(parsedOutput.error)}`
+        }
+      };
+    }
+
+    const output = parsedOutput.data;
+    const resultHash = hashValue(output);
+    if (entry.resultHash !== resultHash) {
+      return {
+        status: "bypass",
+        cacheStatus: "bypass",
+        cache: {
+          ...baseCache,
+          status: "bypass",
+          invalidationReason: "cache_result_hash_mismatch"
+        }
+      };
+    }
+
+    return {
+      status: "hit",
+      cacheStatus: "hit",
+      entry,
+      output,
+      resultHash,
+      cache: {
+        ...baseCache,
+        status: "hit",
+        entryCreatedAt: entry.createdAt
+      }
+    };
+  }
+
+  private async writeCacheEntry(input: {
+    lookup: CacheLookupResult;
+    output: unknown;
+    resultHash: string;
+    adapterVersion: string;
+    redactionSummary?: RedactionSummary | undefined;
+  }) {
+    if (input.lookup.status !== "miss") {
+      return input.lookup.cache;
+    }
+
+    const entry: ToolResultCacheEntry = {
+      key: input.lookup.key,
+      keyInputs: input.lookup.keyInputs,
+      output: input.output,
+      resultHash: input.resultHash,
+      adapterVersion: input.adapterVersion,
+      createdAt: new Date().toISOString()
+    };
+
+    if (input.redactionSummary !== undefined) {
+      entry.redactionSummary = input.redactionSummary;
+    }
+
+    try {
+      await this.cacheStore.set(entry);
+      return input.lookup.cache;
+    } catch (error) {
+      return {
+        ...input.lookup.cache,
+        writeError: cacheReason("cache_set_error", error)
+      };
+    }
+  }
+}
+
+type CacheLookupResult =
+  | {
+      status: "bypass";
+      cacheStatus: "bypass";
+      cache?: ToolCacheProvenance | undefined;
+    }
+  | {
+      status: "miss";
+      cacheStatus: "miss";
+      key: string;
+      keyInputs: ToolCacheKeyInputs;
+      cache: ToolCacheProvenance;
+    }
+  | {
+      status: "hit";
+      cacheStatus: "hit";
+      entry: ToolResultCacheEntry;
+      output: unknown;
+      resultHash: string;
+      cache: ToolCacheProvenance;
+    };
+
+function buildCacheKeyInputs(input: {
+  definition: CapabilityDefinition;
+  args: unknown;
+  context: ToolCallContext;
+}): ToolCacheKeyInputs {
+  const sourceHashes = sourceHashesFromContext(input.context);
+  const modelVersion = modelVersionFromContext(input.context);
+  const keyInputs: ToolCacheKeyInputs = {
+    toolId: input.definition.id,
+    toolVersion: input.definition.version,
+    argsHash: hashValue(input.args),
+    harnessSpecHash: harnessSpecHashFromContext(input.context)
+  };
+
+  if (sourceHashes !== undefined) {
+    keyInputs.sourceHashes = sourceHashes;
+  }
+
+  if (modelVersion !== undefined) {
+    keyInputs.modelVersion = modelVersion;
+  }
+
+  return keyInputs;
+}
+
+function deriveCacheKey(keyInputs: ToolCacheKeyInputs) {
+  return hashValue(keyInputs);
+}
+
+function sourceHashesFromContext(context: ToolCallContext) {
+  return (
+    normalizedStringRecord(context.cache?.sourceHashes) ??
+    normalizedStringRecord(readProperty(context.snapshots?.sourceTrust, "sourceHashes"))
+  );
+}
+
+function harnessSpecHashFromContext(context: ToolCallContext) {
+  return (
+    context.cache?.harnessSpecHash ??
+    readNestedString(context.snapshots?.runState, ["harness", "specHash"]) ??
+    hashValue({ absent: "harnessSpecHash" })
+  );
+}
+
+function modelVersionFromContext(context: ToolCallContext) {
+  return (
+    nonEmptyStringOrUndefined(context.cache?.modelVersion) ??
+    nonEmptyStringOrUndefined(readProperty(context.snapshots?.sourceTrust, "modelVersion"))
+  );
+}
+
+function normalizedStringRecord(value: unknown) {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  const normalized: Record<string, string> = {};
+  for (const key of Object.keys(value).sort()) {
+    const entry = value[key];
+    if (typeof entry === "string" && entry.length > 0) {
+      normalized[key] = entry;
+    }
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function readNestedString(value: unknown, path: readonly string[]) {
+  let current = value;
+
+  for (const segment of path) {
+    current = readProperty(current, segment);
+  }
+
+  return nonEmptyStringOrUndefined(current);
+}
+
+function nonEmptyStringOrUndefined(value: unknown) {
+  return typeof value === "string" && value.length > 0 ? value : undefined;
+}
+
+function cacheReason(prefix: string, error: unknown) {
+  const message =
+    error instanceof Error ? error.message : "Cache operation failed.";
+
+  return `${prefix}: ${sanitizeErrorMessage(message)}`;
 }
 
 async function withAdapterDeadline(
@@ -1642,6 +1984,7 @@ function buildToolResult(input: {
   argsHash: string;
   resultHash?: string;
   cacheStatus: CacheStatus;
+  cache?: ToolCacheProvenance | undefined;
   traceId: string;
   adapterVersion?: string;
   decisionHash?: string | undefined;
@@ -1686,6 +2029,10 @@ function buildToolResult(input: {
 
   if (input.redactionSummary !== undefined) {
     provenance.redactionSummary = input.redactionSummary;
+  }
+
+  if (input.cache !== undefined) {
+    provenance.cache = input.cache;
   }
 
   const result: Record<string, unknown> = {
@@ -1872,6 +2219,39 @@ export function hashValue(value: unknown) {
 
 function stableStringify(value: unknown): string {
   return JSON.stringify(normalizeStable(value)) ?? "undefined";
+}
+
+function cloneCacheEntry(
+  entry: ToolResultCacheEntry | undefined
+): ToolResultCacheEntry | undefined {
+  if (entry === undefined) {
+    return undefined;
+  }
+
+  const cloned: ToolResultCacheEntry = {
+    ...entry,
+    keyInputs: cloneJsonValue(entry.keyInputs),
+    output: cloneJsonValue(entry.output)
+  };
+
+  if (entry.redactionSummary !== undefined) {
+    cloned.redactionSummary = cloneJsonValue(entry.redactionSummary);
+  }
+
+  return cloned;
+}
+
+function cloneJsonValue<T>(value: T): T {
+  if (value === undefined) {
+    return value;
+  }
+
+  try {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? value : (JSON.parse(serialized) as T);
+  } catch {
+    return value;
+  }
 }
 
 function normalizeStable(value: unknown): unknown {

@@ -44,10 +44,15 @@ import {
   FsReadInputSchema,
   FsReadOutputSchema,
   hashValue,
+  InMemoryToolResultCacheStore,
   isolationTierForKind,
   type AdapterExecutionResult,
   type CapabilityAdapter,
-  type CapabilityDefinition
+  type CapabilityDefinition,
+  type ToolBrokerOptions,
+  type ToolCacheMetadata,
+  type ToolResultCacheEntry,
+  type ToolResultCacheStore
 } from "./index";
 
 const workspaceRoot = resolve(import.meta.dir, "../fixtures/workspace");
@@ -632,6 +637,301 @@ describe("tool broker filesystem capabilities", () => {
     });
   });
 
+  describe("brokered cache replay", () => {
+    test("eligible miss is written and equivalent reordered args replay as a hit", async () => {
+      let adapterCalls = 0;
+      const cacheStore = new InMemoryToolResultCacheStore();
+      const registry = new CapabilityRegistry([
+        cacheEnabledFsReadDefinition({
+          adapter: countingSuccessAdapter(() => {
+            adapterCalls += 1;
+          })
+        })
+      ]);
+      const first = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", {
+          encoding: undefined,
+          path: "src/index.ts"
+        }),
+        {
+          ...cacheContext(),
+          traceId: "trace_cache_miss"
+        }
+      );
+      const second = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", {
+          path: "src/index.ts"
+        }),
+        {
+          ...cacheContext(),
+          traceId: "trace_cache_hit"
+        }
+      );
+
+      expectResultSchema(first);
+      expectResultSchema(second);
+      expect(first.status).toBe("success");
+      expect(second.status).toBe("success");
+      expect(first.provenance.cacheStatus).toBe("miss");
+      expect(second.provenance.cacheStatus).toBe("hit");
+      expect(first.provenance.cache?.status).toBe("miss");
+      expect(second.provenance.cache?.status).toBe("hit");
+      expect(second.provenance.cache?.key).toBe(first.provenance.cache?.key);
+      expect(second.provenance.cache?.keyInputs).toEqual(
+        first.provenance.cache?.keyInputs
+      );
+      expect(second.provenance.cache?.keyInputs?.argsHash).toBe(
+        hashValue({ path: "src/index.ts" })
+      );
+      expect(second.provenance.cache?.entryCreatedAt).toBeDefined();
+      expect(second.output).toEqual(first.output);
+      expect(adapterCalls).toBe(1);
+    });
+
+    test("cache lookup remains after policy authorization", async () => {
+      let adapterCalls = 0;
+      const cacheStore = new InMemoryToolResultCacheStore();
+      const registry = new CapabilityRegistry([
+        cacheEnabledFsReadDefinition({
+          adapter: countingSuccessAdapter(() => {
+            adapterCalls += 1;
+          })
+        })
+      ]);
+
+      const allowed = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          ...cacheContext(),
+          traceId: "trace_cache_policy_prime"
+        }
+      );
+      const denied = await broker({
+        registry,
+        cacheStore,
+        policyBundle: toolBrokerDenyReadPolicyBundle
+      }).callTool(request("fs.read", { path: "src/index.ts" }), {
+        ...cacheContext(),
+        traceId: "trace_cache_policy_denied"
+      });
+
+      expect(allowed.provenance.cacheStatus).toBe("miss");
+      expect(denied.status).toBe("denied");
+      expect(denied.error?.code).toBe("policy_denied");
+      expect(denied.provenance.cacheStatus).toBe("bypass");
+      expect(denied.output).toBeUndefined();
+      expect(adapterCalls).toBe(1);
+    });
+
+    test("stale cached output revalidates against the current output schema", async () => {
+      const cacheStore = new InMemoryToolResultCacheStore();
+      const originalRegistry = new CapabilityRegistry([
+        cacheEnabledFsReadDefinition()
+      ]);
+      const primed = await broker({ registry: originalRegistry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          ...cacheContext(),
+          traceId: "trace_cache_schema_prime"
+        }
+      );
+      let adapterCalls = 0;
+      const repairedOutput = {
+        ...(successfulReadOutput().output as Record<string, unknown>),
+        checksum: "fixture-checksum"
+      };
+      const currentRegistry = new CapabilityRegistry([
+        cacheEnabledFsReadDefinition({
+          outputSchema: FsReadOutputSchema.extend({
+            checksum: z.string().min(1)
+          }).strict(),
+          adapter: {
+            id: "fixture/fs-read-schema-v2",
+            version: "0.0.1",
+            kind: "filesystem",
+            async execute(): Promise<AdapterExecutionResult> {
+              adapterCalls += 1;
+              return {
+                status: "success",
+                output: repairedOutput
+              };
+            }
+          }
+        })
+      ]);
+      const result = await broker({ registry: currentRegistry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          ...cacheContext(),
+          traceId: "trace_cache_schema_bypass"
+        }
+      );
+
+      expect(primed.provenance.cacheStatus).toBe("miss");
+      expect(result.status).toBe("success");
+      expect(result.output).toEqual(repairedOutput);
+      expect(result.provenance.cacheStatus).toBe("bypass");
+      expect(result.provenance.cache?.invalidationReason).toContain(
+        "cache_output_invalid"
+      );
+      expect(adapterCalls).toBe(1);
+    });
+
+    test("source hash, tool version, harness spec hash, and model version changes each force misses", async () => {
+      let adapterCalls = 0;
+      const cacheStore = new InMemoryToolResultCacheStore();
+      const registry = new CapabilityRegistry([
+        cacheEnabledFsReadDefinition({
+          adapter: countingSuccessAdapter(() => {
+            adapterCalls += 1;
+          })
+        })
+      ]);
+      const versionedRegistry = new CapabilityRegistry([
+        cacheEnabledFsReadDefinition({
+          version: "0.2.0",
+          adapter: countingSuccessAdapter(() => {
+            adapterCalls += 1;
+          })
+        })
+      ]);
+
+      const base = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          ...cacheContext(),
+          traceId: "trace_cache_key_base"
+        }
+      );
+      const sourceChanged = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          ...cacheContext({ sourceHash: "sha256:source-b" }),
+          traceId: "trace_cache_key_source"
+        }
+      );
+      const toolVersionChanged = await broker({
+        registry: versionedRegistry,
+        cacheStore
+      }).callTool(request("fs.read", { path: "src/index.ts" }), {
+        ...cacheContext(),
+        traceId: "trace_cache_key_tool_version"
+      });
+      const harnessChanged = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          ...cacheContext({ harnessSpecHash: "sha256:harness-b" }),
+          traceId: "trace_cache_key_harness"
+        }
+      );
+      const modelVersionChanged = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          ...cacheContext({
+            cache: {
+              modelVersion: "model-fixture-v2"
+            }
+          }),
+          traceId: "trace_cache_key_model_version"
+        }
+      );
+
+      expect(base.provenance.cacheStatus).toBe("miss");
+      expect(sourceChanged.provenance.cacheStatus).toBe("miss");
+      expect(toolVersionChanged.provenance.cacheStatus).toBe("miss");
+      expect(harnessChanged.provenance.cacheStatus).toBe("miss");
+      expect(modelVersionChanged.provenance.cacheStatus).toBe("miss");
+      expect(sourceChanged.provenance.cache?.key).not.toBe(
+        base.provenance.cache?.key
+      );
+      expect(toolVersionChanged.provenance.cache?.key).not.toBe(
+        base.provenance.cache?.key
+      );
+      expect(harnessChanged.provenance.cache?.key).not.toBe(
+        base.provenance.cache?.key
+      );
+      expect(modelVersionChanged.provenance.cache?.key).not.toBe(
+        base.provenance.cache?.key
+      );
+      expect(adapterCalls).toBe(5);
+    });
+
+    test("ineligible capabilities always bypass and never replay cached output", async () => {
+      let adapterCalls = 0;
+      const cacheStore = new InMemoryToolResultCacheStore();
+      const registry = new CapabilityRegistry([
+        fsReadFixtureDefinition({
+          adapter: countingSuccessAdapter(() => {
+            adapterCalls += 1;
+          })
+        })
+      ]);
+
+      const first = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          traceId: "trace_cache_ineligible_first"
+        }
+      );
+      const second = await broker({ registry, cacheStore }).callTool(
+        request("fs.read", { path: "src/index.ts" }),
+        {
+          traceId: "trace_cache_ineligible_second"
+        }
+      );
+
+      expect(first.provenance.cacheStatus).toBe("bypass");
+      expect(second.provenance.cacheStatus).toBe("bypass");
+      expect(first.provenance.cache).toBeUndefined();
+      expect(second.provenance.cache).toBeUndefined();
+      expect(adapterCalls).toBe(2);
+    });
+
+    test("cache get and set errors are contained in provenance", async () => {
+      let getErrorAdapterCalls = 0;
+      const getErrorResult = await broker({
+        registry: new CapabilityRegistry([
+          cacheEnabledFsReadDefinition({
+            adapter: countingSuccessAdapter(() => {
+              getErrorAdapterCalls += 1;
+            })
+          })
+        ]),
+        cacheStore: new FailingGetCacheStore()
+      }).callTool(request("fs.read", { path: "src/index.ts" }), {
+        ...cacheContext(),
+        traceId: "trace_cache_get_error"
+      });
+      let setErrorAdapterCalls = 0;
+      const setErrorResult = await broker({
+        registry: new CapabilityRegistry([
+          cacheEnabledFsReadDefinition({
+            adapter: countingSuccessAdapter(() => {
+              setErrorAdapterCalls += 1;
+            })
+          })
+        ]),
+        cacheStore: new FailingSetCacheStore()
+      }).callTool(request("fs.read", { path: "src/index.ts" }), {
+        ...cacheContext(),
+        traceId: "trace_cache_set_error"
+      });
+
+      expect(getErrorResult.status).toBe("success");
+      expect(getErrorResult.provenance.cacheStatus).toBe("bypass");
+      expect(getErrorResult.provenance.cache?.invalidationReason).toContain(
+        "cache_get_error"
+      );
+      expect(getErrorAdapterCalls).toBe(1);
+      expect(setErrorResult.status).toBe("success");
+      expect(setErrorResult.provenance.cacheStatus).toBe("miss");
+      expect(setErrorResult.provenance.cache?.writeError).toContain(
+        "cache_set_error"
+      );
+      expect(setErrorAdapterCalls).toBe(1);
+    });
+  });
+
   test("schema-valid fixture output carries enterprise provenance", async () => {
     const result = await broker({
       registry: egressRegistry(),
@@ -825,11 +1125,12 @@ describe("tool broker filesystem capabilities", () => {
 function broker(
   options: {
     registry?: CapabilityRegistry;
-    policyBundle?: FixturePolicyBundle;
+    policyBundle?: FixturePolicyBundle | readonly FixturePolicyBundle[];
     policyEngine?: (
       request: PolicyRequest,
       policyBundles?: FixturePolicyBundle | readonly FixturePolicyBundle[]
     ) => PolicyVerdict;
+    cacheStore?: ToolBrokerOptions["cacheStore"];
   } = {}
 ) {
   if (options.registry !== undefined) {
@@ -838,7 +1139,8 @@ function broker(
       runId: "run_tool_broker_fixture",
       registry: options.registry,
       policyBundle: options.policyBundle ?? toolBrokerAllowPolicyBundle,
-      policyEngine: options.policyEngine
+      policyEngine: options.policyEngine,
+      cacheStore: options.cacheStore
     });
   }
 
@@ -846,7 +1148,8 @@ function broker(
     workspaceRoot,
     runId: "run_tool_broker_fixture",
     policyBundle: options.policyBundle ?? toolBrokerAllowPolicyBundle,
-    policyEngine: options.policyEngine
+    policyEngine: options.policyEngine,
+    cacheStore: options.cacheStore
   });
 }
 
@@ -925,6 +1228,17 @@ function fsReadFixtureDefinition(
   };
 }
 
+function cacheEnabledFsReadDefinition(
+  overrides: Partial<CapabilityDefinition> = {}
+): CapabilityDefinition {
+  return fsReadFixtureDefinition({
+    cache: {
+      enabled: true
+    },
+    ...overrides
+  });
+}
+
 function limitFixtureDefinition(
   limits: CapabilityDefinition["limits"]
 ): CapabilityDefinition {
@@ -984,6 +1298,58 @@ function allowVerdictWithMaxBytes(value: unknown): PolicyVerdict {
       }
     ]
   };
+}
+
+function cacheContext(
+  options: {
+    harnessSpecHash?: string;
+    sourceHash?: string;
+    cache?: ToolCacheMetadata;
+  } = {}
+) {
+  return {
+    snapshots: {
+      runState: {
+        runId: "run_tool_broker_fixture",
+        status: "running",
+        phase: "evidence",
+        harness: {
+          id: "harness.fixture",
+          version: "0.1.0",
+          specHash: options.harnessSpecHash ?? "sha256:harness-a"
+        },
+        budgets: {},
+        pendingApprovals: [],
+        pendingQuestions: [],
+        artifacts: [],
+        lastEventId: "evt_cache_context"
+      },
+      sourceTrust: {
+        sourceHashes: {
+          "src/index.ts": options.sourceHash ?? "sha256:source-a"
+        }
+      }
+    },
+    cache: options.cache
+  };
+}
+
+class FailingGetCacheStore implements ToolResultCacheStore {
+  get(): ToolResultCacheEntry | undefined {
+    throw new Error("fixture cache get failed");
+  }
+
+  set(): void {}
+}
+
+class FailingSetCacheStore implements ToolResultCacheStore {
+  get(): ToolResultCacheEntry | undefined {
+    return undefined;
+  }
+
+  set(): void {
+    throw new Error("fixture cache set failed");
+  }
 }
 
 function sleep(ms: number) {
