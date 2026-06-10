@@ -559,7 +559,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Tool result with provenance envelope. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:7dad986fea6b0d28ef7442772461469d62748242318e3abbf5349f2bce18fe1c",
+    "canonicalHash": "sha256:d87da8d0868661c46d54af70a23d81e7214397cac1d5e29df7738b22d1384807",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/tool-call-result.positive.json",
@@ -1310,7 +1310,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
     },
-    "canonicalHash": "sha256:beda5c802c408ff4b39bcf34e476a4ad754b74942f64f03762df74964660a664",
+    "canonicalHash": "sha256:65662fff45c6f493c33091586a24a5e0c74898913afaeb04a5289c0a80022a17",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event.positive.json",
@@ -1463,7 +1463,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `tool.completed`. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:13f3f758118cb349afe15870ef70eb0047da7e65d9a153c125d221ac365f6e58",
+    "canonicalHash": "sha256:8118cc6b84b5b166db22415f1c12d70fd3d713b5f7db2b98dd00dd376e8d899a",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/tool-completed-event-payload.positive.json",
@@ -1501,7 +1501,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `tool.denied`. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:1fd374501c298b56e0b0caecae2d7f4ee7572202d214da1f9b91067e03b5afc7",
+    "canonicalHash": "sha256:d8fb236c4a0f3f44c9a2f5f1e427327d02ee7ce759fe0b53e8d64c18eddef51e",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/tool-denied-event-payload.positive.json",

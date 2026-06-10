@@ -271,6 +271,38 @@
             "argsHash": {
               "type": "string"
             },
+            "cache": {
+              "additionalProperties": false,
+              "properties": {
+                "entryCreatedAt": {
+                  "type": "string"
+                },
+                "invalidationReason": {
+                  "type": "string"
+                },
+                "key": {
+                  "type": "string"
+                },
+                "keyInputs": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "status": {
+                  "enum": [
+                    "hit",
+                    "miss",
+                    "bypass"
+                  ]
+                },
+                "writeError": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "status"
+              ],
+              "type": "object"
+            },
             "cacheStatus": {
               "enum": [
                 "hit",
@@ -403,7 +435,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:1fd374501c298b56e0b0caecae2d7f4ee7572202d214da1f9b91067e03b5afc7",
+    "hash": "sha256:d8fb236c4a0f3f44c9a2f5f1e427327d02ee7ce759fe0b53e8d64c18eddef51e",
     "id": "specwright.event.tool.denied",
     "status": "public",
     "version": "1"

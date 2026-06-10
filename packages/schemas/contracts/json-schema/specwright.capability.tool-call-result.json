@@ -36,6 +36,38 @@
         "argsHash": {
           "type": "string"
         },
+        "cache": {
+          "additionalProperties": false,
+          "properties": {
+            "entryCreatedAt": {
+              "type": "string"
+            },
+            "invalidationReason": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            },
+            "keyInputs": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "status": {
+              "enum": [
+                "hit",
+                "miss",
+                "bypass"
+              ]
+            },
+            "writeError": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        },
         "cacheStatus": {
           "enum": [
             "hit",
@@ -163,7 +195,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "capability",
-    "hash": "sha256:7dad986fea6b0d28ef7442772461469d62748242318e3abbf5349f2bce18fe1c",
+    "hash": "sha256:d87da8d0868661c46d54af70a23d81e7214397cac1d5e29df7738b22d1384807",
     "id": "specwright.capability.tool-call-result",
     "status": "public",
     "version": "1"
