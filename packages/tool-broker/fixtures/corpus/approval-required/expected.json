@@ -1,0 +1,16 @@
+{
+  "error": {
+    "code": "approval_required",
+    "message": "Fixture requires approval for fs.read Approval approval.fixture.fs_read is required.",
+    "retryable": false
+  },
+  "provenance": {
+    "approvalId": "approval.fixture.fs_read",
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:064bc3fab92012809f42fb84096efa6cb26cdfa3ec4aea867161509d7716aac3",
+    "toolId": "fs.read",
+    "toolVersion": "0.1.0"
+  },
+  "status": "approval_required"
+}

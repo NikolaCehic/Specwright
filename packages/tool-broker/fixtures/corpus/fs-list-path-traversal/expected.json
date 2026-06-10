@@ -1,0 +1,16 @@
+{
+  "error": {
+    "code": "path_outside_workspace",
+    "message": "Path resolves outside the configured workspace.",
+    "retryable": false
+  },
+  "provenance": {
+    "adapterVersion": "0.1.0",
+    "argsHash": "sha256:0ac77447ce04eca7ff56e7449f2e02916c3f82c6a2109939190f2f204467e06c",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:21637e9b75c62b171b00f020ad3c5da660cf32db098b8d7688909efe49093c77",
+    "toolId": "fs.list",
+    "toolVersion": "0.1.0"
+  },
+  "status": "failed"
+}

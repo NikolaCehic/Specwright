@@ -1,0 +1,12 @@
+{
+  "args": {
+    "maxBytes": 10,
+    "path": "docs/readme.md"
+  },
+  "idempotencyKey": "fixture-fs-read-truncated-reordered",
+  "reason": "Conformance fixture for reordered fs.read args",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

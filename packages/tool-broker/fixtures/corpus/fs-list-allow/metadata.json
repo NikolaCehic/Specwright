@@ -1,0 +1,6 @@
+{
+  "capabilityId": "fs.list",
+  "coverage": "allow",
+  "repeatResultHash": true,
+  "title": "fs.list allowed workspace root"
+}

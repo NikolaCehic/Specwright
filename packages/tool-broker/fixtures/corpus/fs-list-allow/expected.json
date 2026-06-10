@@ -1,0 +1,27 @@
+{
+  "output": {
+    "entries": [
+      {
+        "name": "docs",
+        "path": "docs",
+        "type": "directory"
+      },
+      {
+        "name": "src",
+        "path": "src",
+        "type": "directory"
+      }
+    ],
+    "path": "."
+  },
+  "provenance": {
+    "adapterVersion": "0.1.0",
+    "argsHash": "sha256:4ae486c3a48f8dc732af672b138b438a1d96960304cc334d46bbc2687d169cbb",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:a79bbbe57193df4dc5ec069c5f22614780cb0e02132af7054d539585882f56de",
+    "resultHash": "sha256:aab3ddc76f2059d02088d51fe9d8c20a5b3305c971a575ad825d050ace85f016",
+    "toolId": "fs.list",
+    "toolVersion": "0.1.0"
+  },
+  "status": "success"
+}

@@ -1,0 +1,93 @@
+{
+  "approval-required": {
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "errorCode": "approval_required",
+    "status": "approval_required",
+    "toolVersion": "0.1.0"
+  },
+  "fs-list-allow": {
+    "argsHash": "sha256:4ae486c3a48f8dc732af672b138b438a1d96960304cc334d46bbc2687d169cbb",
+    "cacheStatus": "bypass",
+    "resultHash": "sha256:aab3ddc76f2059d02088d51fe9d8c20a5b3305c971a575ad825d050ace85f016",
+    "status": "success",
+    "toolVersion": "0.1.0"
+  },
+  "fs-list-deny": {
+    "argsHash": "sha256:4ae486c3a48f8dc732af672b138b438a1d96960304cc334d46bbc2687d169cbb",
+    "cacheStatus": "bypass",
+    "errorCode": "policy_denied",
+    "status": "denied",
+    "toolVersion": "0.1.0"
+  },
+  "fs-list-path-traversal": {
+    "argsHash": "sha256:0ac77447ce04eca7ff56e7449f2e02916c3f82c6a2109939190f2f204467e06c",
+    "cacheStatus": "bypass",
+    "errorCode": "path_outside_workspace",
+    "status": "failed",
+    "toolVersion": "0.1.0"
+  },
+  "fs-read-allow": {
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "resultHash": "sha256:9f04b82565fed40416f343d6e17ffc77ff29758d6e9a589a63c49bf5a7ffc317",
+    "status": "success",
+    "toolVersion": "0.1.0"
+  },
+  "fs-read-deny": {
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "errorCode": "policy_denied",
+    "status": "denied",
+    "toolVersion": "0.1.0"
+  },
+  "fs-read-invalid-input": {
+    "argsHash": "sha256:44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "cacheStatus": "bypass",
+    "errorCode": "invalid_request",
+    "status": "failed",
+    "toolVersion": "0.1.0"
+  },
+  "fs-read-not-found": {
+    "argsHash": "sha256:2a7b713785edb4f5ee706613d5494193732efb04b924833483b0a9d3585881d3",
+    "cacheStatus": "bypass",
+    "errorCode": "not_found",
+    "status": "failed",
+    "toolVersion": "0.1.0"
+  },
+  "fs-read-truncated": {
+    "argsHash": "sha256:37756cca0934c41191c946e77b6293e7299988aca629cebe7ccb8ce108c76fb1",
+    "cacheStatus": "bypass",
+    "resultHash": "sha256:25ffd70c8c37975a29235c1c02c2186d44d66b18f0292707e4912d06054eee36",
+    "status": "success",
+    "toolVersion": "0.1.0"
+  },
+  "fs-read-truncated-reordered": {
+    "argsHash": "sha256:37756cca0934c41191c946e77b6293e7299988aca629cebe7ccb8ce108c76fb1",
+    "cacheStatus": "bypass",
+    "resultHash": "sha256:25ffd70c8c37975a29235c1c02c2186d44d66b18f0292707e4912d06054eee36",
+    "status": "success",
+    "toolVersion": "0.1.0"
+  },
+  "output-invalid": {
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "errorCode": "output_invalid",
+    "status": "failed",
+    "toolVersion": "0.1.0"
+  },
+  "policy-error": {
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "errorCode": "policy_error",
+    "status": "denied",
+    "toolVersion": "0.1.0"
+  },
+  "tool-not-found": {
+    "argsHash": "sha256:d66a53fedbf412beeadb3868ece33ec9e7e20e9aa0224b75a70c5655b8ca2e2c",
+    "cacheStatus": "bypass",
+    "errorCode": "tool_not_found",
+    "status": "denied",
+    "toolVersion": "undeclared"
+  }
+}

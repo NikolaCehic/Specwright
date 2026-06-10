@@ -17,6 +17,8 @@ import type {
 } from "@specwright/policy-engine";
 import { ToolCallResultSchema } from "@specwright/schemas";
 import { z } from "zod";
+import "./conformance-runner.test";
+import "./containment.test";
 import {
   EGRESS_ERROR_SECRET,
   EGRESS_FIXTURE_ADAPTER_VERSION,
@@ -44,6 +46,7 @@ import {
   toolBrokerRejectedApprovalDecision
 } from "../fixtures/policy/approval";
 import "./capability-registry.test";
+import "./replay-corpus.test";
 import {
   CAPABILITY_KINDS,
   CAPABILITY_KIND_ISOLATION_TIERS,

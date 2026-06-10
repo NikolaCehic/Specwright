@@ -1,0 +1,5 @@
+{
+  "policy": "approval_required",
+  "registry": "default",
+  "traceId": "trace_conformance_approval_required"
+}

@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "src/index.ts"
+  },
+  "idempotencyKey": "fixture-approval-required",
+  "reason": "Conformance fixture for approval required",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

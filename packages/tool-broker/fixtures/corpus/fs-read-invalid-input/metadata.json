@@ -1,0 +1,5 @@
+{
+  "capabilityId": "fs.read",
+  "coverage": "failure_or_redaction",
+  "title": "fs.read args schema failure"
+}
