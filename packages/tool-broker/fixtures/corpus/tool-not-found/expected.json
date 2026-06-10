@@ -1,0 +1,14 @@
+{
+  "error": {
+    "code": "tool_not_found",
+    "message": "Tool shell.exec is not declared in the capability registry.",
+    "retryable": false
+  },
+  "provenance": {
+    "argsHash": "sha256:d66a53fedbf412beeadb3868ece33ec9e7e20e9aa0224b75a70c5655b8ca2e2c",
+    "cacheStatus": "bypass",
+    "toolId": "shell.exec",
+    "toolVersion": "undeclared"
+  },
+  "status": "denied"
+}

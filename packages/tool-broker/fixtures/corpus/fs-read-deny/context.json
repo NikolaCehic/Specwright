@@ -1,0 +1,5 @@
+{
+  "policy": "deny",
+  "registry": "default",
+  "traceId": "trace_conformance_fs_read_deny"
+}

@@ -1,0 +1,19 @@
+{
+  "output": {
+    "bytesRead": 10,
+    "content": "# Specwrig",
+    "encoding": "utf8",
+    "path": "docs/readme.md",
+    "truncated": true
+  },
+  "provenance": {
+    "adapterVersion": "0.1.0",
+    "argsHash": "sha256:37756cca0934c41191c946e77b6293e7299988aca629cebe7ccb8ce108c76fb1",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:ee8a721d4726ced83385d6cf89e8191a8bb3cdf3ffc4529b3a96d9739663269e",
+    "resultHash": "sha256:25ffd70c8c37975a29235c1c02c2186d44d66b18f0292707e4912d06054eee36",
+    "toolId": "fs.read",
+    "toolVersion": "0.1.0"
+  },
+  "status": "success"
+}

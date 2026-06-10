@@ -1,0 +1,21 @@
+{
+  "id": "evt_replay_fs_list_requested",
+  "runId": "run_replay_corpus",
+  "timestamp": "2026-06-10T00:00:00.000Z",
+  "sequence": 0,
+  "traceId": "trace_conformance_fs_list_allow",
+  "type": "tool.requested",
+  "payload": {
+    "request": {
+      "args": {
+        "path": "."
+      },
+      "idempotencyKey": "fixture-fs-list-allow",
+      "reason": "Conformance fixture for fs.list allow",
+      "requestedBy": {
+        "phase": "evidence"
+      },
+      "toolId": "fs.list"
+    }
+  }
+}

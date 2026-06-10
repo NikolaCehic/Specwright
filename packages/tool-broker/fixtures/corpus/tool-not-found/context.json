@@ -1,0 +1,5 @@
+{
+  "policy": "allow",
+  "registry": "default",
+  "traceId": "trace_conformance_tool_not_found"
+}

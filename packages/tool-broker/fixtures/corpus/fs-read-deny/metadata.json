@@ -1,0 +1,5 @@
+{
+  "capabilityId": "fs.read",
+  "coverage": "deny",
+  "title": "fs.read denied by policy"
+}

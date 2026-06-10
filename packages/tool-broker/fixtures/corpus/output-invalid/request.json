@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "src/index.ts"
+  },
+  "idempotencyKey": "fixture-output-invalid",
+  "reason": "Conformance fixture for output validation failure",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

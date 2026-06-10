@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "missing.txt"
+  },
+  "idempotencyKey": "fixture-fs-read-not-found",
+  "reason": "Conformance fixture for fs.read not found",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

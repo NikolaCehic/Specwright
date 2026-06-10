@@ -1,0 +1,5 @@
+{
+  "policy": "allow",
+  "registry": "fs_read_invalid_output",
+  "traceId": "trace_conformance_output_invalid"
+}

@@ -1,0 +1,16 @@
+{
+  "error": {
+    "code": "output_invalid",
+    "message": "encoding: Invalid literal value, expected \"utf8\"; bytesRead: Required; truncated: Required",
+    "retryable": false
+  },
+  "provenance": {
+    "adapterVersion": "0.1.0",
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:3bc39e95ef77a9212929cd43a8294a457d5896c599cae4e3fab68b027a10c530",
+    "toolId": "fs.read",
+    "toolVersion": "0.1.0"
+  },
+  "status": "failed"
+}
