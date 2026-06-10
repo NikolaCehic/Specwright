@@ -1,5 +1,14 @@
 import { describe, expect, test } from "bun:test";
-import { resolve } from "node:path";
+import {
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  symlink,
+  writeFile
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { evaluatePolicy } from "@specwright/policy-engine";
 import type {
   FixturePolicyBundle,
@@ -36,13 +45,18 @@ import {
 } from "../fixtures/policy/approval";
 import "./capability-registry.test";
 import {
+  CAPABILITY_KINDS,
+  CAPABILITY_KIND_ISOLATION_TIERS,
   CapabilityRegistry,
+  DEFAULT_FS_READ_MAX_BYTES,
+  DEFAULT_TOOL_TIMEOUT_MS,
   computeLimits,
   createDefaultCapabilityRegistry,
   createToolBroker,
   FILESYSTEM_ADAPTER_VERSION,
   FsReadInputSchema,
   FsReadOutputSchema,
+  deriveTierConstraints,
   hashValue,
   InMemoryToolResultCacheStore,
   isolationTierForKind,
@@ -52,7 +66,8 @@ import {
   type ToolBrokerOptions,
   type ToolCacheMetadata,
   type ToolResultCacheEntry,
-  type ToolResultCacheStore
+  type ToolResultCacheStore,
+  type CapabilityKind
 } from "./index";
 
 const workspaceRoot = resolve(import.meta.dir, "../fixtures/workspace");
@@ -548,6 +563,56 @@ describe("tool broker filesystem capabilities", () => {
     expect(adapterCompleted).toBe(false);
   });
 
+  test("isolation tier constraints are total and unsupported tiers cannot run", async () => {
+    expect(Object.keys(CAPABILITY_KIND_ISOLATION_TIERS).sort()).toEqual(
+      [...CAPABILITY_KINDS].sort()
+    );
+
+    for (const kind of CAPABILITY_KINDS) {
+      const constraints = deriveTierConstraints(genericDefinitionForKind(kind));
+
+      expect(constraints.isolationTier).toBe(isolationTierForKind(kind));
+      expect(constraints.deadlineMs).toBe(DEFAULT_TOOL_TIMEOUT_MS);
+      expect(constraints.execution).toBe(
+        kind === "filesystem" ? "sanctioned" : "unsupported"
+      );
+    }
+
+    let adapterCalls = 0;
+    const registry = new CapabilityRegistry([
+      genericDefinitionForKind("model", {
+        id: "fixture.model.unsupported",
+        adapter: {
+          id: "fixture/model-unsupported",
+          version: "0.0.0",
+          kind: "model",
+          async execute(): Promise<AdapterExecutionResult> {
+            adapterCalls += 1;
+            return {
+              status: "success",
+              output: {
+                ok: true
+              }
+            };
+          }
+        }
+      })
+    ]);
+    const result = await broker({
+      registry,
+      policyEngine: allowPolicyEngine
+    }).callTool(request("fixture.model.unsupported", {}), {
+      traceId: "trace_unsupported_tier"
+    });
+
+    expectResultSchema(result);
+    expect(result.status).toBe("failed");
+    expect(result.error?.code).toBe("unsupported_isolation_tier");
+    expect(result.error?.retryable).toBe(false);
+    expect(result.output).toBeUndefined();
+    expect(adapterCalls).toBe(0);
+  });
+
   test("computeLimits narrows to the minimum and never widens definition limits", () => {
     const definition = limitFixtureDefinition({ timeoutMs: 123, maxBytes: 100 });
 
@@ -581,6 +646,117 @@ describe("tool broker filesystem capabilities", () => {
       timeoutMs: 123,
       maxBytes: 100
     });
+  });
+
+  test("tier ceilings participate in computeLimits without widening authority", () => {
+    const filesystemDefinition = limitFixtureDefinition({
+      timeoutMs: DEFAULT_TOOL_TIMEOUT_MS * 2,
+      maxBytes: DEFAULT_FS_READ_MAX_BYTES * 2
+    });
+    const modelDefinition = genericDefinitionForKind("model", {
+      limits: {
+        timeoutMs: DEFAULT_TOOL_TIMEOUT_MS * 2,
+        maxTokens: 20_000
+      }
+    });
+
+    expect(
+      computeLimits(
+        filesystemDefinition,
+        { maxBytes: DEFAULT_FS_READ_MAX_BYTES + 1 },
+        allowVerdictWithMaxBytes(DEFAULT_FS_READ_MAX_BYTES + 2)
+      )
+    ).toEqual({
+      timeoutMs: DEFAULT_TOOL_TIMEOUT_MS,
+      maxBytes: DEFAULT_FS_READ_MAX_BYTES
+    });
+    expect(
+      computeLimits(
+        modelDefinition,
+        { maxTokens: 10_000 },
+        allowVerdictWithConstraint("maxTokens", 9_000)
+      )
+    ).toEqual({
+      timeoutMs: DEFAULT_TOOL_TIMEOUT_MS,
+      maxBytes: DEFAULT_FS_READ_MAX_BYTES,
+      maxTokens: 8_192
+    });
+  });
+
+  test("adapter execution input stays least-context", async () => {
+    let observedInputKeys: string[] = [];
+    let observedRunContextKeys: string[] = [];
+    let observedLimitKeys: string[] = [];
+    const fsReadAdapter: CapabilityAdapter = {
+      id: "fixture/fs-read-least-context",
+      version: "0.0.0",
+      kind: "filesystem",
+      async execute(input): Promise<AdapterExecutionResult> {
+        observedInputKeys = Object.keys(input).sort();
+        observedRunContextKeys = Object.keys(input.runContext).sort();
+        observedLimitKeys = Object.keys(input.limits).sort();
+        expect(input).not.toHaveProperty("registry");
+        expect(input).not.toHaveProperty("policyEngine");
+        expect(input).not.toHaveProperty("runStore");
+        expect(input).not.toHaveProperty("adapter");
+        return successfulReadOutput();
+      }
+    };
+    const result = await broker({
+      registry: new CapabilityRegistry([
+        fsReadFixtureDefinition({
+          adapter: fsReadAdapter
+        })
+      ])
+    }).callTool(request("fs.read", { path: "src/index.ts" }), {
+      traceId: "trace_least_context"
+    });
+
+    expect(result.status).toBe("success");
+    expect(observedInputKeys).toEqual(["args", "limits", "runContext"]);
+    expect(observedRunContextKeys).toEqual([
+      "cwd",
+      "phase",
+      "runId",
+      "traceId",
+      "workspaceRoot"
+    ]);
+    expect(observedLimitKeys).toEqual(["maxBytes", "timeoutMs"]);
+  });
+
+  test("filesystem adapters reject symlinks resolving outside workspaceRoot", async () => {
+    const tempRoot = await mkdtemp(join(tmpdir(), "specwright-tool-broker-"));
+    const outsideRoot = await mkdtemp(
+      join(tmpdir(), "specwright-tool-broker-outside-")
+    );
+
+    try {
+      await mkdir(join(tempRoot, "src"), { recursive: true });
+      await writeFile(join(tempRoot, "src", "inside.txt"), "inside\n", "utf8");
+      await writeFile(join(outsideRoot, "secret.txt"), "outside\n", "utf8");
+      await symlink(join(outsideRoot, "secret.txt"), join(tempRoot, "escape"));
+      const realTempRoot = await realpath(tempRoot);
+
+      const result = await createToolBroker({
+        workspaceRoot: realTempRoot,
+        runId: "run_symlink_escape",
+        policyBundle: toolBrokerAllowPolicyBundle
+      }).callTool(request("fs.read", { path: "escape" }), {
+        cwd: realTempRoot,
+        traceId: "trace_symlink_escape"
+      });
+
+      expectResultSchema(result);
+      expect(result.status).toBe("failed");
+      expect(result.error).toEqual({
+        code: "path_outside_workspace",
+        message: "Path resolves outside the configured workspace.",
+        retryable: false
+      });
+    } finally {
+      await rm(tempRoot, { recursive: true, force: true });
+      await rm(outsideRoot, { recursive: true, force: true });
+    }
   });
 
   test("policy request uses definition authority and forwards context", async () => {
@@ -1288,15 +1464,68 @@ function allowVerdict(): PolicyVerdict {
 }
 
 function allowVerdictWithMaxBytes(value: unknown): PolicyVerdict {
+  return allowVerdictWithConstraint("maxBytes", value);
+}
+
+function allowVerdictWithConstraint(kind: string, value: unknown): PolicyVerdict {
   return {
     ...allowVerdict(),
     constraints: [
       {
-        kind: "maxBytes",
+        kind,
         value,
-        sourceRuleId: "fixture.max-bytes"
+        sourceRuleId: `fixture.${kind}`
       }
     ]
+  };
+}
+
+function allowPolicyEngine(): PolicyVerdict {
+  return allowVerdict();
+}
+
+function genericDefinitionForKind(
+  kind: CapabilityKind,
+  overrides: Partial<CapabilityDefinition> = {}
+): CapabilityDefinition {
+  const outputSchema = z
+    .object({
+      ok: z.boolean()
+    })
+    .strict();
+
+  return {
+    id: `fixture.${kind}.inspect`,
+    kind,
+    description: `Inspect ${kind} tier behavior.`,
+    version: "0.1.0",
+    inputSchema: z.object({}).strict(),
+    outputSchema,
+    adapter: {
+      id: `fixture/${kind}`,
+      version: "0.0.0",
+      kind,
+      async execute(): Promise<AdapterExecutionResult> {
+        return {
+          status: "success",
+          output: {
+            ok: true
+          }
+        };
+      }
+    },
+    risk: "low",
+    requestedScopes: [`${kind}:fixture`],
+    limits: {
+      timeoutMs: 1_000,
+      maxBytes: 1_000,
+      maxTokens: 1_000
+    },
+    cache: {
+      enabled: false
+    },
+    isolationTier: isolationTierForKind(kind),
+    ...overrides
   };
 }
 

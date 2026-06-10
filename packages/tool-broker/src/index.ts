@@ -110,6 +110,26 @@ export function isolationTierForKind(kind: CapabilityKind): IsolationTier {
   return CAPABILITY_KIND_ISOLATION_TIERS[kind];
 }
 
+export type NetworkAllowlist = "deny_all" | readonly string[];
+export type SubprocessPosture = "forbidden" | "sandboxed";
+export type WriteConfinementPosture =
+  | "none"
+  | "workspace_readonly"
+  | "workspace_staged";
+export type TierExecutionPosture = "sanctioned" | "unsupported";
+
+export type TierConstraintSet = {
+  isolationTier: IsolationTier;
+  deadlineMs: number;
+  maxBytes?: number;
+  maxTokens?: number;
+  networkAllowlist: NetworkAllowlist;
+  subprocess: SubprocessPosture;
+  writeConfinement: WriteConfinementPosture;
+  execution: TierExecutionPosture;
+  unsupportedReason?: string;
+};
+
 export type AdapterStatus = "success" | "failed";
 
 export type AdapterError = {
@@ -817,12 +837,24 @@ export class ToolBroker {
     policyVerdict: PolicyVerdict;
     traceId: string;
   }) {
+    const tierConstraints = deriveTierConstraints(input.definition);
     const limits = computeLimits(
       input.definition,
       input.args,
-      input.policyVerdict
+      input.policyVerdict,
+      tierConstraints
     );
     const startedAt = Date.now();
+
+    if (tierConstraints.execution === "unsupported") {
+      return adapterFailure(
+        "unsupported_isolation_tier",
+        tierConstraints.unsupportedReason ??
+          `Capability ${input.definition.id} cannot execute in isolation tier ${tierConstraints.isolationTier}.`,
+        false,
+        startedAt
+      );
+    }
 
     try {
       return await withAdapterDeadline(
@@ -1230,6 +1262,13 @@ function assertValidCapabilityDefinition(definition: CapabilityDefinition) {
   const parsedDefinition = CapabilityDefinitionSchema.safeParse(definition);
 
   if (!parsedDefinition.success) {
+    if (isTierlessKindFailure(definition)) {
+      throw new ToolBrokerError(
+        "tierless_kind",
+        tierlessKindMessage(definition)
+      );
+    }
+
     if (isMissingOutputSchemaFailure(definition)) {
       throw new ToolBrokerError(
         "missing_output_schema",
@@ -1274,6 +1313,15 @@ function assertValidCapabilityDefinition(definition: CapabilityDefinition) {
       missingOutputSchemaMessage(definition)
     );
   }
+}
+
+function isTierlessKindFailure(definition: unknown) {
+  if (!isRecord(definition)) {
+    return false;
+  }
+
+  const kind = definition.kind;
+  return typeof kind === "string" && !hasIsolationTierForKind(kind);
 }
 
 function isMissingOutputSchemaFailure(definition: unknown) {
@@ -1321,6 +1369,12 @@ function missingIsolationTierMessage(definition: unknown) {
   const id = readStringProperty(definition, "id") ?? "unknown";
   const kind = readStringProperty(definition, "kind") ?? "unknown";
   return `Capability ${id} must declare the registered isolation tier for kind ${kind}.`;
+}
+
+function tierlessKindMessage(definition: unknown) {
+  const id = readStringProperty(definition, "id") ?? "unknown";
+  const kind = readStringProperty(definition, "kind") ?? "unknown";
+  return `Capability ${id} declares kind ${kind} with no registered isolation tier.`;
 }
 
 function requiresNormalizationOutputSchema(kind: CapabilityKind) {
@@ -1482,6 +1536,7 @@ export type ToolBrokerErrorCode =
   | "cwd_outside_workspace"
   | "not_found"
   | "invalid_definition"
+  | "tierless_kind"
   | "missing_isolation_tier"
   | "missing_output_schema"
   | "adapter_kind_mismatch";
@@ -1530,27 +1585,127 @@ function buildPolicyRequest(input: {
 export function computeLimits(
   definition: CapabilityDefinition,
   args: unknown,
-  verdict: PolicyVerdict
+  verdict: PolicyVerdict,
+  tierConstraints: TierConstraintSet = deriveTierConstraints(definition)
 ): AdapterExecutionLimits {
+  const timeoutCandidates = [
+    definition.limits.timeoutMs,
+    readPositiveNumber(args, "timeoutMs"),
+    readPolicyPositiveNumber(verdict, "timeoutMs"),
+    tierConstraints.deadlineMs
+  ].filter((value): value is number => value !== undefined);
   const limits: AdapterExecutionLimits = {
-    timeoutMs: definition.limits.timeoutMs ?? DEFAULT_TOOL_TIMEOUT_MS
+    timeoutMs:
+      timeoutCandidates.length > 0
+        ? Math.min(...timeoutCandidates)
+        : DEFAULT_TOOL_TIMEOUT_MS
   };
   const maxByteCandidates = [
     definition.limits.maxBytes,
     readPositiveNumber(args, "maxBytes"),
-    readPolicyMaxBytes(verdict)
+    readPolicyPositiveNumber(verdict, "maxBytes"),
+    tierConstraints.maxBytes
+  ].filter((value): value is number => value !== undefined);
+  const maxTokenCandidates = [
+    definition.limits.maxTokens,
+    readPositiveNumber(args, "maxTokens"),
+    readPolicyPositiveNumber(verdict, "maxTokens"),
+    tierConstraints.maxTokens
   ].filter((value): value is number => value !== undefined);
 
   if (maxByteCandidates.length > 0) {
     limits.maxBytes = Math.min(...maxByteCandidates);
   }
 
+  if (maxTokenCandidates.length > 0) {
+    limits.maxTokens = Math.min(...maxTokenCandidates);
+  }
+
   return limits;
 }
 
-function readPolicyMaxBytes(verdict: PolicyVerdict) {
-  const maxBytes = verdict.constraints
-    .filter((constraint) => constraint.kind === "maxBytes")
+export function deriveTierConstraints(
+  definition: CapabilityDefinition
+): TierConstraintSet {
+  const isolationTier = isolationTierForKind(definition.kind);
+
+  if (!isIsolationTier(isolationTier)) {
+    throw new ToolBrokerError(
+      "tierless_kind",
+      tierlessKindMessage(definition)
+    );
+  }
+
+  switch (isolationTier) {
+    case 0: {
+      const constraintSet: TierConstraintSet = {
+        isolationTier,
+        deadlineMs: DEFAULT_TOOL_TIMEOUT_MS,
+        maxBytes: DEFAULT_FS_READ_MAX_BYTES,
+        networkAllowlist: "deny_all",
+        subprocess: "forbidden",
+        writeConfinement: "workspace_readonly",
+        execution:
+          definition.kind === "filesystem" ? "sanctioned" : "unsupported"
+      };
+
+      if (definition.kind !== "filesystem") {
+        constraintSet.unsupportedReason = `Capability ${definition.id} kind ${definition.kind} is tier ${isolationTier}, but only filesystem adapters are sanctioned in-process.`;
+      }
+
+      return constraintSet;
+    }
+    case 1:
+      return {
+        isolationTier,
+        deadlineMs: DEFAULT_TOOL_TIMEOUT_MS,
+        maxBytes: DEFAULT_FS_READ_MAX_BYTES,
+        maxTokens: 8_192,
+        networkAllowlist: "deny_all",
+        subprocess: "forbidden",
+        writeConfinement: "none",
+        execution: "unsupported",
+        unsupportedReason: `Capability ${definition.id} requires semantic/model tier ${isolationTier}, which has no sanctioned in-repo adapter runner yet.`
+      };
+    case 2:
+      return {
+        isolationTier,
+        deadlineMs: DEFAULT_TOOL_TIMEOUT_MS,
+        maxBytes: DEFAULT_FS_READ_MAX_BYTES,
+        networkAllowlist: "deny_all",
+        subprocess: "forbidden",
+        writeConfinement: "workspace_staged",
+        execution: "unsupported",
+        unsupportedReason: `Capability ${definition.id} requires mutating-local tier ${isolationTier}, which has no sanctioned in-repo adapter runner yet.`
+      };
+    case 3:
+      return {
+        isolationTier,
+        deadlineMs: DEFAULT_TOOL_TIMEOUT_MS,
+        maxBytes: DEFAULT_FS_READ_MAX_BYTES,
+        networkAllowlist: "deny_all",
+        subprocess: "sandboxed",
+        writeConfinement: "workspace_staged",
+        execution: "unsupported",
+        unsupportedReason: `Capability ${definition.id} requires process/shell tier ${isolationTier}, which has no sanctioned sandbox runner yet.`
+      };
+    case 4:
+      return {
+        isolationTier,
+        deadlineMs: DEFAULT_TOOL_TIMEOUT_MS,
+        maxBytes: DEFAULT_FS_READ_MAX_BYTES,
+        networkAllowlist: [],
+        subprocess: "sandboxed",
+        writeConfinement: "none",
+        execution: "unsupported",
+        unsupportedReason: `Capability ${definition.id} requires external-network tier ${isolationTier}, which has no sanctioned sandbox runner yet.`
+      };
+  }
+}
+
+function readPolicyPositiveNumber(verdict: PolicyVerdict, kind: string) {
+  const values = verdict.constraints
+    .filter((constraint) => constraint.kind === kind)
     .map((constraint) => constraint.value)
     .filter(
       (value): value is number =>
@@ -1560,7 +1715,7 @@ function readPolicyMaxBytes(verdict: PolicyVerdict) {
         Number.isFinite(value)
     );
 
-  return maxBytes.length > 0 ? Math.min(...maxBytes) : undefined;
+  return values.length > 0 ? Math.min(...values) : undefined;
 }
 
 function readPositiveNumber(value: unknown, key: string) {
