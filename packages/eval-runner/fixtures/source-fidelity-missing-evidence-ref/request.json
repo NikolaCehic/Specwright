@@ -1,0 +1,62 @@
+{
+  "evalDefinition": {
+    "id": "source_fidelity_missing_evidence_ref",
+    "type": "source_fidelity",
+    "target": {
+      "artifactId": "ux_contract"
+    },
+    "claimsPath": "claims",
+    "severity": "blocking"
+  },
+  "input": {
+    "artifacts": {
+      "ux_contract": {
+        "artifactId": "ux_contract",
+        "artifactType": "ux_contract",
+        "content": {
+          "claims": [
+            {
+              "id": "claim.unrecorded",
+              "claim": "The product requires approval review.",
+              "level": "source_fact",
+              "important": true,
+              "evidenceRefs": [
+                "evidence:brief#approval-review"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "evidence": {
+      "records": [
+        {
+          "id": "evidence:brief#other",
+          "claim": "The brief mentions another fact."
+        }
+      ]
+    }
+  },
+  "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+  "evalRegistry": {
+    "schemaVersion": "specwright.eval-registry.v0",
+    "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+    "entries": [
+      {
+        "definitionId": "source_fidelity_missing_evidence_ref",
+        "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+        "kind": "source_fidelity",
+        "contentHash": "sha256:eb7d6d67e86a4851b7b72afc790f84828b8cbf2f14e92cab993e3d830d539e2f",
+        "definition": {
+          "id": "source_fidelity_missing_evidence_ref",
+          "type": "source_fidelity",
+          "target": {
+            "artifactId": "ux_contract"
+          },
+          "claimsPath": "claims",
+          "severity": "blocking"
+        }
+      }
+    ]
+  }
+}

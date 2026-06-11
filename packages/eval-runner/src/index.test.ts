@@ -1,16 +1,22 @@
 import { describe, expect, test } from "bun:test";
+import { existsSync, readdirSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  EvalFindingSchema,
+  EvalProducedBySchema,
+  EvalSeveritySchema,
   EvalVerdictSchema,
   EvalVerdictStatusSchema,
+  RepairTaskSchema,
   type ToolCallRequest,
   type ToolCallResult,
   type EvalVerdict
 } from "@specwright/schemas";
 import { loadHarnessPackage } from "@specwright/harness-loader";
 import {
+  DEFAULT_EVAL_RUNNER_EVALUATOR,
   DECISION_HASH_FAIL_CLOSED_CODE,
   DATASET_HASH_MISMATCH_CODE,
   DATASET_MALFORMED_CODE,
@@ -41,6 +47,7 @@ import {
   recordEvalVerdict,
   runEval,
   runEvalAsync,
+  runEvals,
   runEvalWithRegression,
   resolveEvalDefinition,
   stableStringify,
@@ -66,18 +73,24 @@ import type { FixtureEvalDefinition } from "./index";
 const fixturesDir = join(import.meta.dir, "../fixtures");
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../../..");
 
-const fixtureCases = [
+const originalGoldenFixtureCases = [
   "schema-pass",
   "schema-fail-blocking",
+  "completeness-missing-section",
   "source-fidelity-pass",
   "source-fidelity-missing-evidence",
-  "completeness-missing-section",
-  "unsupported-model-assisted",
-  "registry-resolved-pass",
-  "registry-hash-mismatch-fail-closed",
-  "registry-off-registry-fail-closed",
-  "schema-pass-mutated-target"
-];
+  "unsupported-model-assisted"
+] as const;
+
+const partialExpectedMetadataFixtureCases = [
+  "dataset-hash-mismatch",
+  "dataset-poisoned",
+  "grader-no-golden"
+] as const;
+
+const partialExpectedMetadataFixtures = new Set<string>(
+  partialExpectedMetadataFixtureCases
+);
 
 const modelGradedFixtureCases = [
   {
@@ -102,7 +115,446 @@ const modelGradedFixtureCases = [
   }
 ];
 
+const modelGradedFixtureExpectations = new Map(
+  modelGradedFixtureCases.map((fixture) => [
+    fixture.name,
+    fixture.expectedBrokerCalls
+  ])
+);
+
+const fixtureCases = discoverFullVerdictFixtureCases();
+
 const decisionHashPattern = /^sha256:[a-f0-9]{64}$/u;
+
+type AcceptanceCheckRow = {
+  id: string;
+  family:
+    | "contract"
+    | "determinism"
+    | "fail_closed"
+    | "security"
+    | "observability"
+    | "migration"
+    | "operability";
+  check: string;
+  coverage:
+    | {
+        type: "test";
+        name: string;
+      }
+    | {
+        type: "todo";
+        owner: string;
+        reason: string;
+      };
+};
+
+const implementedAcceptanceTests = new Set([
+  "directory-driven fixture conformance",
+  "contract conformance over fixture verdicts",
+  "unsupported deterministic check routes to needs_review",
+  "default harness registry lint",
+  "repair task schema and bounds",
+  "runEval idempotence across fixtures",
+  "decision hash stability and target invalidation",
+  "deterministic core purity guard",
+  "emission replay projection",
+  "runEvals order independence",
+  "fail-closed fixture matrix",
+  "security abuse matrix",
+  "model output cannot raise deterministic fail",
+  "invalid model output fails closed",
+  "registry governance rejects inline unsigned definitions",
+  "model redacted context",
+  "poisoned dataset rejected",
+  "observability recorded events and provenance",
+  "model broker provenance",
+  "repair traceability",
+  "regression attribution",
+  "historical fixtures replay",
+  "definition schema rejection",
+  "dataset version tracking",
+  "model graded budgets",
+  "ci gate uses same suite",
+  "tenancy isolation"
+]);
+
+const acceptanceCheckMatrix = [
+  {
+    id: "contract.verdict-schema",
+    family: "contract",
+    check: "every verdict conforms to the EvalVerdict contract",
+    coverage: { type: "test", name: "contract conformance over fixture verdicts" }
+  },
+  {
+    id: "contract.status-schema",
+    family: "contract",
+    check: "every verdict status is one of the EvalVerdictStatus values",
+    coverage: { type: "test", name: "contract conformance over fixture verdicts" }
+  },
+  {
+    id: "contract.severity-schema",
+    family: "contract",
+    check: "every verdict severity is advisory or blocking",
+    coverage: { type: "test", name: "contract conformance over fixture verdicts" }
+  },
+  {
+    id: "contract.produced-by",
+    family: "contract",
+    check: "every verdict carries producedBy.kind and ref",
+    coverage: { type: "test", name: "contract conformance over fixture verdicts" }
+  },
+  {
+    id: "contract.findings-schema",
+    family: "contract",
+    check: "findings conform to EvalFinding",
+    coverage: { type: "test", name: "contract conformance over fixture verdicts" }
+  },
+  {
+    id: "contract.known-check-types",
+    family: "contract",
+    check: "only known check types evaluate deterministically",
+    coverage: {
+      type: "test",
+      name: "unsupported deterministic check routes to needs_review"
+    }
+  },
+  {
+    id: "contract.definition-lint",
+    family: "contract",
+    check: "eval definitions declare a known type and resolvable target",
+    coverage: { type: "test", name: "default harness registry lint" }
+  },
+  {
+    id: "contract.repair-tasks",
+    family: "contract",
+    check: "repair tasks conform to RepairTask and are bounded",
+    coverage: { type: "test", name: "repair task schema and bounds" }
+  },
+  {
+    id: "determinism.identical-inputs",
+    family: "determinism",
+    check: "identical inputs produce an identical verdict",
+    coverage: { type: "test", name: "runEval idempotence across fixtures" }
+  },
+  {
+    id: "determinism.golden-fixtures",
+    family: "determinism",
+    check: "every golden fixture matches its expected verdict",
+    coverage: { type: "test", name: "directory-driven fixture conformance" }
+  },
+  {
+    id: "determinism.no-clock",
+    family: "determinism",
+    check: "no wall clock is read by the deterministic core",
+    coverage: { type: "test", name: "deterministic core purity guard" }
+  },
+  {
+    id: "determinism.decision-hash",
+    family: "determinism",
+    check: "deterministic verdicts have a stable decision hash",
+    coverage: {
+      type: "test",
+      name: "decision hash stability and target invalidation"
+    }
+  },
+  {
+    id: "determinism.pure-core",
+    family: "determinism",
+    check: "the deterministic core is pure",
+    coverage: { type: "test", name: "deterministic core purity guard" }
+  },
+  {
+    id: "determinism.event-replay",
+    family: "determinism",
+    check: "replaying a historical run reproduces eval verdicts",
+    coverage: { type: "test", name: "emission replay projection" }
+  },
+  {
+    id: "determinism.run-evals-order",
+    family: "determinism",
+    check: "runEvals is order-independent and side-effect-free",
+    coverage: { type: "test", name: "runEvals order independence" }
+  },
+  {
+    id: "fail.definition-missing",
+    family: "fail_closed",
+    check: "missing definition fails closed",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.target-missing",
+    family: "fail_closed",
+    check: "missing target artifact fails closed",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.no-checks",
+    family: "fail_closed",
+    check: "no declared checks fails closed",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.unsupported-kind",
+    family: "fail_closed",
+    check: "unsupported deterministic kind fails closed",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.claims-missing",
+    family: "fail_closed",
+    check: "source-fidelity with no claims fails closed",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.claim-no-evidence-refs",
+    family: "fail_closed",
+    check: "important claim with no evidence refs fails",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.claim-missing-evidence",
+    family: "fail_closed",
+    check: "claim referencing missing evidence fails",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.required-field",
+    family: "fail_closed",
+    check: "missing required field fails closed",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.required-section",
+    family: "fail_closed",
+    check: "missing required section fails closed",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.no-blocking-pass",
+    family: "fail_closed",
+    check: "no failure path yields a blocking pass",
+    coverage: { type: "test", name: "fail-closed fixture matrix" }
+  },
+  {
+    id: "fail.review-timeout-no-promote",
+    family: "fail_closed",
+    check: "review timeout or rejection never auto-promotes",
+    coverage: {
+      type: "todo",
+      owner: "Scope 05 GateEngine / Scope 07 human review",
+      reason: "approval timeout and rejection promotion is owned by GateEngine review state, not the pure eval-runner package"
+    }
+  },
+  {
+    id: "security.supplied-verdict",
+    family: "security",
+    check: "supplied verdicts are ignored and the runner recomputes",
+    coverage: { type: "test", name: "security abuse matrix" }
+  },
+  {
+    id: "security.injection-prose",
+    family: "security",
+    check: "embedded return-pass prose has no effect",
+    coverage: { type: "test", name: "security abuse matrix" }
+  },
+  {
+    id: "security.model-output-cannot-raise",
+    family: "security",
+    check: "model-graded output cannot raise status",
+    coverage: {
+      type: "test",
+      name: "model output cannot raise deterministic fail"
+    }
+  },
+  {
+    id: "security.invalid-model-output",
+    family: "security",
+    check: "invalid model-graded output fails closed",
+    coverage: { type: "test", name: "invalid model output fails closed" }
+  },
+  {
+    id: "security.inline-unsigned-definitions",
+    family: "security",
+    check: "inline or unsigned eval definitions are rejected",
+    coverage: {
+      type: "test",
+      name: "registry governance rejects inline unsigned definitions"
+    }
+  },
+  {
+    id: "security.self-citation",
+    family: "security",
+    check: "self-citation cannot satisfy source fidelity",
+    coverage: { type: "test", name: "security abuse matrix" }
+  },
+  {
+    id: "security.repair-agency",
+    family: "security",
+    check: "repair tasks cannot widen agency",
+    coverage: { type: "test", name: "repair task schema and bounds" }
+  },
+  {
+    id: "security.model-context-redacted",
+    family: "security",
+    check: "model-graded context is redacted",
+    coverage: { type: "test", name: "model redacted context" }
+  },
+  {
+    id: "security.poisoned-dataset",
+    family: "security",
+    check: "poisoned dataset is rejected",
+    coverage: { type: "test", name: "poisoned dataset rejected" }
+  },
+  {
+    id: "observability.verdict-recorded",
+    family: "observability",
+    check: "every evaluation appends eval.verdict.recorded",
+    coverage: {
+      type: "test",
+      name: "observability recorded events and provenance"
+    }
+  },
+  {
+    id: "observability.reconstructable",
+    family: "observability",
+    check: "every verdict is reconstructable from the log",
+    coverage: { type: "test", name: "emission replay projection" }
+  },
+  {
+    id: "observability.full-provenance",
+    family: "observability",
+    check: "verdicts carry full provenance",
+    coverage: {
+      type: "test",
+      name: "observability recorded events and provenance"
+    }
+  },
+  {
+    id: "observability.model-broker-provenance",
+    family: "observability",
+    check: "model-graded findings carry broker provenance",
+    coverage: { type: "test", name: "model broker provenance" }
+  },
+  {
+    id: "observability.repair-traceable",
+    family: "observability",
+    check: "repair loops are end-to-end traceable",
+    coverage: { type: "test", name: "repair traceability" }
+  },
+  {
+    id: "observability.regressions-attributable",
+    family: "observability",
+    check: "regressions are attributable",
+    coverage: { type: "test", name: "regression attribution" }
+  },
+  {
+    id: "observability.metrics",
+    family: "observability",
+    check: "metrics expose fail-closed, review, and regression signals",
+    coverage: {
+      type: "todo",
+      owner: "Scope 07 observability metrics",
+      reason: "metrics emission is not implemented in the eval-runner package yet"
+    }
+  },
+  {
+    id: "migration.runner-change-classified",
+    family: "migration",
+    check: "runner changes are classified",
+    coverage: {
+      type: "todo",
+      owner: "Scope 07 release governance",
+      reason: "compatibility class is a review/release artifact rather than a runtime package behavior"
+    }
+  },
+  {
+    id: "migration.evaluator-ref-bump",
+    family: "migration",
+    check: "verdict-semantic changes bump the evaluator ref",
+    coverage: {
+      type: "todo",
+      owner: "Scope 07 release governance",
+      reason: "semantic-change detection requires release metadata outside this package; fixtures assert the current ref"
+    }
+  },
+  {
+    id: "migration.historical-fixtures",
+    family: "migration",
+    check: "historical fixtures replay under the current runner",
+    coverage: { type: "test", name: "historical fixtures replay" }
+  },
+  {
+    id: "migration.definition-schema-version",
+    family: "migration",
+    check: "definition/schema-version changes are migrated or rejected",
+    coverage: { type: "test", name: "definition schema rejection" }
+  },
+  {
+    id: "migration.dataset-version",
+    family: "migration",
+    check: "dataset version changes are tracked",
+    coverage: { type: "test", name: "dataset version tracking" }
+  },
+  {
+    id: "operability.deterministic-latency",
+    family: "operability",
+    check: "deterministic latency budget is enforced",
+    coverage: {
+      type: "todo",
+      owner: "Scope 07 operations benchmark",
+      reason: "no non-flaky latency budget harness or threshold is present in this package"
+    }
+  },
+  {
+    id: "operability.model-budgets",
+    family: "operability",
+    check: "model-graded checks have bounded budgets",
+    coverage: { type: "test", name: "model graded budgets" }
+  },
+  {
+    id: "operability.review-backlog",
+    family: "operability",
+    check: "review backlog is observable per tenant",
+    coverage: {
+      type: "todo",
+      owner: "Scope 05 GateEngine / Scope 07 operations",
+      reason: "review queues live outside the pure eval-runner package"
+    }
+  },
+  {
+    id: "operability.repair-loop-ceiling",
+    family: "operability",
+    check: "repair-loop ceiling forces escalation",
+    coverage: {
+      type: "todo",
+      owner: "Scope 07 repair orchestration",
+      reason: "repair iteration ceilings are orchestration state, not implemented by runEval"
+    }
+  },
+  {
+    id: "operability.ci-live-identical",
+    family: "operability",
+    check: "evals run identically in CI and live runs",
+    coverage: { type: "test", name: "ci gate uses same suite" }
+  },
+  {
+    id: "operability.tenancy-isolation",
+    family: "operability",
+    check: "tenancy isolation holds",
+    coverage: { type: "test", name: "tenancy isolation" }
+  },
+  {
+    id: "operability.runbooks",
+    family: "operability",
+    check: "every fail-closed, review-timeout, and regression path has a runbook",
+    coverage: {
+      type: "todo",
+      owner: "Scope 07 operations runbooks",
+      reason: "runbook ownership is documented in the wiki and not represented as package code"
+    }
+  }
+] satisfies AcceptanceCheckRow[];
 
 describe("eval runner fixtures", () => {
   test("uses the repaired-aware shared eval status contract", () => {
@@ -112,21 +564,504 @@ describe("eval runner fixtures", () => {
   for (const fixtureName of fixtureCases) {
     test(fixtureName, async () => {
       const fixtureDir = join(fixturesDir, fixtureName);
-      const request = (await readJson(join(
-        fixtureDir,
-        "request.json"
-      ))) as RunEvalRequest;
       const expected = await readJson(join(fixtureDir, "expected-verdict.json"));
 
-      const result = runEval(request);
+      const { result, calls } = await runFixtureVerdict(fixtureName);
 
       expect(EvalVerdictSchema.parse(result)).toEqual(result);
       expect(result).toEqual(expected);
-      expect(runEval(request)).toEqual(result);
+      expect(JSON.stringify((await runFixtureVerdict(fixtureName)).result)).toBe(
+        JSON.stringify(result)
+      );
+      const expectedBrokerCalls = modelGradedFixtureExpectations.get(fixtureName);
+
+      if (expectedBrokerCalls !== undefined) {
+        expect(calls).toHaveLength(expectedBrokerCalls);
+      } else {
+        expect(calls).toHaveLength(0);
+      }
+
       expectValidDecisionProvenance(result);
       expect(recomputeDecisionHash(result)).toBe(result.provenance?.decisionHash);
     });
   }
+
+  test("discovers every full request and expected-verdict fixture", () => {
+    const discovered = discoverExpectedVerdictFixtureNames();
+    const covered = new Set(fixtureCases);
+
+    for (const fixtureName of discovered) {
+      if (partialExpectedMetadataFixtures.has(fixtureName)) {
+        continue;
+      }
+
+      expect(covered.has(fixtureName)).toBe(true);
+    }
+
+    expect(
+      discovered.filter((fixtureName) =>
+        partialExpectedMetadataFixtures.has(fixtureName)
+      )
+    ).toEqual([...partialExpectedMetadataFixtureCases]);
+  });
+});
+
+describe("eval runner acceptance coverage matrix", () => {
+  test("maps every named acceptance row to a test or explicit deferral", () => {
+    expect(acceptanceCheckMatrix).toHaveLength(54);
+
+    const ids = new Set<string>();
+
+    for (const row of acceptanceCheckMatrix) {
+      expect(row.id.length).toBeGreaterThan(0);
+      expect(ids.has(row.id)).toBe(false);
+      ids.add(row.id);
+
+      if (row.coverage.type === "test") {
+        expect(implementedAcceptanceTests.has(row.coverage.name)).toBe(true);
+      } else {
+        expect(row.coverage.owner.length).toBeGreaterThan(0);
+        expect(row.coverage.reason.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  for (const row of acceptanceCheckMatrix) {
+    if (row.coverage.type === "todo") {
+      test.todo(
+        `[${row.id}] ${row.check} - ${row.coverage.owner}: ${row.coverage.reason}`
+      );
+    }
+  }
+});
+
+describe("eval runner contract conformance", () => {
+  test("fixture verdicts preserve schema labels through JSON round-trip", async () => {
+    for (const fixtureName of fixtureCases) {
+      const { result } = await runFixtureVerdict(fixtureName);
+      const roundTrip = JSON.parse(JSON.stringify(result)) as unknown;
+
+      expect(EvalVerdictSchema.parse(result)).toEqual(result);
+      expect(EvalVerdictSchema.parse(roundTrip)).toEqual(result);
+      expect(EvalVerdictStatusSchema.parse(result.status)).toBe(result.status);
+      expect(EvalSeveritySchema.parse(result.severity)).toBe(result.severity);
+      expect(EvalProducedBySchema.parse(result.producedBy)).toEqual(
+        result.producedBy
+      );
+      expect(result.producedBy.ref.length).toBeGreaterThan(0);
+
+      if (result.producedBy.kind === "deterministic") {
+        expect(result.producedBy.ref).toBe(DEFAULT_EVAL_RUNNER_EVALUATOR);
+      }
+
+      for (const finding of result.findings) {
+        expect(EvalFindingSchema.parse(finding)).toEqual(finding);
+      }
+
+      if (result.repairTask !== undefined) {
+        expect(RepairTaskSchema.parse(result.repairTask)).toEqual(
+          result.repairTask
+        );
+      }
+    }
+  });
+
+  test("unsupported deterministic check types route to needs_review", () => {
+    const result = runEval(
+      registeredEvalRequest(
+        {
+          id: "unsupported_check_type",
+          type: "deterministic",
+          target: {
+            artifactId: "plan"
+          },
+          checks: [
+            {
+              id: "unknown_check",
+              type: "not_a_supported_check"
+            }
+          ]
+        },
+        {
+          artifacts: {
+            plan: {
+              artifactId: "plan",
+              artifactType: "plan",
+              content: {
+                title: "Plan"
+              }
+            }
+          }
+        }
+      )
+    );
+
+    expect(EvalVerdictSchema.parse(result)).toEqual(result);
+    expect(result.status).toBe("needs_review");
+    expect(result.findings[0]?.code).toBe("eval.check.unsupported");
+  });
+
+  test("emitted repair tasks conform and do not inherit widened agency", async () => {
+    const request = registeredEvalRequest(
+      {
+        id: "repair_task_bounds",
+        type: "schema",
+        target: {
+          artifactId: "plan"
+        },
+        requiredFields: ["title", "steps"],
+        severity: "blocking",
+        onFail: {
+          action: "create_repair_task",
+          allowedTools: ["dangerous.shell", "unreviewed.network"],
+          constraints: {
+            agency: "widen"
+          }
+        }
+      },
+      {
+        artifacts: {
+          plan: {
+            artifactId: "plan",
+            artifactType: "plan",
+            content: {
+              title: "Plan missing steps"
+            }
+          }
+        }
+      }
+    );
+    const result = await evaluateAndRecord(request, memoryEmissionContext());
+    const repairEvent = result.events.find(
+      (event) => event.type === EVAL_REPAIR_TASK_CREATED_EVENT
+    );
+    const repairTask = RepairTaskSchema.parse(
+      (repairEvent?.payload as { repairTask?: unknown } | undefined)?.repairTask
+    );
+
+    expect(result.verdict.status).toBe("fail");
+    expect(repairTask.targetRef).toBe(result.verdict.targetRef);
+    expect(repairTask.producedBy).toEqual(result.verdict.producedBy);
+    expect(repairTask.allowedTools).toBeUndefined();
+    expect(repairTask.blockedTools).toBeUndefined();
+    expect(stableStringify(repairTask)).not.toContain("dangerous.shell");
+    expect(stableStringify(repairTask)).not.toContain("unreviewed.network");
+    expect(repairTask.constraints).toMatchObject({
+      evalId: result.verdict.evalId,
+      decisionHash: result.verdict.provenance?.decisionHash,
+      severity: "blocking"
+    });
+  });
+});
+
+describe("eval runner determinism conformance", () => {
+  test("runEval is byte-identical on repeat across all conformance fixtures", async () => {
+    for (const fixtureName of fixtureCases) {
+      const first = await runFixtureVerdict(fixtureName);
+      const second = await runFixtureVerdict(fixtureName);
+
+      expect(JSON.stringify(second.result)).toBe(JSON.stringify(first.result));
+    }
+  });
+
+  test("runEvals is order-independent and side-effect-free", () => {
+    const definitions = [
+      {
+        id: "schema_title",
+        type: "schema",
+        target: {
+          artifactId: "plan"
+        },
+        requiredFields: ["title"],
+        severity: "blocking"
+      },
+      {
+        id: "completeness_summary",
+        type: "completeness",
+        target: {
+          artifactId: "plan"
+        },
+        requiredSections: ["summary"],
+        sectionsPath: "sections",
+        severity: "blocking"
+      }
+    ] satisfies FixtureEvalDefinition[];
+    const input = {
+      artifacts: {
+        plan: {
+          artifactId: "plan",
+          artifactType: "plan",
+          content: {
+            title: "Order-independent plan",
+            sections: ["summary"]
+          }
+        }
+      }
+    } satisfies RunEvalRequest["input"];
+    const harnessPackageId = "harness.order@1.0.0";
+    const forward = {
+      harnessPackageId,
+      evalRegistry: buildEvalRegistry(harnessPackageId, definitions),
+      input
+    };
+    const reversed = {
+      harnessPackageId,
+      evalRegistry: buildEvalRegistry(harnessPackageId, [...definitions].reverse()),
+      input
+    };
+    const first = runEvals(forward);
+    const second = runEvals(reversed);
+
+    expect(verdictsByEvalId(first)).toEqual(verdictsByEvalId(second));
+    expect(runEvals(forward)).toEqual(first);
+    expect(runEvals(reversed)).toEqual(second);
+  });
+
+  test("deterministic core has no visible clock, fs, network, or env dependency", async () => {
+    const deterministicCoreFiles = [
+      "index.ts",
+      "registry.ts",
+      "decision-hash.ts"
+    ];
+    const forbiddenPatterns = [
+      /\bDate\.now\s*\(/u,
+      /\bnew Date\s*\(/u,
+      /\bprocess\.env\b/u,
+      /\bfetch\s*\(/u,
+      /node:(?:fs|http|https|net|tls|dns|child_process)/u
+    ];
+
+    for (const file of deterministicCoreFiles) {
+      const source = await readFile(join(import.meta.dir, file), "utf8");
+
+      for (const pattern of forbiddenPatterns) {
+        expect(source).not.toMatch(pattern);
+      }
+    }
+
+    const request = (await readJson(join(
+      fixturesDir,
+      "schema-pass",
+      "request.json"
+    ))) as RunEvalRequest;
+    const brokerCalls: ToolCallRequest[] = [];
+
+    expect(
+      runEval({
+        ...request,
+        broker: async (toolRequest) => {
+          brokerCalls.push(toolRequest);
+          throw new Error("deterministic runEval must not call the broker");
+        }
+      })
+    ).toEqual(runEval(request));
+    expect(brokerCalls).toHaveLength(0);
+  });
+});
+
+describe("eval runner fail-closed conformance", () => {
+  const failClosedCases = [
+    {
+      fixtureName: "definition-missing",
+      status: "fail",
+      code: "eval.definition.missing"
+    },
+    {
+      fixtureName: "target-missing",
+      status: "fail",
+      code: "eval.target.missing"
+    },
+    {
+      fixtureName: "no-checks",
+      status: "needs_review",
+      code: "eval.checks.missing"
+    },
+    {
+      fixtureName: "unsupported-model-assisted",
+      status: "needs_review",
+      code: "eval.type.unsupported"
+    },
+    {
+      fixtureName: "source-fidelity-claims-missing",
+      status: "fail",
+      code: "claims.missing"
+    },
+    {
+      fixtureName: "source-fidelity-missing-evidence",
+      status: "fail",
+      code: "claim.evidence_refs.missing"
+    },
+    {
+      fixtureName: "source-fidelity-missing-evidence-ref",
+      status: "fail",
+      code: "claim.evidence.missing"
+    },
+    {
+      fixtureName: "schema-fail-blocking",
+      status: "fail",
+      code: "artifact.required_fields.missing"
+    },
+    {
+      fixtureName: "completeness-missing-section",
+      status: "fail",
+      code: "artifact.sections.missing"
+    }
+  ] as const;
+
+  for (const item of failClosedCases) {
+    test(`${item.fixtureName} emits ${item.code}`, async () => {
+      const { result } = await runFixtureVerdict(item.fixtureName);
+
+      expect(result.status).toBe(item.status);
+      expect(result.status).not.toBe("pass");
+      expect(findingCodes(result)).toContain(item.code);
+    });
+  }
+
+  test("no fail-closed failure path yields a blocking pass", async () => {
+    for (const item of failClosedCases) {
+      const { result } = await runFixtureVerdict(item.fixtureName);
+
+      expect({
+        fixtureName: item.fixtureName,
+        status: result.status,
+        severity: result.severity
+      }).not.toEqual({
+        fixtureName: item.fixtureName,
+        status: "pass",
+        severity: "blocking"
+      });
+      expect(["fail", "needs_review"]).toContain(result.status);
+    }
+  });
+});
+
+describe("eval runner security and abuse conformance", () => {
+  const abuseCases = [
+    {
+      fixtureName: "injected-verdict",
+      code: "artifact.required_fields.missing"
+    },
+    {
+      fixtureName: "injection-prose",
+      code: "artifact.required_fields.missing"
+    },
+    {
+      fixtureName: "source-fidelity-self-citation",
+      code: "claim.evidence.missing"
+    }
+  ] as const;
+
+  for (const item of abuseCases) {
+    test(`${item.fixtureName} cannot force a pass`, async () => {
+      const { result } = await runFixtureVerdict(item.fixtureName);
+
+      expect(result.status).toBe("fail");
+      expect(result.status).not.toBe("pass");
+      expect(findingCodes(result)).toContain(item.code);
+    });
+  }
+
+  test("inline and hash-mismatched definitions fail closed", async () => {
+    for (const fixtureName of [
+      "registry-off-registry-fail-closed",
+      "registry-hash-mismatch-fail-closed"
+    ]) {
+      const { result } = await runFixtureVerdict(fixtureName);
+
+      expect(result.status).toBe("fail");
+      expect(findingCodes(result)).toEqual(
+        expect.arrayContaining([
+          fixtureName === "registry-off-registry-fail-closed"
+            ? "eval.definition.missing"
+            : "eval.definition.untrusted"
+        ])
+      );
+    }
+  });
+});
+
+describe("eval runner tenancy isolation", () => {
+  test("same eval id resolves only from the run package registry", () => {
+    const evalId = "tenant_scoped_eval";
+    const tenantADefinition = {
+      id: evalId,
+      type: "schema",
+      target: {
+        artifactId: "plan"
+      },
+      requiredFields: ["title"]
+    } satisfies FixtureEvalDefinition;
+    const tenantBDefinition = {
+      ...tenantADefinition,
+      requiredFields: ["title", "tenantBOnly"]
+    } satisfies FixtureEvalDefinition;
+    const input = {
+      artifacts: {
+        plan: {
+          artifactId: "plan",
+          artifactType: "plan",
+          content: {
+            title: "Tenant scoped plan"
+          }
+        }
+      }
+    } satisfies RunEvalRequest["input"];
+    const tenantARegistry = buildEvalRegistry("tenant.a@1.0.0", [
+      tenantADefinition
+    ]);
+    const tenantBRegistry = buildEvalRegistry("tenant.b@1.0.0", [
+      tenantBDefinition
+    ]);
+
+    expect(
+      runEval({
+        harnessPackageId: "tenant.a@1.0.0",
+        evalRegistry: tenantARegistry,
+        evalId,
+        input
+      }).status
+    ).toBe("pass");
+    expect(
+      runEval({
+        harnessPackageId: "tenant.b@1.0.0",
+        evalRegistry: tenantBRegistry,
+        evalId,
+        input
+      }).status
+    ).toBe("fail");
+    expect(
+      runEval({
+        harnessPackageId: "tenant.b@1.0.0",
+        evalRegistry: tenantARegistry,
+        evalId,
+        input
+      }).findings[0]?.code
+    ).toBe("eval.definition.missing");
+  });
+
+  test.todo(
+    "dataset tenancy isolation - Scope 07 dataset tenancy / Packet 04 follow-up: current dataset resolver is request-supplied and content-addressed but has no tenant/package identifier to assert"
+  );
+});
+
+describe("eval runner CI conformance gate", () => {
+  test("workflow gates eval-runner changes on the same conformance suite", async () => {
+    const workflow = await readFile(
+      join(repoRoot, ".github/workflows/eval-runner-conformance.yml"),
+      "utf8"
+    );
+
+    expect(workflow).toContain("packages/eval-runner/**");
+    expect(workflow).toContain(
+      ".github/workflows/eval-runner-conformance.yml"
+    );
+    expect(workflow).toContain("bun run --cwd packages/eval-runner test");
+    expect(workflow).toContain("bun run --cwd packages/eval-runner typecheck");
+    expect(workflow).toContain("bun run build");
+    expect(workflow).toContain("bun run typecheck");
+    expect(workflow).toContain("bun run proof:v0");
+  });
 });
 
 describe("model-assisted eval runner fixtures", () => {
@@ -1725,6 +2660,54 @@ function testPruneUndefined<T>(value: T): T {
   return output as T;
 }
 
+function discoverExpectedVerdictFixtureNames(): string[] {
+  return readdirSync(fixturesDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter(
+      (name) =>
+        existsSync(join(fixturesDir, name, "request.json")) &&
+        existsSync(join(fixturesDir, name, "expected-verdict.json"))
+    )
+    .sort();
+}
+
+function discoverFullVerdictFixtureCases(): string[] {
+  return discoverExpectedVerdictFixtureNames().filter(
+    (name) => !partialExpectedMetadataFixtures.has(name)
+  );
+}
+
+async function runFixtureVerdict(fixtureName: string): Promise<{
+  result: EvalVerdict;
+  calls: ToolCallRequest[];
+}> {
+  const fixtureDir = join(fixturesDir, fixtureName);
+  const request = (await readJson(join(
+    fixtureDir,
+    "request.json"
+  ))) as RunEvalRequest;
+  const recordedResultPath = join(fixtureDir, "recorded-result.json");
+
+  if (existsSync(recordedResultPath)) {
+    const recordedResult = (await readJson(recordedResultPath)) as ToolCallResult;
+    const replay = replayBroker(recordedResult);
+
+    return {
+      result: await runEvalAsync({
+        ...request,
+        broker: replay.callTool
+      }),
+      calls: replay.calls
+    };
+  }
+
+  return {
+    result: runEval(request),
+    calls: []
+  };
+}
+
 async function readJson(path: string) {
   return JSON.parse(await readFile(path, "utf8")) as unknown;
 }
@@ -1749,6 +2732,46 @@ function expectFailClosedDecisionHash(verdict: EvalVerdict) {
   );
   expect(verdict.provenance?.decisionHash).toMatch(decisionHashPattern);
   expect(recomputeDecisionHash(verdict)).toBe(verdict.provenance?.decisionHash);
+}
+
+function verdictsByEvalId(verdicts: readonly EvalVerdict[]) {
+  return Object.fromEntries(
+    verdicts.map((verdict) => [verdict.evalId, verdict])
+  );
+}
+
+function findingCodes(verdict: EvalVerdict): string[] {
+  const codes: string[] = [];
+
+  for (const finding of verdict.findings) {
+    collectFindingCodes(finding, codes);
+  }
+
+  return codes;
+}
+
+function collectFindingCodes(finding: unknown, codes: string[]) {
+  if (!isRecordValue(finding)) {
+    return;
+  }
+
+  if (typeof finding.code === "string") {
+    codes.push(finding.code);
+  }
+
+  const nested = isRecordValue(finding.metadata)
+    ? finding.metadata.findings
+    : undefined;
+
+  if (Array.isArray(nested)) {
+    for (const item of nested) {
+      collectFindingCodes(item, codes);
+    }
+  }
+}
+
+function isRecordValue(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function unsupportedObjectValues(): unknown[] {

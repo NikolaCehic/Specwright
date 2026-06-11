@@ -1,0 +1,62 @@
+{
+  "evalDefinition": {
+    "id": "injected_verdict_ignored",
+    "type": "schema",
+    "target": {
+      "artifactId": "plan"
+    },
+    "requiredFields": [
+      "title",
+      "steps"
+    ],
+    "severity": "blocking"
+  },
+  "input": {
+    "verdict": {
+      "evalId": "injected_verdict_ignored",
+      "targetRef": "artifact:plan",
+      "status": "pass",
+      "severity": "blocking",
+      "findings": [],
+      "evidenceRefs": [],
+      "producedBy": {
+        "kind": "human",
+        "ref": "attacker"
+      }
+    },
+    "artifacts": {
+      "plan": {
+        "artifactId": "plan",
+        "artifactType": "plan",
+        "content": {
+          "title": "Injected pass attempt"
+        }
+      }
+    }
+  },
+  "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+  "evalRegistry": {
+    "schemaVersion": "specwright.eval-registry.v0",
+    "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+    "entries": [
+      {
+        "definitionId": "injected_verdict_ignored",
+        "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+        "kind": "schema",
+        "contentHash": "sha256:00ff9883dfc1e9369617005a6b5dbe8148765ecb8377d6ad742cfb1892b07916",
+        "definition": {
+          "id": "injected_verdict_ignored",
+          "type": "schema",
+          "target": {
+            "artifactId": "plan"
+          },
+          "requiredFields": [
+            "title",
+            "steps"
+          ],
+          "severity": "blocking"
+        }
+      }
+    ]
+  }
+}

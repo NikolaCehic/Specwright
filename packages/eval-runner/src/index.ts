@@ -1429,7 +1429,9 @@ function evaluateSourceFidelityCheck(
       return;
     }
 
-    const missingRefs = refs.filter((ref) => !hasEvidenceRef(input.evidence, ref));
+    const missingRefs = refs.filter(
+      (ref) => !hasEvidenceRef(input.evidence, ref, target)
+    );
 
     if (missingRefs.length > 0) {
       findings.push(
@@ -2116,13 +2118,34 @@ function evidenceRefsForValue(value: unknown): string[] {
 
 function hasEvidenceRef(
   evidence: EvalEvidenceSnapshot | undefined,
-  ref: string
+  ref: string,
+  target?: ResolvedArtifact | undefined
 ) {
+  if (target !== undefined && isSelfEvidenceRef(ref, target)) {
+    return false;
+  }
+
   if (evidence === undefined) {
     return true;
   }
 
   return collectEvidenceRefs(evidence).has(ref);
+}
+
+function isSelfEvidenceRef(ref: string, target: ResolvedArtifact) {
+  const normalizedRef = ref.split("#", 1)[0] ?? ref;
+  const selfRefs = uniqueStrings([
+    target.ref,
+    target.artifact.artifactId,
+    target.artifact.id,
+    target.artifact.artifactType
+  ].flatMap((value) =>
+    typeof value === "string" && value.length > 0
+      ? [value, value.startsWith("artifact:") ? value : `artifact:${value}`]
+      : []
+  ));
+
+  return selfRefs.includes(normalizedRef);
 }
 
 function collectEvidenceRefs(value: unknown, depth = 0): Set<string> {

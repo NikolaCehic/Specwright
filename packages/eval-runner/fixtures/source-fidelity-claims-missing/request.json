@@ -1,0 +1,52 @@
+{
+  "evalDefinition": {
+    "id": "source_fidelity_claims_missing",
+    "type": "source_fidelity",
+    "target": {
+      "artifactId": "ux_contract"
+    },
+    "claimsPath": "claims",
+    "severity": "blocking"
+  },
+  "input": {
+    "artifacts": {
+      "ux_contract": {
+        "artifactId": "ux_contract",
+        "artifactType": "ux_contract",
+        "content": {
+          "summary": "No structured claims were emitted."
+        }
+      }
+    },
+    "evidence": {
+      "records": [
+        {
+          "id": "evidence:brief#1",
+          "claim": "The brief exists."
+        }
+      ]
+    }
+  },
+  "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+  "evalRegistry": {
+    "schemaVersion": "specwright.eval-registry.v0",
+    "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+    "entries": [
+      {
+        "definitionId": "source_fidelity_claims_missing",
+        "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+        "kind": "source_fidelity",
+        "contentHash": "sha256:c61b7a2720d38c7d8f2976dbdd2bcf47539fbb79e63c4008e29bd3c2eeec3bc9",
+        "definition": {
+          "id": "source_fidelity_claims_missing",
+          "type": "source_fidelity",
+          "target": {
+            "artifactId": "ux_contract"
+          },
+          "claimsPath": "claims",
+          "severity": "blocking"
+        }
+      }
+    ]
+  }
+}
