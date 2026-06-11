@@ -294,7 +294,7 @@ phases:
     expect(first.schemaVersion).toBe(SUPPORTED_HARNESS_SCHEMA_VERSION);
     expect(first.specHash).toStartWith("sha256:");
     expect(first.specHash).toBe(
-      "sha256:b29c8e3e58717c6c97bdf6029278cc6763cb0bc3492ff40a67ff7aaf0d4be456"
+      "sha256:35d21524acbca9e715a69a9f1166d65b2499b86d1c23f147baccb1f2d082c3b3"
     );
     expect(first.specHash).toBe(second.specHash);
     expect(first.phases.map((phase) => phase.id)).toEqual([
@@ -643,7 +643,7 @@ phases:
       resolved: []
     });
     expect(record.snapshot.specHash).toBe(
-      "sha256:b29c8e3e58717c6c97bdf6029278cc6763cb0bc3492ff40a67ff7aaf0d4be456"
+      "sha256:35d21524acbca9e715a69a9f1166d65b2499b86d1c23f147baccb1f2d082c3b3"
     );
     expect(events).toHaveLength(0);
   });

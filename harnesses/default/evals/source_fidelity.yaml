@@ -1,6 +1,11 @@
 id: source_fidelity
 description: Verify important plan claims are backed by recorded evidence.
 type: source_fidelity
+datasetRef:
+  id: specwright.default.source_fidelity
+  version: "1.0.0"
+  path: packages/eval-runner/fixtures/default-datasets/source_fidelity.json
+  contentId: sha256:f9202ee5ce4d13ec541115f461254eda47d55b7e68ec3f82af32f0c95ce11996
 target:
   artifactId: plan
 artifactSchemas:

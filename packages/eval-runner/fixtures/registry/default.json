@@ -6,20 +6,26 @@
       "definitionId": "artifact_schema_presence",
       "harnessPackageId": "specwright.default@0.1.0",
       "kind": "artifact_schema",
-      "contentHash": "sha256:bd738b2849111e348ba6b9678d821605b89a3f44bdfb0f66300b737441b73eb7",
+      "contentHash": "sha256:9130a3b67a1c34c2c0d02bc036ed42d3abbb7f2cb3430986c32b8d0931657cc8",
       "definition": {
         "id": "artifact_schema_presence",
         "description": "Ensure the plan artifact exists and exposes required schema fields.",
-        "type": "deterministic",
-        "target": {
-          "artifactId": "plan"
-        },
-        "artifactSchemas": [
-          "plan"
-        ],
         "requiredArtifacts": [
           "plan"
         ],
+        "artifactSchemas": [
+          "plan"
+        ],
+        "type": "deterministic",
+        "datasetRef": {
+          "id": "specwright.default.artifact_schema_presence",
+          "version": "1.0.0",
+          "path": "packages/eval-runner/fixtures/default-datasets/artifact_schema_presence.json",
+          "contentId": "sha256:60908c02ed97ebdc630aef606a1dad54a8769a63be952bea268e6208bfc33604"
+        },
+        "target": {
+          "artifactId": "plan"
+        },
         "blocking": true,
         "checks": [
           {
@@ -55,22 +61,28 @@
       "definitionId": "source_fidelity",
       "harnessPackageId": "specwright.default@0.1.0",
       "kind": "source_fidelity",
-      "contentHash": "sha256:522ff57f239a5d121237de668ffeb647ec2dd346325bf62af61fb065720d4607",
+      "contentHash": "sha256:0ad49c39349114d90d1bfc6ec09351b2b6e9d230f4958a81e3fe182f6520a038",
       "definition": {
         "id": "source_fidelity",
         "description": "Verify important plan claims are backed by recorded evidence.",
-        "type": "source_fidelity",
-        "target": {
-          "artifactId": "plan"
-        },
-        "artifactSchemas": [
-          "plan",
-          "evidence-graph"
-        ],
         "requiredArtifacts": [
           "plan",
           "evidence-graph"
         ],
+        "artifactSchemas": [
+          "plan",
+          "evidence-graph"
+        ],
+        "type": "source_fidelity",
+        "datasetRef": {
+          "id": "specwright.default.source_fidelity",
+          "version": "1.0.0",
+          "path": "packages/eval-runner/fixtures/default-datasets/source_fidelity.json",
+          "contentId": "sha256:f9202ee5ce4d13ec541115f461254eda47d55b7e68ec3f82af32f0c95ce11996"
+        },
+        "target": {
+          "artifactId": "plan"
+        },
         "claimsPath": "claims",
         "blocking": true,
         "checks": [
@@ -96,20 +108,26 @@
       "definitionId": "completeness_required_sections",
       "harnessPackageId": "specwright.default@0.1.0",
       "kind": "completeness",
-      "contentHash": "sha256:363ef7cffb66ee2750b8c36ccfb8000d889360fa9d19ebfd90debb19508b674e",
+      "contentHash": "sha256:3708001dc34fd8a530c43144ddde8675dda53052a07ebc70fd49a210f082a4e8",
       "definition": {
         "id": "completeness_required_sections",
         "description": "Ensure the plan includes the minimum reviewable planning sections.",
-        "type": "completeness",
-        "target": {
-          "artifactId": "plan"
-        },
-        "artifactSchemas": [
-          "plan"
-        ],
         "requiredArtifacts": [
           "plan"
         ],
+        "artifactSchemas": [
+          "plan"
+        ],
+        "type": "completeness",
+        "datasetRef": {
+          "id": "specwright.default.completeness_required_sections",
+          "version": "1.0.0",
+          "path": "packages/eval-runner/fixtures/default-datasets/completeness_required_sections.json",
+          "contentId": "sha256:63af2df0e9262c396ab8918c9bac53adf1b3753977f3b7448eb2cc79a79ffd7a"
+        },
+        "target": {
+          "artifactId": "plan"
+        },
         "requiredSections": [
           "goal",
           "evidence",

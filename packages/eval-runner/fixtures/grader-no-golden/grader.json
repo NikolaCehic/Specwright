@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "specwright.eval-grader.v0",
+  "id": "specwright.semantic-grader",
+  "version": "2.0.0",
+  "rubricHash": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "inputSchemaRef": "schema:model-input@1",
+  "outputSchemaRef": "schema:model-output@1",
+  "samplingBand": {
+    "min": 0,
+    "max": 1
+  }
+}

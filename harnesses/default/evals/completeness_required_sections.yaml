@@ -1,6 +1,11 @@
 id: completeness_required_sections
 description: Ensure the plan includes the minimum reviewable planning sections.
 type: completeness
+datasetRef:
+  id: specwright.default.completeness_required_sections
+  version: "1.0.0"
+  path: packages/eval-runner/fixtures/default-datasets/completeness_required_sections.json
+  contentId: sha256:63af2df0e9262c396ab8918c9bac53adf1b3753977f3b7448eb2cc79a79ffd7a
 target:
   artifactId: plan
 artifactSchemas:

@@ -27,6 +27,8 @@ import {
   hashValue,
   inputHashesToCausationIds,
   unresolvedDecisionInputHashes,
+  type DecisionInputHashes,
+  type HashDigest,
   type OrderedCheckResult,
   type ResolvedInputsHashInput
 } from "./decision-hash";
@@ -34,6 +36,29 @@ import {
   evaluateModelAssistedGrader,
   type EvalBrokerPort
 } from "./model-assisted";
+import {
+  DATASET_MISSING_CODE,
+  DATASET_MALFORMED_CODE,
+  DATASET_POISONED_CODE,
+  datasetReferenceFromDefinition,
+  findGoldenCase,
+  hasDeclaredDatasetReference,
+  resolveDataset,
+  targetTypeFromTargetRef,
+  type DatasetResolver,
+  type PinnedDataset
+} from "./datasets";
+import {
+  GRADER_NO_GOLDEN_CODE,
+  enforceGoldenRegressionBar,
+  type PinnedGrader
+} from "./graders";
+import {
+  REGRESSION_DECISION_HASH_DEFECT_CODE,
+  REGRESSION_GOLDEN_BINDING_MISMATCH_CODE,
+  evaluateRegression,
+  type EvalRegressionResult
+} from "./regression";
 
 export {
   DECISION_HASH_FAIL_CLOSED_CODE,
@@ -51,6 +76,58 @@ export {
   type OrderedCheckResult,
   type ResolvedInputsHashInput
 } from "./decision-hash";
+export {
+  DATASET_HASH_MISMATCH_CODE,
+  DATASET_MALFORMED_CODE,
+  DATASET_MISSING_CODE,
+  DATASET_POISONED_CODE,
+  DatasetCaseSchema,
+  DatasetGoldenVerdictSchema,
+  DatasetManifestSchema,
+  DatasetReferenceSchema,
+  canonicalizeDatasetManifest,
+  computeDatasetContentId,
+  datasetReferenceFromDefinition,
+  findGoldenCase,
+  hasDeclaredDatasetReference,
+  parseDatasetManifest,
+  pinDataset,
+  resolveDataset,
+  targetTypeFromTargetRef,
+  verifyDatasetPin,
+  type DatasetCase,
+  type DatasetManifest,
+  type DatasetReference,
+  type DatasetResolution,
+  type DatasetResolver,
+  type PinnedDataset
+} from "./datasets";
+export {
+  GRADER_NO_GOLDEN_CODE,
+  GraderManifestSchema,
+  canonicalizeGraderManifest,
+  computeGraderContentId,
+  enforceGoldenRegressionBar,
+  parseGraderManifest,
+  pinGrader,
+  type GraderBlockingBar,
+  type GraderManifest,
+  type PinnedGrader
+} from "./graders";
+export {
+  REGRESSION_DECISION_HASH_DEFECT_CODE,
+  REGRESSION_GOLDEN_BINDING_MISMATCH_CODE,
+  REGRESSION_GOLDEN_MISSING_CODE,
+  REPLAY_DERIVATION_REQUIRED_CODE,
+  EvalRegressionProvenanceSchema,
+  EvalRegressionResultSchema,
+  ReplayGuardResultSchema,
+  evaluateRegression,
+  guardDatasetBoundReplay,
+  type EvalRegressionProvenance,
+  type EvalRegressionResult,
+  type ReplayGuardResult
+} from "./regression";
 export type {
   EvalBrokerContext,
   EvalBrokerPort,
@@ -127,7 +204,21 @@ export type FixtureEvalDefinition = EvalDefinition & {
   claimsPath?: string | undefined;
   sectionsPath?: string | undefined;
   unsupportedStatus?: EvalVerdict["status"] | undefined;
+  dataset?: unknown;
+  datasetRef?: unknown;
+  graderManifest?: unknown;
 } & Record<string, unknown>;
+
+export type EvalRegressionRunOptions = {
+  enabled?: boolean | undefined;
+  harnessSpecHash?: HashDigest | undefined;
+  decisionInputHashes?: DecisionInputHashes | undefined;
+  datasetRequired?: boolean | undefined;
+  mismatchCode?:
+    | "eval.dataset.hash_mismatch"
+    | "eval.dataset.poisoned"
+    | undefined;
+};
 
 export type RunEvalRequest = {
   harnessPackageId?: string | undefined;
@@ -144,6 +235,15 @@ export type RunEvalRequest = {
   phase?: string | undefined;
   runId?: string | undefined;
   traceId?: string | undefined;
+  ciInvocationId?: string | undefined;
+  datasetManifest?: unknown;
+  currentDatasetManifest?: unknown;
+  pinnedDataset?: PinnedDataset | undefined;
+  datasetResolver?: DatasetResolver | undefined;
+  datasetRequired?: boolean | undefined;
+  datasetCaseId?: string | undefined;
+  regression?: EvalRegressionRunOptions | undefined;
+  graderManifest?: unknown;
 };
 
 export type RunEvalsRequest = Omit<RunEvalRequest, "evalDefinition"> & {
@@ -174,6 +274,13 @@ type CheckEvaluation =
       finding: EvalFinding;
       evidenceRefs: string[];
     };
+
+export type RunEvalWithRegressionResult = {
+  verdict: EvalVerdict;
+  dataset?: PinnedDataset | undefined;
+  grader?: PinnedGrader | undefined;
+  regression?: EvalRegressionResult | undefined;
+};
 
 export function runEval(request: RunEvalRequest): EvalVerdict {
   const resolution = resolveEvalDefinition(request);
@@ -232,6 +339,19 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
   const severity = evalSeverity(definition);
   const target = resolveTargetArtifact(definition, request.input);
   const targetRef = target?.ref ?? targetRefFromDefinition(definition) ?? `eval:${evalId}`;
+  const datasetFailure = datasetFailClosedVerdictForRequest({
+    request,
+    resolution,
+    definition,
+    evalId,
+    target,
+    targetRef,
+    evaluatorRef
+  });
+
+  if (datasetFailure !== undefined) {
+    return datasetFailure;
+  }
 
   if (definition.skip === true || definition.enabled === false) {
     return buildVerdict({
@@ -449,6 +569,19 @@ export async function runEvalAsync(request: RunEvalRequest): Promise<EvalVerdict
   const severity = evalSeverity(definition);
   const target = resolveTargetArtifact(definition, request.input);
   const targetRef = target?.ref ?? targetRefFromDefinition(definition) ?? `eval:${evalId}`;
+  const datasetFailure = datasetFailClosedVerdictForRequest({
+    request,
+    resolution,
+    definition,
+    evalId,
+    target,
+    targetRef,
+    evaluatorRef
+  });
+
+  if (datasetFailure !== undefined) {
+    return datasetFailure;
+  }
 
   if (definition.skip === true || definition.enabled === false) {
     return buildVerdict({
@@ -632,6 +765,39 @@ export async function runEvalAsync(request: RunEvalRequest): Promise<EvalVerdict
     });
   }
 
+  const graderBar = graderBarForRequest({
+    request,
+    definition,
+    targetRef,
+    severity
+  });
+
+  if (graderBar !== undefined && !graderBar.allowed) {
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status: "needs_review",
+      severity: "advisory",
+      findings: [graderBar.finding],
+      evidenceRefs,
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target,
+        checkResults: [
+          ...checkResults,
+          {
+            type: "model_assisted",
+            status: "needs_review",
+            code: GRADER_NO_GOLDEN_CODE
+          }
+        ]
+      })
+    });
+  }
+
   const modelEvaluation = await evaluateModelAssistedGrader({
     definition,
     evalId,
@@ -678,6 +844,368 @@ export async function runEvalAsync(request: RunEvalRequest): Promise<EvalVerdict
       target,
       checkResults: modelCheckResults
     })
+  });
+}
+
+export function runEvalWithRegression(
+  request: RunEvalRequest
+): RunEvalWithRegressionResult {
+  const prepared = prepareDatasetForRequest(request);
+
+  if (prepared?.status === "fail_closed") {
+    return {
+      verdict: prepared.verdict
+    };
+  }
+
+  const verdict = runEval(request);
+
+  if (prepared?.status !== "resolved") {
+    return {
+      verdict
+    };
+  }
+
+  const regression = regressionForVerdict({
+    request,
+    verdict,
+    dataset: prepared.dataset
+  });
+
+  if (
+    regression?.status === "decision_hash_defect" ||
+    regression?.status === "binding_mismatch"
+  ) {
+    return {
+      verdict: regressionDefectVerdict({
+        request,
+        verdict,
+        regression
+      }),
+      dataset: prepared.dataset,
+      regression
+    };
+  }
+
+  return {
+    verdict,
+    dataset: prepared.dataset,
+    regression
+  };
+}
+
+function prepareDatasetForRequest(
+  request: RunEvalRequest
+):
+  | {
+      status: "resolved";
+      dataset: PinnedDataset;
+    }
+  | {
+      status: "fail_closed";
+      verdict: EvalVerdict;
+    }
+  | undefined {
+  const resolution = resolveEvalDefinition(request);
+  const definition = resolution.status === "resolved" ? resolution.definition : undefined;
+  const evalId = request.evalId ?? request.evalDefinition?.id ?? resolution.definitionId;
+  const evaluatorRef =
+    request.evaluatorRef ?? DEFAULT_EVAL_RUNNER_EVALUATOR;
+
+  if (definition === undefined) {
+    return undefined;
+  }
+
+  const target = resolveTargetArtifact(definition, request.input);
+  const targetRef = target?.ref ?? targetRefFromDefinition(definition) ?? `eval:${evalId}`;
+  const resolutionResult = datasetResolutionForRequest({
+    request,
+    definition,
+    evalId
+  });
+
+  if (resolutionResult === undefined) {
+    return undefined;
+  }
+
+  if (resolutionResult.status === "resolved") {
+    return {
+      status: "resolved",
+      dataset: resolutionResult.pinned
+    };
+  }
+
+  return {
+    status: "fail_closed",
+    verdict: datasetFailureVerdict({
+      request,
+      resolution,
+      definition,
+      evalId,
+      target,
+      targetRef,
+      evaluatorRef,
+      datasetResolution: resolutionResult
+    })
+  };
+}
+
+function datasetFailClosedVerdictForRequest(input: {
+  request: RunEvalRequest;
+  resolution: EvalDefinitionResolution;
+  definition: FixtureEvalDefinition;
+  evalId: string;
+  target: ResolvedArtifact | undefined;
+  targetRef: string;
+  evaluatorRef: string;
+}): EvalVerdict | undefined {
+  const datasetResolution = datasetResolutionForRequest({
+    request: input.request,
+    definition: input.definition,
+    evalId: input.evalId
+  });
+
+  if (
+    datasetResolution === undefined ||
+    datasetResolution.status === "resolved"
+  ) {
+    return undefined;
+  }
+
+  return datasetFailureVerdict({
+    ...input,
+    datasetResolution
+  });
+}
+
+function datasetResolutionForRequest(input: {
+  request: RunEvalRequest;
+  definition: FixtureEvalDefinition;
+  evalId: string;
+}) {
+  const hasDatasetInput =
+    input.request.datasetManifest !== undefined ||
+    input.request.currentDatasetManifest !== undefined ||
+    input.request.pinnedDataset !== undefined ||
+    input.request.datasetResolver !== undefined ||
+    hasDeclaredDatasetReference(input.definition);
+  const required =
+    hasDeclaredDatasetReference(input.definition) ||
+    input.request.datasetRequired === true ||
+    input.request.regression?.enabled === true ||
+    input.request.regression?.datasetRequired === true;
+
+  if (!hasDatasetInput && !required) {
+    return undefined;
+  }
+
+  const datasetInput: Parameters<typeof resolveDataset>[0] = {
+    evalId: input.evalId,
+    definition: input.definition,
+    manifest:
+      input.request.currentDatasetManifest ?? input.request.datasetManifest,
+    required
+  };
+
+  if (input.request.pinnedDataset !== undefined) {
+    datasetInput.pinned = input.request.pinnedDataset;
+  }
+
+  if (input.request.datasetResolver !== undefined) {
+    datasetInput.resolver = input.request.datasetResolver;
+  }
+
+  if (input.request.runId !== undefined) {
+    datasetInput.runId = input.request.runId;
+  }
+
+  if (input.request.ciInvocationId !== undefined) {
+    datasetInput.ciInvocationId = input.request.ciInvocationId;
+  }
+
+  if (input.request.regression?.mismatchCode !== undefined) {
+    datasetInput.mismatchCode = input.request.regression.mismatchCode;
+  }
+
+  const result = resolveDataset(datasetInput);
+
+  if (result.status === "missing" && !required) {
+    return undefined;
+  }
+
+  return result;
+}
+
+function datasetFailureVerdict(input: {
+  request: RunEvalRequest;
+  resolution: EvalDefinitionResolution;
+  definition: FixtureEvalDefinition;
+  evalId: string;
+  target: ResolvedArtifact | undefined;
+  targetRef: string;
+  evaluatorRef: string;
+  datasetResolution: Exclude<
+    ReturnType<typeof resolveDataset>,
+    { status: "resolved" }
+  >;
+}): EvalVerdict {
+  const code = input.datasetResolution.code;
+
+  return buildVerdict({
+    evalId: input.evalId,
+    targetRef: input.targetRef,
+    status: "fail",
+    severity: "blocking",
+    findings: [
+      makeFinding({
+        message: input.datasetResolution.message,
+        code,
+        targetRef: input.targetRef,
+        severity: "blocking",
+        repairHint:
+          code === DATASET_MISSING_CODE
+            ? "Resolve and pin the eval dataset before running regression analysis."
+            : code === DATASET_MALFORMED_CODE
+              ? "Fix the dataset reference before running this eval."
+            : "Restore the pinned dataset bytes or re-pin the dataset through a governed run.",
+        metadata: {
+          dataset: {
+            expectedContentId:
+              input.datasetResolution.status === "mismatch"
+                ? input.datasetResolution.expectedContentId
+                : undefined,
+            actualContentId:
+              input.datasetResolution.status === "mismatch"
+                ? input.datasetResolution.actualContentId
+                : undefined,
+            ref: input.datasetResolution.ref,
+            malformed: code === DATASET_MALFORMED_CODE,
+            poisoned: code === DATASET_POISONED_CODE
+          }
+        }
+      })
+    ],
+    evidenceRefs: input.target?.evidenceRefs ?? [],
+    evaluatorRef: input.evaluatorRef,
+    provenance: {
+      runId: input.request.runId,
+      phase: input.request.phase,
+      traceId: input.request.traceId
+    },
+    decisionContext: decisionContextFor({
+      request: input.request,
+      resolution: input.resolution,
+      definition: input.definition,
+      target: input.target,
+      checkResults: [
+        {
+          type: "dataset",
+          status: "fail",
+          code
+        }
+      ]
+    })
+  });
+}
+
+function regressionForVerdict(input: {
+  request: RunEvalRequest;
+  verdict: EvalVerdict;
+  dataset: PinnedDataset;
+}): EvalRegressionResult | undefined {
+  if (input.request.regression?.enabled !== true) {
+    return undefined;
+  }
+
+  const targetType = targetTypeFromTargetRef(input.verdict.targetRef);
+  const goldenCase = findGoldenCase({
+    pinned: input.dataset,
+    evalId: input.verdict.evalId,
+    targetType,
+    caseId: input.request.datasetCaseId
+  });
+
+  return evaluateRegression({
+    current: input.verdict,
+    golden: goldenCase?.golden,
+    dataset: input.dataset,
+    targetType,
+    harnessSpecHash: input.request.regression.harnessSpecHash,
+    decisionInputHashes: input.request.regression.decisionInputHashes
+  });
+}
+
+function regressionDefectVerdict(input: {
+  request: RunEvalRequest;
+  verdict: EvalVerdict;
+  regression: EvalRegressionResult;
+}): EvalVerdict {
+  const code =
+    input.regression.findingCode ?? REGRESSION_DECISION_HASH_DEFECT_CODE;
+
+  return buildVerdict({
+    evalId: input.verdict.evalId,
+    targetRef: input.verdict.targetRef,
+    status: "fail",
+    severity: "blocking",
+    findings: [
+      makeFinding({
+        message:
+          input.regression.message ??
+          "Eval regression analysis could not recompute the decision hash",
+        code,
+        targetRef: input.verdict.targetRef,
+        severity: "blocking",
+        repairHint:
+          code === REGRESSION_GOLDEN_BINDING_MISMATCH_CODE
+            ? "Fix the dataset golden baseline binding before classifying regression status."
+            : "Re-derive the eval verdict from recorded inputs before classifying regression status.",
+        metadata: {
+          regression: input.regression
+        }
+      })
+    ],
+    evidenceRefs: input.verdict.evidenceRefs,
+    evaluatorRef: input.request.evaluatorRef ?? DEFAULT_EVAL_RUNNER_EVALUATOR,
+    provenance: {
+      runId: input.request.runId,
+      phase: input.request.phase,
+      traceId: input.request.traceId
+    },
+    decisionContext: {
+      targetContent: input.verdict,
+      evidenceSnapshot: undefined,
+      definition: {
+        defect: REGRESSION_DECISION_HASH_DEFECT_CODE
+      },
+      checkResults: [
+        {
+          type: "regression",
+          status: "fail",
+          code
+        }
+      ]
+    }
+  });
+}
+
+function graderBarForRequest(input: {
+  request: RunEvalRequest;
+  definition: FixtureEvalDefinition;
+  targetRef: string;
+  severity: EvalSeverity;
+}) {
+  const manifest = input.request.graderManifest ?? input.definition.graderManifest;
+
+  if (manifest === undefined) {
+    return undefined;
+  }
+
+  return enforceGoldenRegressionBar({
+    manifest,
+    targetRef: input.targetRef,
+    severity: input.severity,
+    blocking: input.severity === "blocking"
   });
 }
 
