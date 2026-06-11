@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "."
+  },
+  "idempotencyKey": "fixture-fs-list-deny",
+  "reason": "Conformance fixture for fs.list deny",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.list"
+}

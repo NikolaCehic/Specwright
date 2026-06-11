@@ -1,0 +1,51 @@
+{
+  "id": "evt_replay_fs_list_completed",
+  "runId": "run_replay_corpus",
+  "timestamp": "2026-06-10T00:00:00.000Z",
+  "sequence": 1,
+  "traceId": "trace_conformance_fs_list_allow",
+  "causationId": "evt_replay_fs_list_completed_requested",
+  "type": "tool.completed",
+  "payload": {
+    "request": {
+      "args": {
+        "path": "."
+      },
+      "idempotencyKey": "fixture-fs-list-allow",
+      "reason": "Conformance fixture for fs.list allow",
+      "requestedBy": {
+        "phase": "evidence"
+      },
+      "toolId": "fs.list"
+    },
+    "result": {
+      "toolCallId": "tool_replay_fs_list_allow",
+      "output": {
+        "entries": [
+          {
+            "name": "docs",
+            "path": "docs",
+            "type": "directory"
+          },
+          {
+            "name": "src",
+            "path": "src",
+            "type": "directory"
+          }
+        ],
+        "path": "."
+      },
+      "provenance": {
+        "adapterVersion": "0.1.0",
+        "argsHash": "sha256:4ae486c3a48f8dc732af672b138b438a1d96960304cc334d46bbc2687d169cbb",
+        "cacheStatus": "bypass",
+        "decisionHash": "sha256:a79bbbe57193df4dc5ec069c5f22614780cb0e02132af7054d539585882f56de",
+        "resultHash": "sha256:aab3ddc76f2059d02088d51fe9d8c20a5b3305c971a575ad825d050ace85f016",
+        "toolId": "fs.list",
+        "toolVersion": "0.1.0",
+        "traceId": "trace_conformance_fs_list_allow"
+      },
+      "status": "success"
+    }
+  }
+}

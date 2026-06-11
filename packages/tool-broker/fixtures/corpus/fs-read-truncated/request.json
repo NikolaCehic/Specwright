@@ -1,0 +1,12 @@
+{
+  "args": {
+    "path": "docs/readme.md",
+    "maxBytes": 10
+  },
+  "idempotencyKey": "fixture-fs-read-truncated",
+  "reason": "Conformance fixture for fs.read truncation",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

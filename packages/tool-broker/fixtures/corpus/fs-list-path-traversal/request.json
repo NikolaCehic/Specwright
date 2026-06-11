@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "../outside"
+  },
+  "idempotencyKey": "fixture-fs-list-path-traversal",
+  "reason": "Conformance fixture for fs.list traversal failure",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.list"
+}

@@ -1,0 +1,9 @@
+{
+  "args": {},
+  "idempotencyKey": "fixture-fs-read-invalid-input",
+  "reason": "Conformance fixture for fs.read invalid input",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

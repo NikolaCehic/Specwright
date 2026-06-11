@@ -1,0 +1,19 @@
+{
+  "output": {
+    "bytesRead": 36,
+    "content": "export const sample = \"Specwright\";\n",
+    "encoding": "utf8",
+    "path": "src/index.ts",
+    "truncated": false
+  },
+  "provenance": {
+    "adapterVersion": "0.1.0",
+    "argsHash": "sha256:be25f3f85c5b85e95514080872ba0bca69acd8e1cec464b632945e79fed1d5b6",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:2acc939c4f5960238de9f5e8d57b8aafea1e435e182ced7f2223488bc76ea96a",
+    "resultHash": "sha256:9f04b82565fed40416f343d6e17ffc77ff29758d6e9a589a63c49bf5a7ffc317",
+    "toolId": "fs.read",
+    "toolVersion": "0.1.0"
+  },
+  "status": "success"
+}

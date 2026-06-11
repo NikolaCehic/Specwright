@@ -1,0 +1,15 @@
+{
+  "error": {
+    "code": "policy_denied",
+    "message": "Fixture denies fs.list",
+    "retryable": false
+  },
+  "provenance": {
+    "argsHash": "sha256:4ae486c3a48f8dc732af672b138b438a1d96960304cc334d46bbc2687d169cbb",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:e8df9d1316a1f1a13b9ea09599effed2aaed9fbd759c285c4ce265de01f5254e",
+    "toolId": "fs.list",
+    "toolVersion": "0.1.0"
+  },
+  "status": "denied"
+}

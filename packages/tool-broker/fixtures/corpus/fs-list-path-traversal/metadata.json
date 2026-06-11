@@ -1,0 +1,5 @@
+{
+  "capabilityId": "fs.list",
+  "coverage": "failure_or_redaction",
+  "title": "fs.list path traversal denied by containment"
+}

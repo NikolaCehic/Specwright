@@ -1,0 +1,5 @@
+{
+  "policy": "throw",
+  "registry": "default",
+  "traceId": "trace_conformance_policy_error"
+}

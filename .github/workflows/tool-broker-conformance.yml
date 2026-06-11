@@ -1,0 +1,41 @@
+name: Tool Broker Conformance
+
+on:
+  pull_request:
+    paths:
+      - "packages/tool-broker/**"
+      - ".github/workflows/tool-broker-conformance.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/tool-broker/**"
+      - ".github/workflows/tool-broker-conformance.yml"
+
+jobs:
+  broker-conformance:
+    name: Broker conformance gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.14"
+
+      - name: Install
+        run: bun install
+
+      - name: Build
+        run: bun run build
+
+      - name: Broker conformance
+        run: bun run --cwd packages/tool-broker conformance:broker
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Proof
+        run: bun run proof:v0

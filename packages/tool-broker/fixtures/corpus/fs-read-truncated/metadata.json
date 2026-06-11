@@ -1,0 +1,6 @@
+{
+  "capabilityId": "fs.read",
+  "coverage": "allow",
+  "determinismGroup": "fs-read-docs-maxbytes",
+  "title": "fs.read deterministic truncated read"
+}

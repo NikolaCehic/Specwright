@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "src/index.ts"
+  },
+  "idempotencyKey": "fixture-fs-read-allow",
+  "reason": "Conformance fixture for fs.read allow",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

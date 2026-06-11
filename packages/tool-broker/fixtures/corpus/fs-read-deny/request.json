@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "src/index.ts"
+  },
+  "idempotencyKey": "fixture-fs-read-deny",
+  "reason": "Conformance fixture for fs.read deny",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

@@ -136,14 +136,17 @@ describe("capability registry declaration contracts", () => {
     );
   });
 
-  test("tierless, wrong-tier, and unmapped-kind definitions fail closed", () => {
+  test("tierless and wrong-tier definitions fail closed", () => {
     for (const definition of [
       definitionMissingIsolationTier(),
-      definitionWithWrongIsolationTier(),
-      definitionWithUnmappedKind()
+      definitionWithWrongIsolationTier()
     ]) {
       expectRegistrationRejection(definition, "missing_isolation_tier");
     }
+  });
+
+  test("unmapped capability kinds fail closed with tierless_kind", () => {
+    expectRegistrationRejection(definitionWithUnmappedKind(), "tierless_kind");
   });
 
   test("adapter kind mismatch fails closed with adapter_kind_mismatch", () => {

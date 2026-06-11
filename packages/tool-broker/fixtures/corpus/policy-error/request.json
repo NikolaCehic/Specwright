@@ -1,0 +1,11 @@
+{
+  "args": {
+    "path": "src/index.ts"
+  },
+  "idempotencyKey": "fixture-policy-error",
+  "reason": "Conformance fixture for policy error",
+  "requestedBy": {
+    "phase": "evidence"
+  },
+  "toolId": "fs.read"
+}

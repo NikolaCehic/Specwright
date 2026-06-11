@@ -1,0 +1,6 @@
+{
+  "capabilityId": "fs.read",
+  "coverage": "allow",
+  "repeatResultHash": true,
+  "title": "fs.read allowed source file"
+}

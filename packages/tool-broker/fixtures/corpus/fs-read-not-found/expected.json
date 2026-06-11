@@ -1,0 +1,16 @@
+{
+  "error": {
+    "code": "not_found",
+    "message": "Path missing.txt does not exist.",
+    "retryable": false
+  },
+  "provenance": {
+    "adapterVersion": "0.1.0",
+    "argsHash": "sha256:2a7b713785edb4f5ee706613d5494193732efb04b924833483b0a9d3585881d3",
+    "cacheStatus": "bypass",
+    "decisionHash": "sha256:c7b3d04d83e17d5c3fed80bb8300f7c78e1e84064f45952f9cb52502895a1a4c",
+    "toolId": "fs.read",
+    "toolVersion": "0.1.0"
+  },
+  "status": "failed"
+}
