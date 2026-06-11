@@ -23,7 +23,9 @@ implementation update reconciles the repo.
   instructions.
 - `packages/tool-broker`: capability boundary for v0 filesystem tools
   (`fs.list` and `fs.read`).
-- `packages/eval-runner`: deterministic fixture eval execution.
+- `packages/eval-runner`: governed eval execution with registry resolution,
+  deterministic verdict hashes, constrained model-assisted grading, pinned
+  datasets, regression checks, event/span emission, and conformance fixtures.
 - `packages/evidence-store`: evidence recording for source facts, assumptions,
   human decisions, and unresolved unknowns.
 - `packages/artifact-store`: schema-valid MVP artifact recording.
@@ -63,6 +65,26 @@ Run TypeScript checks:
 bun run typecheck
 ```
 
+## Eval Runner
+
+`packages/eval-runner` owns the Scope 07 eval contract. It resolves governed
+eval definitions from registry manifests, produces schema-valid verdicts with
+deterministic decision hashes, fails closed for malformed or unsupported inputs,
+routes model-assisted grading through explicit broker ports, binds regression
+checks to pinned dataset content, and records eval verdict/repair provenance as
+runtime events and trace spans.
+
+Run the eval-runner conformance suite directly:
+
+```bash
+bun run --cwd packages/eval-runner test
+bun run --cwd packages/eval-runner typecheck
+```
+
+The CI conformance gate runs when `packages/eval-runner/**` or its workflow
+changes, and includes install, build, eval-runner tests, eval-runner typecheck,
+root typecheck, and `proof:v0`.
+
 ## V0 Proof
 
 Run the single v0 proof command:
@@ -82,9 +104,10 @@ event log.
 - Default Harness v0 is a narrow source-bound planning fixture, not a full
   frontend-contract harness.
 - The brokered v0 capability set is limited to `fs.list` and `fs.read`.
-- There are no model calls, embeddings, browser or Playwright tools, shell
-  execution, git mutation, MCP adapter, approvals, or handoff packet workflows
-  in this slice.
+- There are no direct runtime-owned model calls, embeddings, browser or
+  Playwright tools, shell execution, git mutation, MCP adapter, approvals, or
+  handoff packet workflows in this slice. Model-assisted eval grading is
+  constrained behind explicit broker ports and conformance fixtures.
 - The CLI adapter is the reference adapter only; it should preserve runtime
   semantics rather than implement lifecycle behavior itself.
 - Runtime outputs are meant to prove strictness, replayability, and source
