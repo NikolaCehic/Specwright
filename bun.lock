@@ -29,6 +29,18 @@
         "zod": "^3.22.4",
       },
     },
+    "packages/adapters-mcp": {
+      "name": "@specwright/adapters-mcp",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/runtime": "workspace:*",
+        "@specwright/schemas": "workspace:*",
+        "zod": "^3.22.4",
+      },
+      "devDependencies": {
+        "@specwright/adapters-cli": "workspace:*",
+      },
+    },
     "packages/artifact-store": {
       "name": "@specwright/artifact-store",
       "version": "0.0.0",
@@ -141,6 +153,8 @@
     "@specwright/adapter-parity": ["@specwright/adapter-parity@workspace:packages/adapter-parity"],
 
     "@specwright/adapters-cli": ["@specwright/adapters-cli@workspace:packages/adapters-cli"],
+
+    "@specwright/adapters-mcp": ["@specwright/adapters-mcp@workspace:packages/adapters-mcp"],
 
     "@specwright/artifact-store": ["@specwright/artifact-store@workspace:packages/artifact-store"],
 
