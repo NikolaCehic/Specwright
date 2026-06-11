@@ -1,0 +1,52 @@
+{
+  "apiVersion": 1,
+  "command": "replay",
+  "outcome": "ok",
+  "runId": "run-contract",
+  "data": {
+    "state": {
+      "runId": "run-contract",
+      "status": "running",
+      "phase": "intake",
+      "harness": {
+        "id": "specwright.default",
+        "version": "0.1.0",
+        "specHash": "sha256:harness"
+      },
+      "budgets": {},
+      "pendingApprovals": [],
+      "pendingQuestions": [],
+      "artifacts": [],
+      "lastEventId": "event-1"
+    },
+    "events": [
+      {
+        "id": "event-1",
+        "runId": "run-contract",
+        "type": "run.started",
+        "contractId": "specwright.event.run.started",
+        "contractVersion": "1",
+        "schemaHash": "sha256:a670db6bd3212b2022150b28ed9b9636135886c9d7da76d98f926a060a047c53",
+        "timestamp": "2026-05-29T00:00:00.000Z",
+        "sequence": 0,
+        "traceId": "trace-1",
+        "payload": {
+          "budgets": {},
+          "harness": {
+            "id": "default",
+            "specHash": "sha256:harness-fixture",
+            "version": "1.0.0"
+          },
+          "initialPhase": "intake",
+          "input": {
+            "harnessId": "default",
+            "host": {
+              "kind": "cli"
+            },
+            "task": "Generate the authoritative contract registry."
+          }
+        }
+      }
+    ]
+  }
+}

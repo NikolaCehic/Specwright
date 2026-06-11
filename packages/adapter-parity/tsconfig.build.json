@@ -5,11 +5,23 @@
     "rootDir": "src",
     "outDir": "dist",
     "paths": {
+      "@specwright/adapters-cli": [
+        "../adapters-cli/dist/index.d.ts"
+      ],
+      "@specwright/adapters-cli/*": [
+        "../adapters-cli/dist/*"
+      ],
       "@specwright/runtime": [
         "../runtime/dist/index.d.ts"
       ],
       "@specwright/runtime/*": [
         "../runtime/dist/*"
+      ],
+      "@specwright/run-store": [
+        "../run-store/dist/index.d.ts"
+      ],
+      "@specwright/run-store/*": [
+        "../run-store/dist/*"
       ],
       "@specwright/schemas": [
         "../schemas/dist/index.d.ts"

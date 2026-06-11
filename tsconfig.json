@@ -90,6 +90,12 @@
       "@specwright/adapters-cli/*": [
         "packages/adapters-cli/src/*"
       ],
+      "@specwright/adapter-parity": [
+        "packages/adapter-parity/src/index.ts"
+      ],
+      "@specwright/adapter-parity/*": [
+        "packages/adapter-parity/src/*"
+      ],
       "@specwright/schemas": [
         "packages/schemas/src/index.ts"
       ],

@@ -1,0 +1,9 @@
+{
+  "apiVersion": 1,
+  "changes": [
+    {
+      "classification": "additive-compatible",
+      "description": "Initial apiVersion 1 envelope wraps prior raw JSON payloads under data and adds command/outcome metadata."
+    }
+  ]
+}
