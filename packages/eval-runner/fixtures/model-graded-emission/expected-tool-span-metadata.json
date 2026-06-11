@@ -1,0 +1,8 @@
+{
+  "toolId": "tool.model.semantic_grade",
+  "toolVersion": "1.0.0",
+  "requestHash": "sha256:5037d576456b69088b6979bb00cb6002a9349bba0ded449658424b284a3701e7",
+  "resultHash": "sha256:3c7dd15471aacdb584b576cbe7cc6122872648aa16091553e9fa32d55e84150e",
+  "tokenBudget": 512,
+  "rubricRef": "rubric:semantic-quality@1.0.0"
+}

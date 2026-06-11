@@ -18,6 +18,12 @@ import {
   GRADER_NO_GOLDEN_CODE,
   REGRESSION_DECISION_HASH_DEFECT_CODE,
   REGRESSION_GOLDEN_BINDING_MISMATCH_CODE,
+  EVAL_CHECKS_MISSING_EVENT,
+  EVAL_DEFINITION_MISSING_EVENT,
+  EVAL_REPAIR_TASK_CREATED_EVENT,
+  EVAL_TARGET_MISSING_EVENT,
+  EVAL_TYPE_UNSUPPORTED_EVENT,
+  EVAL_VERDICT_RECORDED_EVENT,
   DatasetManifestSchema,
   EvalRegressionResultSchema,
   GraderManifestSchema,
@@ -30,12 +36,18 @@ import {
   pinDataset,
   recomputeDecisionHash,
   hashResolvedInputs,
+  evaluateAndRecord,
+  projectEvalEmissionHistory,
+  recordEvalVerdict,
   runEval,
   runEvalAsync,
   runEvalWithRegression,
   resolveEvalDefinition,
   stableStringify,
   type DecisionInputHashes,
+  type EvalEmissionContext,
+  type EvalEmissionRuntimeEvent,
+  type EvalEmissionTraceSpan,
   type RunEvalRequest
 } from "./index";
 import {
@@ -404,6 +416,335 @@ describe("model-assisted eval runner fixtures", () => {
       "eval.grader.blocking_pass_not_authoritative"
     );
     expect(result.producedBy.kind).toBe("model_assisted");
+  });
+});
+
+describe("eval emission boundary", () => {
+  test("records verdict events and eval spans deterministically", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "schema-pass",
+      "request.json"
+    ))) as RunEvalRequest;
+    const first = await evaluateAndRecord(request, memoryEmissionContext());
+    const second = await evaluateAndRecord(request, memoryEmissionContext());
+
+    expect(first.verdict).toEqual(runEval(request));
+    expect(first.events.map((event) => event.type)).toEqual([
+      EVAL_VERDICT_RECORDED_EVENT
+    ]);
+    expect(first.spans.map((span) => `${span.kind}:${span.status}`)).toEqual([
+      "eval:pass",
+      "eval:success",
+      "eval:pass"
+    ]);
+    expect(first.provenance.definition.hash).toMatch(decisionHashPattern);
+    expect(first.provenance.target.contentHash).toMatch(decisionHashPattern);
+    expect(first.provenance.evidence.snapshotHash).toMatch(decisionHashPattern);
+    expect(first.provenance.decisionHash).toBe(
+      first.verdict.provenance?.decisionHash
+    );
+    expect(normalizeEmissionReplay(first)).toEqual(
+      normalizeEmissionReplay(second)
+    );
+
+    const history = projectEvalEmissionHistory({
+      events: first.events,
+      spans: first.spans
+    });
+    expect(history.verdicts).toHaveLength(1);
+    expect(history.verdicts[0]?.status).toBe("pass");
+    expect(history.spans[0]).toMatchObject({
+      kind: "eval",
+      status: "pass",
+      evalId: first.verdict.evalId,
+      targetRef: first.verdict.targetRef,
+      decisionHash: first.verdict.provenance?.decisionHash
+    });
+  });
+
+  test("emits fail-closed branch events keyed to finding codes", async () => {
+    const cases: Array<{
+      request: RunEvalRequest;
+      eventType: string;
+      code: string;
+    }> = [
+      {
+        request: {
+          evalId: "missing_definition",
+          evalDefinitions: [],
+          input: {}
+        },
+        eventType: EVAL_DEFINITION_MISSING_EVENT,
+        code: "eval.definition.missing"
+      },
+      {
+        request: registeredEvalRequest(
+          {
+            id: "missing_target",
+            type: "schema",
+            target: {
+              artifactId: "plan"
+            },
+            requiredFields: ["title"]
+          },
+          {
+            artifacts: {}
+          }
+        ),
+        eventType: EVAL_TARGET_MISSING_EVENT,
+        code: "eval.target.missing"
+      },
+      {
+        request: registeredEvalRequest(
+          {
+            id: "missing_checks",
+            type: "deterministic",
+            target: {
+              artifactId: "plan"
+            }
+          },
+          {
+            artifacts: {
+              plan: {
+                artifactId: "plan",
+                content: {
+                  title: "Plan"
+                }
+              }
+            }
+          }
+        ),
+        eventType: EVAL_CHECKS_MISSING_EVENT,
+        code: "eval.checks.missing"
+      },
+      {
+        request: registeredEvalRequest(
+          {
+            id: "unsupported_visual",
+            type: "visual",
+            target: {
+              artifactId: "plan"
+            }
+          },
+          {
+            artifacts: {
+              plan: {
+                artifactId: "plan",
+                content: {
+                  title: "Plan"
+                }
+              }
+            }
+          }
+        ),
+        eventType: EVAL_TYPE_UNSUPPORTED_EVENT,
+        code: "eval.type.unsupported"
+      }
+    ];
+
+    for (const item of cases) {
+      const result = await evaluateAndRecord(item.request, memoryEmissionContext());
+
+      expect(result.events.map((event) => event.type)).toContain(
+        EVAL_VERDICT_RECORDED_EVENT
+      );
+      expect(result.events.map((event) => event.type)).toContain(item.eventType);
+      const branchEvent = result.events.find(
+        (event) => event.type === item.eventType
+      );
+
+      expect(branchEvent?.payload).toMatchObject({
+        finding: {
+          code: item.code
+        }
+      });
+    }
+  });
+
+  test("emits repair task events and projects repair-loop linkage", async () => {
+    const expectedFailingEventTypes = await readJson(join(
+      fixturesDir,
+      "repair-loop-emission",
+      "expected-failing-event-types.json"
+    ));
+    const expectedLinkedHistory = await readJson(join(
+      fixturesDir,
+      "repair-loop-emission",
+      "expected-linked-history.json"
+    ));
+    const request = (await readJson(join(
+      fixturesDir,
+      "schema-fail-blocking",
+      "request.json"
+    ))) as RunEvalRequest;
+    const failed = await evaluateAndRecord(request, memoryEmissionContext());
+    const verdictEvent = failed.events.find(
+      (event) => event.type === EVAL_VERDICT_RECORDED_EVENT
+    );
+    const repairEvent = failed.events.find(
+      (event) => event.type === EVAL_REPAIR_TASK_CREATED_EVENT
+    );
+
+    expect(failed.verdict.status).toBe("fail");
+    expect(failed.events.map((event) => event.type)).toEqual(
+      expectedFailingEventTypes
+    );
+    expect(repairEvent?.payload).toMatchObject({
+      evalId: failed.verdict.evalId,
+      targetRef: failed.verdict.targetRef
+    });
+    expect(
+      (repairEvent?.payload as { sourceFindingIds?: string[] }).sourceFindingIds
+        ?.length
+    ).toBeGreaterThan(0);
+
+    const repairedRequest = {
+      ...request,
+      input: {
+        artifacts: {
+          plan: {
+            artifactId: "plan",
+            artifactType: "plan",
+            evidenceRefs: ["evidence:brief"],
+            content: {
+              title: "Source-bound plan",
+              steps: ["Collect evidence"]
+            }
+          }
+        }
+      }
+    } satisfies RunEvalRequest;
+    const linked = await evaluateAndRecord(repairedRequest, memoryEmissionContext({
+      repair: {
+        isReevaluation: true,
+        priorFailure: {
+          eventId: verdictEvent!.id,
+          decisionHash: failed.verdict.provenance!.decisionHash as `sha256:${string}`,
+          evalId: failed.verdict.evalId,
+          targetRef: failed.verdict.targetRef,
+          sourceFindingIds: (repairEvent?.payload as { sourceFindingIds: string[] })
+            .sourceFindingIds
+        }
+      }
+    }));
+
+    expect(linked.verdict.status).toBe("pass");
+    expect(linked.provenance.priorFailure?.eventId).toBe(verdictEvent?.id);
+
+    const history = projectEvalEmissionHistory({
+      events: [...failed.events, ...linked.events],
+      spans: [...failed.spans, ...linked.spans]
+    });
+
+    expect(history.repairs).toHaveLength(1);
+    expect(history.verdicts.at(-1)?.priorFailure?.eventId).toBe(verdictEvent?.id);
+    expect({
+      repairCount: history.repairs.length,
+      linkedPassHasPriorFailure:
+        history.verdicts.at(-1)?.priorFailure?.eventId === verdictEvent?.id
+    }).toEqual(expectedLinkedHistory);
+  });
+
+  test("rejects re-evaluation pass without prior failing verdict", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "schema-pass",
+      "request.json"
+    ))) as RunEvalRequest;
+
+    await expect(
+      evaluateAndRecord(
+        request,
+        memoryEmissionContext({
+          repair: {
+            isReevaluation: true
+          }
+        })
+      )
+    ).rejects.toMatchObject({
+      code: "audit_gap.re_evaluation_pass_without_prior_failure"
+    });
+  });
+
+  test("records model-graded tool spans and rubric refs", async () => {
+    const fixtureDir = join(fixturesDir, "model-graded-advisory-pass");
+    const expectedToolSpanMetadata = await readJson(join(
+      fixturesDir,
+      "model-graded-emission",
+      "expected-tool-span-metadata.json"
+    ));
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const recordedResult = (await readJson(join(
+      fixtureDir,
+      "recorded-result.json"
+    ))) as ToolCallResult;
+    const replay = replayBroker(recordedResult);
+    const result = await evaluateAndRecord(
+      {
+        ...request,
+        broker: replay.callTool
+      },
+      memoryEmissionContext()
+    );
+
+    expect(result.verdict.producedBy.kind).toBe("model_assisted");
+    expect(result.events.map((event) => event.type)).toEqual([
+      EVAL_VERDICT_RECORDED_EVENT
+    ]);
+    expect(result.auditGaps).toEqual([]);
+    expect(result.trustedForPromotion).toBe(true);
+    expect(result.spans.some((span) => span.kind === "tool")).toBe(true);
+    expect(result.spans.find((span) => span.kind === "tool")?.metadata).toMatchObject(
+      expectedToolSpanMetadata as Record<string, unknown>
+    );
+  });
+
+  test("flags model-graded findings without tool span or rubric ref incomplete", async () => {
+    const fixtureDir = join(fixturesDir, "model-graded-advisory-pass");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const recordedResult = (await readJson(join(
+      fixtureDir,
+      "recorded-result.json"
+    ))) as ToolCallResult;
+    const replay = replayBroker(recordedResult);
+    const verdict = await runEvalAsync({
+      ...request,
+      broker: replay.callTool
+    });
+    const modelAssisted =
+      verdict.findings[0]?.metadata?.modelAssisted as Record<string, unknown>;
+    const result = await recordEvalVerdict(
+      request,
+      memoryEmissionContext(),
+      {
+        ...verdict,
+        findings: [
+          {
+            ...verdict.findings[0]!,
+            metadata: {
+              modelAssisted: {
+                ...modelAssisted,
+                rubricRef: undefined,
+                toolSpan: undefined
+              }
+            }
+          }
+        ]
+      } as EvalVerdict
+    );
+
+    expect(result.auditGaps.map((gap) => gap.code).sort()).toEqual([
+      "eval.audit_gap.model_finding_missing_rubric_ref",
+      "eval.audit_gap.model_finding_missing_tool_span"
+    ]);
+    expect(result.trustedForPromotion).toBe(false);
   });
 });
 
@@ -1262,6 +1603,127 @@ describe("eval registry governance", () => {
     ).toBe("artifact_schema");
   });
 });
+
+function registeredEvalRequest(
+  definition: FixtureEvalDefinition,
+  input: RunEvalRequest["input"]
+): RunEvalRequest {
+  const harnessPackageId = "harness.emission@1.0.0";
+
+  return {
+    harnessPackageId,
+    evalId: definition.id,
+    evalDefinition: definition,
+    evalRegistry: {
+      schemaVersion: "specwright.eval-registry.v0",
+      harnessPackageId,
+      entries: [
+        {
+          definitionId: definition.id,
+          harnessPackageId,
+          kind: definition.type ?? "deterministic",
+          contentHash: hashEvalDefinition(definition),
+          definition
+        }
+      ]
+    } as EvalRegistryManifest,
+    input
+  };
+}
+
+function memoryEmissionContext(
+  overrides: Partial<EvalEmissionContext> = {}
+): EvalEmissionContext {
+  const context: EvalEmissionContext = {
+    runId: "run_emission_fixture",
+    traceId: "trace_emission_fixture",
+    clock: () => "2026-06-11T00:00:00.000Z",
+    appendEvent: (input) => ({
+      event: testPruneUndefined({
+        id: input.id,
+        runId: input.runId,
+        type: input.type,
+        timestamp: input.timestamp,
+        sequence: input.sequence,
+        traceId: input.traceId,
+        causationId: input.causationId,
+        correlationId: input.correlationId,
+        contractId: `specwright.event.${input.type}`,
+        contractVersion: "eval-runner.local.v0",
+        schemaHash:
+          "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        payload: input.payload
+      }) as EvalEmissionRuntimeEvent
+    }),
+    recordSpan: (span, spanContext) =>
+      testPruneUndefined({
+        runId: spanContext.runId,
+        traceId: spanContext.traceId,
+        spanId:
+          span.spanId ??
+          `span:${span.kind}:${span.name}:${spanContext.runId}:${spanContext.traceId}`,
+        parentSpanId: span.parentSpanId,
+        kind: span.kind,
+        name: span.name,
+        status: span.status,
+        startedAt:
+          span.startedAt instanceof Date
+            ? span.startedAt.toISOString()
+            : span.startedAt ?? "2026-06-11T00:00:00.000Z",
+        endedAt:
+          span.endedAt instanceof Date
+            ? span.endedAt.toISOString()
+            : span.endedAt,
+        durationMs: span.durationMs,
+        eventIds: span.eventIds,
+        metadata: span.metadata ?? {}
+      }) as EvalEmissionTraceSpan,
+    ...overrides
+  };
+
+  return context;
+}
+
+function normalizeEmissionReplay(result: {
+  events: EvalEmissionRuntimeEvent[];
+  spans: EvalEmissionTraceSpan[];
+}) {
+  return {
+    events: result.events.map((event) => ({
+      ...event,
+      timestamp: "<timestamp>"
+    })),
+    spans: result.spans.map((span) => ({
+      ...span,
+      startedAt: "<timestamp>",
+      endedAt: span.endedAt === undefined ? undefined : "<timestamp>"
+    }))
+  };
+}
+
+function testPruneUndefined<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => testPruneUndefined(item)) as T;
+  }
+
+  if (
+    value === null ||
+    typeof value !== "object" ||
+    value instanceof Date
+  ) {
+    return value;
+  }
+
+  const output: Record<string, unknown> = {};
+
+  for (const [key, child] of Object.entries(value)) {
+    if (child !== undefined) {
+      output[key] = testPruneUndefined(child);
+    }
+  }
+
+  return output as T;
+}
 
 async function readJson(path: string) {
   return JSON.parse(await readFile(path, "utf8")) as unknown;

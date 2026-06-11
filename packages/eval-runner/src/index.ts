@@ -137,6 +137,34 @@ export type {
   ModelAssistedSchema,
   ProjectedGraderContext
 } from "./model-assisted";
+export {
+  EVAL_CHECKS_MISSING_EVENT,
+  EVAL_DEFINITION_MISSING_EVENT,
+  EVAL_REPAIR_TASK_CREATED_EVENT,
+  EVAL_TARGET_MISSING_EVENT,
+  EVAL_TYPE_UNSUPPORTED_EVENT,
+  EVAL_VERDICT_RECORDED_EVENT,
+  EvalEmissionError,
+  evaluateAndRecord,
+  evaluateManyAndRecord,
+  projectEvalEmissionHistory,
+  recordEvalVerdict,
+  type EvalAuditGap,
+  type EvalEmissionAppendInput,
+  type EvalEmissionAppendResult,
+  type EvalEmissionAppendSink,
+  type EvalEmissionContext,
+  type EvalEmissionEventPayload,
+  type EvalEmissionEventType,
+  type EvalEmissionHistory,
+  type EvalEmissionResult,
+  type EvalEmissionSpanSink,
+  type EvalFailClosedPayload,
+  type EvalRecordedProvenance,
+  type EvalRepairTaskCreatedPayload,
+  type EvalVerdictRecordedPayload,
+  type PriorEvalFailureLink
+} from "./emission";
 
 export const DEFAULT_EVAL_RUNNER_EVALUATOR = "specwright.eval-runner.v0";
 
