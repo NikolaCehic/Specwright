@@ -1,0 +1,4 @@
+{
+  "storedVerdictRef": "../regression-pass-to-fail/dataset.json#cases/0/golden",
+  "currentDatasetRef": "../dataset-poisoned/poisoned-dataset.json"
+}

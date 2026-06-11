@@ -1,0 +1,52 @@
+{
+  "schemaVersion": "specwright.eval-dataset.v0",
+  "id": "specwright.eval-runner.regression-pass-to-fail",
+  "version": "1.0.0",
+  "evalId": "artifact_schema_regression",
+  "targetType": "plan",
+  "cases": [
+    {
+      "id": "pass-baseline",
+      "input": {
+        "artifacts": {
+          "plan": {
+            "artifactId": "plan",
+            "artifactType": "plan",
+            "evidenceRefs": [
+              "evidence:brief"
+            ],
+            "content": {
+              "title": "Source-bound plan",
+              "steps": [
+                "collect evidence"
+              ]
+            }
+          }
+        }
+      },
+      "golden": {
+        "evalId": "artifact_schema_regression",
+        "targetRef": "artifact:plan",
+        "status": "fail",
+        "severity": "blocking",
+        "findings": [],
+        "evidenceRefs": [
+          "evidence:brief"
+        ],
+        "producedBy": {
+          "kind": "deterministic",
+          "ref": "specwright.eval-runner.v0"
+        },
+        "provenance": {
+          "decisionHash": "sha256:ec54ac8e0b58ebaafb3d8a423b63094834edc48f61cb5cb1f460c7b2aaed0a34",
+          "causationIds": [
+            "specwright.eval-runner.input-hash.targetContentHash=sha256:badf79480aa0258f050e620f5562fa43455d17831927dfd7879799a22f84eb99",
+            "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+            "specwright.eval-runner.input-hash.definitionHash=sha256:a8a5863ea09252086dd5d9549780c92c921ed310db5c4e4f59cdb05ebb3f53b6",
+            "specwright.eval-runner.input-hash.checkResultsHash=sha256:51ba7639c1ad9474709816ba4144985ab6e1b6880cedf8348ab707a37030c0f7"
+          ]
+        }
+      }
+    }
+  ]
+}

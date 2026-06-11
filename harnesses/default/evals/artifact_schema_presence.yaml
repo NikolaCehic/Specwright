@@ -1,6 +1,11 @@
 id: artifact_schema_presence
 description: Ensure the plan artifact exists and exposes required schema fields.
 type: deterministic
+datasetRef:
+  id: specwright.default.artifact_schema_presence
+  version: "1.0.0"
+  path: packages/eval-runner/fixtures/default-datasets/artifact_schema_presence.json
+  contentId: sha256:60908c02ed97ebdc630aef606a1dad54a8769a63be952bea268e6208bfc33604
 target:
   artifactId: plan
 artifactSchemas:

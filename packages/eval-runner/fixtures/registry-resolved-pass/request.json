@@ -45,6 +45,89 @@
       }
     }
   ],
+  "datasetManifest": {
+    "schemaVersion": "specwright.eval-dataset.v0",
+    "id": "specwright.default.artifact_schema_presence",
+    "version": "1.0.0",
+    "evalId": "artifact_schema_presence",
+    "targetType": "plan",
+    "cases": [
+      {
+        "id": "default-pass-baseline",
+        "input": {
+          "artifacts": {
+            "plan": {
+              "artifactId": "plan",
+              "artifactType": "plan",
+              "evidenceRefs": [
+                "evidence:brief#1"
+              ],
+              "content": {
+                "goal": "Ship a source-bound plan.",
+                "steps": [
+                  "collect evidence"
+                ],
+                "claims": [
+                  {
+                    "id": "claim:1",
+                    "claim": "The plan is source-bound.",
+                    "level": "source_fact",
+                    "evidenceRefs": [
+                      "evidence:brief#1"
+                    ]
+                  }
+                ],
+                "sections": {
+                  "goal": "Ship a source-bound plan.",
+                  "evidence": "evidence:brief#1",
+                  "steps": [
+                    "collect evidence"
+                  ],
+                  "risks": [
+                    "missing evidence"
+                  ],
+                  "verification": [
+                    "run evals"
+                  ]
+                }
+              }
+            }
+          },
+          "evidence": {
+            "records": [
+              {
+                "id": "evidence:brief#1",
+                "quote": "The plan must be source-bound."
+              }
+            ]
+          }
+        },
+        "golden": {
+          "evalId": "artifact_schema_presence",
+          "targetRef": "artifact:plan",
+          "status": "pass",
+          "severity": "blocking",
+          "findings": [],
+          "evidenceRefs": [
+            "evidence:brief#1"
+          ],
+          "producedBy": {
+            "kind": "deterministic",
+            "ref": "specwright.eval-runner.v0"
+          },
+          "provenance": {
+            "decisionHash": "sha256:ac36f7cc21cc3ebf63c8fdd15a6a01da73d46e4d6d1fdf3ad2beca1ada2327ca",
+            "causationIds": [
+              "specwright.eval-runner.input-hash.targetContentHash=sha256:b7d96ee618cd51e870e01d93b9c6d9dba62dbbaff13ddceeb3002964fd2dbbe9",
+              "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:1fa68d43b57451cd62c15022064944dee5246ade368e2dd17f9fe90e01a067fa",
+              "specwright.eval-runner.input-hash.definitionHash=sha256:bd738b2849111e348ba6b9678d821605b89a3f44bdfb0f66300b737441b73eb7",
+              "specwright.eval-runner.input-hash.checkResultsHash=sha256:cdb802f4542009b70238eeb6d2801f0a2416e89f11fef043ba4924750765334c"
+            ]
+          }
+        }
+      }
+    ]
+  },
   "input": {
     "artifacts": {
       "plan": {

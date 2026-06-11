@@ -1,0 +1,16 @@
+{
+  "kind": "eval.regression",
+  "status": "regression",
+  "provenance": {
+    "priorStatus": "pass",
+    "newStatus": "fail",
+    "evalId": "artifact_schema_regression",
+    "targetType": "plan",
+    "attributedVersion": {
+      "harnessSpecHash": "sha256:ef5fe67560d4b6fb12652a458cd72def267f479bce4f110283a97f531452b852",
+      "datasetVersion": "1.0.0"
+    },
+    "datasetContentId": "sha256:d8f894119ee520d4502a7ca763bfca34b96cca0140803b1b7431d9ef86fc7a7a",
+    "decisionHash": "sha256:d43daae7b99425fae14754f1954302c1b89e867504be4f9761dfff16b1b8214a"
+  }
+}

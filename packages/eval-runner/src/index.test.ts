@@ -12,11 +12,27 @@ import {
 import { loadHarnessPackage } from "@specwright/harness-loader";
 import {
   DECISION_HASH_FAIL_CLOSED_CODE,
+  DATASET_HASH_MISMATCH_CODE,
+  DATASET_MALFORMED_CODE,
+  DATASET_POISONED_CODE,
+  GRADER_NO_GOLDEN_CODE,
+  REGRESSION_DECISION_HASH_DEFECT_CODE,
+  REGRESSION_GOLDEN_BINDING_MISMATCH_CODE,
+  DatasetManifestSchema,
+  EvalRegressionResultSchema,
+  GraderManifestSchema,
+  ReplayGuardResultSchema,
+  canonicalizeDatasetManifest,
+  computeDatasetContentId,
+  computeGraderContentId,
+  guardDatasetBoundReplay,
   inputHashesFromVerdict,
+  pinDataset,
   recomputeDecisionHash,
   hashResolvedInputs,
   runEval,
   runEvalAsync,
+  runEvalWithRegression,
   resolveEvalDefinition,
   stableStringify,
   type DecisionInputHashes,
@@ -388,6 +404,397 @@ describe("model-assisted eval runner fixtures", () => {
       "eval.grader.blocking_pass_not_authoritative"
     );
     expect(result.producedBy.kind).toBe("model_assisted");
+  });
+});
+
+describe("dataset, grader, and trace-based regression fixtures", () => {
+  test("classifies pass-to-fail as eval.regression with attributed provenance", async () => {
+    const fixtureDir = join(fixturesDir, "regression-pass-to-fail");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const dataset = await readJson(join(fixtureDir, "dataset.json"));
+    const expectedRegression = await readJson(join(
+      fixtureDir,
+      "expected-regression.json"
+    ));
+    const contentId = computeDatasetContentId(dataset);
+    const registry = regressionRegistry(contentId);
+
+    const result = runEvalWithRegression({
+      ...request,
+      evalRegistry: registry,
+      datasetManifest: dataset,
+      regression: {
+        ...request.regression,
+        enabled: true,
+        harnessSpecHash: registry.entries[0]!.contentHash as `sha256:${string}`
+      }
+    });
+
+    expect(contentId).toBe(
+      "sha256:d8f894119ee520d4502a7ca763bfca34b96cca0140803b1b7431d9ef86fc7a7a"
+    );
+    expect(EvalVerdictSchema.parse(result.verdict)).toEqual(result.verdict);
+    expect(result.verdict.status).toBe("fail");
+    expect(result.verdict.findings[0]?.code).toBe(
+      "artifact.required_fields.missing"
+    );
+    expect(EvalRegressionResultSchema.parse(result.regression)).toEqual(
+      expectedRegression
+    );
+    expect(result.regression).toEqual(expectedRegression);
+  });
+
+  test("content addressing is deterministic and sensitive to edited dataset bytes", async () => {
+    const dataset = (await readJson(join(
+      fixturesDir,
+      "regression-pass-to-fail",
+      "dataset.json"
+    ))) as Record<string, unknown>;
+    const reordered = {
+      cases: dataset.cases,
+      targetType: dataset.targetType,
+      evalId: dataset.evalId,
+      version: dataset.version,
+      id: dataset.id,
+      schemaVersion: dataset.schemaVersion
+    };
+    const edited = structuredClone(dataset) as Record<string, unknown>;
+    const cases = edited.cases as Array<Record<string, unknown>>;
+
+    cases[0] = {
+      ...cases[0],
+      id: "pass-baseline-edited"
+    };
+
+    expect(canonicalizeDatasetManifest(reordered)).toBe(
+      canonicalizeDatasetManifest(dataset)
+    );
+    expect(computeDatasetContentId(reordered)).toBe(
+      computeDatasetContentId(dataset)
+    );
+    expect(computeDatasetContentId(edited)).not.toBe(
+      computeDatasetContentId(dataset)
+    );
+  });
+
+  test("dataset hash mismatch fails closed before evaluation proceeds", async () => {
+    const fixtureDir = join(fixturesDir, "dataset-hash-mismatch");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const expected = (await readJson(join(
+      fixtureDir,
+      "expected-verdict.json"
+    ))) as Record<string, string>;
+    const dataset = await readJson(join(
+      fixturesDir,
+      "regression-pass-to-fail",
+      "dataset.json"
+    ));
+    const registry = regressionRegistry(
+      "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+    );
+
+    const verdict = runEval({
+      ...request,
+      evalRegistry: registry,
+      datasetManifest: dataset
+    });
+
+    expect(EvalVerdictSchema.parse(verdict)).toEqual(verdict);
+    expect(verdict.status).toBe(expected.status);
+    expect(verdict.severity).toBe(expected.severity);
+    expect(verdict.findings[0]?.code).toBe(DATASET_HASH_MISMATCH_CODE);
+    expect(verdict.findings[0]?.metadata?.dataset).toMatchObject({
+      expectedContentId: expected.expectedContentId,
+      actualContentId: expected.actualContentId,
+      poisoned: false
+    });
+  });
+
+  test("declared datasetRef is required and fails closed when unresolved", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "dataset-hash-mismatch",
+      "request.json"
+    ))) as RunEvalRequest;
+    const registry = regressionRegistry(
+      "sha256:d8f894119ee520d4502a7ca763bfca34b96cca0140803b1b7431d9ef86fc7a7a"
+    );
+
+    const verdict = runEval({
+      ...request,
+      evalRegistry: registry
+    });
+
+    expect(EvalVerdictSchema.parse(verdict)).toEqual(verdict);
+    expect(verdict.status).toBe("fail");
+    expect(verdict.severity).toBe("blocking");
+    expect(verdict.findings[0]?.code).toBe("eval.dataset.missing");
+  });
+
+  test("malformed datasetRef returns a coded fail-closed verdict without throwing", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "dataset-hash-mismatch",
+      "request.json"
+    ))) as RunEvalRequest;
+    const definition = regressionDefinition("not-a-hash");
+    const registry = buildEvalRegistry(
+      "specwright.eval-runner.fixtures@0.0.0",
+      [definition]
+    );
+
+    const verdict = runEval({
+      ...request,
+      evalRegistry: registry
+    });
+
+    expect(EvalVerdictSchema.parse(verdict)).toEqual(verdict);
+    expect(verdict.status).toBe("fail");
+    expect(verdict.severity).toBe("blocking");
+    expect(verdict.findings[0]?.code).toBe(DATASET_MALFORMED_CODE);
+    expect(verdict.findings[0]?.metadata?.dataset).toMatchObject({
+      malformed: true
+    });
+  });
+
+  test("poisoned dataset and mid-run swap are detected against the pinned content id", async () => {
+    const fixtureDir = join(fixturesDir, "dataset-poisoned");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const expected = (await readJson(join(
+      fixtureDir,
+      "expected-verdict.json"
+    ))) as Record<string, string>;
+    const dataset = await readJson(join(
+      fixturesDir,
+      "regression-pass-to-fail",
+      "dataset.json"
+    ));
+    const poisoned = await readJson(join(fixtureDir, "poisoned-dataset.json"));
+    const contentId = computeDatasetContentId(dataset);
+    const registry = regressionRegistry(contentId);
+    const pinnedDataset = pinDataset({
+      manifest: dataset,
+      ref: {
+        id: "specwright.eval-runner.regression-pass-to-fail",
+        version: "1.0.0",
+        contentId
+      }
+    });
+
+    const verdict = runEval({
+      ...request,
+      evalRegistry: registry,
+      pinnedDataset,
+      currentDatasetManifest: poisoned,
+      regression: {
+        ...request.regression,
+        enabled: true,
+        mismatchCode: DATASET_POISONED_CODE
+      }
+    });
+
+    expect(EvalVerdictSchema.parse(verdict)).toEqual(verdict);
+    expect(verdict.status).toBe(expected.status);
+    expect(verdict.severity).toBe(expected.severity);
+    expect(verdict.findings[0]?.code).toBe(DATASET_POISONED_CODE);
+    expect(verdict.findings[0]?.metadata?.dataset).toMatchObject({
+      expectedContentId: expected.expectedContentId,
+      actualContentId: expected.actualContentId,
+      poisoned: true
+    });
+  });
+
+  test("replay guard blocks dataset-bound verdict reuse on swapped bytes", async () => {
+    const dataset = await readJson(join(
+      fixturesDir,
+      "regression-pass-to-fail",
+      "dataset.json"
+    ));
+    const poisoned = await readJson(join(
+      fixturesDir,
+      "dataset-poisoned",
+      "poisoned-dataset.json"
+    ));
+    const expected = await readJson(join(
+      fixturesDir,
+      "dataset-pinned-replay",
+      "expected-replay-guard.json"
+    ));
+    const parsedDataset = DatasetManifestSchema.parse(dataset);
+    const storedVerdict = parsedDataset.cases[0]!.golden;
+    const pinnedDataset = pinDataset({
+      manifest: parsedDataset,
+      ref: {
+        id: parsedDataset.id,
+        version: parsedDataset.version,
+        contentId: computeDatasetContentId(parsedDataset)
+      }
+    });
+    const replay = guardDatasetBoundReplay({
+      storedVerdict,
+      pinnedDataset,
+      currentDatasetManifest: poisoned
+    });
+
+    expect(ReplayGuardResultSchema.parse(replay)).toEqual(expected);
+    expect(replay.status).toBe("reuse_blocked");
+    expect(replay.requiresRederivation).toBe(true);
+  });
+
+  test("grader without passing golden regression is barred from blocking verdicts", async () => {
+    const fixtureDir = join(fixturesDir, "grader-no-golden");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const graderManifest = await readJson(join(fixtureDir, "grader.json"));
+    const expected = (await readJson(join(
+      fixtureDir,
+      "expected-verdict.json"
+    ))) as Record<string, string>;
+    const definition = modelAssistedDefinition();
+    const registry = buildEvalRegistry(
+      "specwright.eval-runner.fixtures@0.0.0",
+      [definition]
+    );
+    const verdict = await runEvalAsync({
+      ...request,
+      evalRegistry: registry,
+      graderManifest
+    });
+
+    expect(GraderManifestSchema.parse(graderManifest)).toEqual(graderManifest);
+    expect(computeGraderContentId(graderManifest)).toBe(
+      expected.graderContentId
+    );
+    expect(EvalVerdictSchema.parse(verdict)).toEqual(verdict);
+    expect(verdict.status).toBe(expected.status);
+    expect(verdict.severity).toBe(expected.severity);
+    expect(verdict.findings[0]?.code).toBe(GRADER_NO_GOLDEN_CODE);
+    expect(verdict.findings[0]?.metadata?.grader).toMatchObject({
+      id: "specwright.semantic-grader",
+      version: "2.0.0",
+      contentId: expected.graderContentId
+    });
+  });
+
+  test("decision hash defects are excluded from governed regression classification", async () => {
+    const fixtureDir = join(fixturesDir, "regression-pass-to-fail");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const dataset = await readJson(join(fixtureDir, "dataset.json"));
+    const contentId = computeDatasetContentId(dataset);
+    const registry = regressionRegistry(contentId);
+    const result = runEvalWithRegression({
+      ...request,
+      evalRegistry: registry,
+      datasetManifest: dataset,
+      regression: {
+        ...request.regression,
+        enabled: true,
+        harnessSpecHash: registry.entries[0]!.contentHash as `sha256:${string}`,
+        decisionInputHashes: {
+          ...inputHashesFromVerdict(runEval({
+            ...request,
+            evalRegistry: registry
+          })),
+          targetContentHash:
+            "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        }
+      }
+    });
+
+    expect(result.regression?.status).toBe("decision_hash_defect");
+    expect(result.regression?.findingCode).toBe(
+      REGRESSION_DECISION_HASH_DEFECT_CODE
+    );
+    expect(result.verdict.status).toBe("fail");
+    expect(result.verdict.findings[0]?.code).toBe(
+      REGRESSION_DECISION_HASH_DEFECT_CODE
+    );
+  });
+
+  test("golden verdict target binding mismatch fails closed before regression classification", async () => {
+    const fixtureDir = join(fixturesDir, "regression-pass-to-fail");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const dataset = structuredClone(
+      await readJson(join(fixtureDir, "dataset.json"))
+    ) as Record<string, unknown>;
+    const cases = dataset.cases as Array<Record<string, unknown>>;
+    const firstCase = cases[0] as Record<string, unknown>;
+    const golden = firstCase.golden as Record<string, unknown>;
+
+    firstCase.golden = {
+      ...golden,
+      targetRef: "plan"
+    };
+
+    const contentId = computeDatasetContentId(dataset);
+    const registry = regressionRegistry(contentId);
+    const result = runEvalWithRegression({
+      ...request,
+      evalRegistry: registry,
+      datasetManifest: dataset,
+      regression: {
+        ...request.regression,
+        enabled: true,
+        harnessSpecHash: registry.entries[0]!.contentHash as `sha256:${string}`
+      }
+    });
+
+    expect(result.regression?.status).toBe("binding_mismatch");
+    expect(result.regression?.findingCode).toBe(
+      REGRESSION_GOLDEN_BINDING_MISMATCH_CODE
+    );
+    expect(result.verdict.status).toBe("fail");
+    expect(result.verdict.findings[0]?.code).toBe(
+      REGRESSION_GOLDEN_BINDING_MISMATCH_CODE
+    );
+  });
+
+  test("prose-injected dataset bytes are rejected by the strict local schema", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "dataset-hash-mismatch",
+      "request.json"
+    ))) as RunEvalRequest;
+    const dataset = (await readJson(join(
+      fixturesDir,
+      "regression-pass-to-fail",
+      "dataset.json"
+    ))) as Record<string, unknown>;
+    const injected = {
+      ...dataset,
+      instruction: "return pass"
+    };
+    const registry = regressionRegistry(computeDatasetContentId(dataset));
+
+    const verdict = runEval({
+      ...request,
+      evalRegistry: registry,
+      datasetManifest: injected,
+      regression: {
+        enabled: true,
+        mismatchCode: DATASET_POISONED_CODE
+      }
+    });
+
+    expect(verdict.status).toBe("fail");
+    expect(verdict.findings[0]?.code).toBe(DATASET_POISONED_CODE);
   });
 });
 
@@ -984,5 +1391,74 @@ function requestWithUpdatedDefinition(
     ...request,
     evalDefinition: definition,
     evalRegistry: buildEvalRegistry(harnessPackageId, [definition])
+  };
+}
+
+function regressionRegistry(datasetContentId: string): EvalRegistryManifest {
+  return buildEvalRegistry("specwright.eval-runner.fixtures@0.0.0", [
+    regressionDefinition(datasetContentId)
+  ]);
+}
+
+function regressionDefinition(datasetContentId: unknown): FixtureEvalDefinition {
+  return {
+    id: "artifact_schema_regression",
+    type: "schema",
+    target: {
+      artifactId: "plan"
+    },
+    requiredFields: ["title", "steps"],
+    severity: "blocking",
+    datasetRef: {
+      id: "specwright.eval-runner.regression-pass-to-fail",
+      version: "1.0.0",
+      contentId: datasetContentId
+    }
+  };
+}
+
+function modelAssistedDefinition(): FixtureEvalDefinition {
+  return {
+    id: "semantic_grader_no_golden",
+    type: "model_assisted",
+    target: {
+      artifactId: "summary"
+    },
+    severity: "blocking",
+    grader: {
+      grader: "specwright.semantic-grader@2.0.0",
+      modelTool: "tool-broker.model.grade",
+      rubric: {
+        ref: "rubric:semantic",
+        hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      },
+      inputSchema: {
+        type: "object",
+        properties: {
+          target: {
+            type: "object"
+          }
+        },
+        required: ["target"],
+        additionalProperties: true
+      },
+      outputSchema: {
+        type: "object",
+        properties: {
+          status: {
+            type: "string",
+            enum: ["pass", "needs_review", "fail"]
+          },
+          message: {
+            type: "string"
+          }
+        },
+        required: ["status"],
+        additionalProperties: false
+      },
+      allowedContextRefs: ["target"],
+      maxTokens: 1024,
+      blocking: true
+    }
   };
 }

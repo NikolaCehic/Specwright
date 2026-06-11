@@ -1,0 +1,83 @@
+{
+  "schemaVersion": "specwright.eval-dataset.v0",
+  "id": "specwright.default.completeness_required_sections",
+  "version": "1.0.0",
+  "evalId": "completeness_required_sections",
+  "targetType": "plan",
+  "cases": [
+    {
+      "id": "default-pass-baseline",
+      "input": {
+        "artifacts": {
+          "plan": {
+            "artifactId": "plan",
+            "artifactType": "plan",
+            "evidenceRefs": [
+              "evidence:brief#1"
+            ],
+            "content": {
+              "goal": "Ship a source-bound plan.",
+              "steps": [
+                "collect evidence"
+              ],
+              "claims": [
+                {
+                  "id": "claim:1",
+                  "claim": "The plan is source-bound.",
+                  "level": "source_fact",
+                  "evidenceRefs": [
+                    "evidence:brief#1"
+                  ]
+                }
+              ],
+              "sections": {
+                "goal": "Ship a source-bound plan.",
+                "evidence": "evidence:brief#1",
+                "steps": [
+                  "collect evidence"
+                ],
+                "risks": [
+                  "missing evidence"
+                ],
+                "verification": [
+                  "run evals"
+                ]
+              }
+            }
+          }
+        },
+        "evidence": {
+          "records": [
+            {
+              "id": "evidence:brief#1",
+              "quote": "The plan must be source-bound."
+            }
+          ]
+        }
+      },
+      "golden": {
+        "evalId": "completeness_required_sections",
+        "targetRef": "artifact:plan",
+        "status": "pass",
+        "severity": "blocking",
+        "findings": [],
+        "evidenceRefs": [
+          "evidence:brief#1"
+        ],
+        "producedBy": {
+          "kind": "deterministic",
+          "ref": "specwright.eval-runner.v0"
+        },
+        "provenance": {
+          "decisionHash": "sha256:ef88fcc7e527fa0640fd1f207b080c512ceb9dd18568ab6a55d796dcba2dec18",
+          "causationIds": [
+            "specwright.eval-runner.input-hash.targetContentHash=sha256:b7d96ee618cd51e870e01d93b9c6d9dba62dbbaff13ddceeb3002964fd2dbbe9",
+            "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:1fa68d43b57451cd62c15022064944dee5246ade368e2dd17f9fe90e01a067fa",
+            "specwright.eval-runner.input-hash.definitionHash=sha256:363ef7cffb66ee2750b8c36ccfb8000d889360fa9d19ebfd90debb19508b674e",
+            "specwright.eval-runner.input-hash.checkResultsHash=sha256:83f73c3b5b47b91438e07157514e0351d5f4444763e33816a1ef51cb8268b890"
+          ]
+        }
+      }
+    }
+  ]
+}

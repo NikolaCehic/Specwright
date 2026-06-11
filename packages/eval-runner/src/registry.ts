@@ -12,6 +12,13 @@ export const DEFAULT_HARNESS_EVAL_DEFINITIONS = [
     sourcePath: "evals/artifact_schema_presence.yaml",
     description: "Ensure the plan artifact exists and exposes required schema fields.",
     type: "deterministic",
+    datasetRef: {
+      id: "specwright.default.artifact_schema_presence",
+      version: "1.0.0",
+      path: "packages/eval-runner/fixtures/default-datasets/artifact_schema_presence.json",
+      contentId:
+        "sha256:60908c02ed97ebdc630aef606a1dad54a8769a63be952bea268e6208bfc33604"
+    },
     target: {
       artifactId: "plan"
     },
@@ -40,6 +47,13 @@ export const DEFAULT_HARNESS_EVAL_DEFINITIONS = [
     sourcePath: "evals/source_fidelity.yaml",
     description: "Verify important plan claims are backed by recorded evidence.",
     type: "source_fidelity",
+    datasetRef: {
+      id: "specwright.default.source_fidelity",
+      version: "1.0.0",
+      path: "packages/eval-runner/fixtures/default-datasets/source_fidelity.json",
+      contentId:
+        "sha256:f9202ee5ce4d13ec541115f461254eda47d55b7e68ec3f82af32f0c95ce11996"
+    },
     target: {
       artifactId: "plan"
     },
@@ -69,6 +83,13 @@ export const DEFAULT_HARNESS_EVAL_DEFINITIONS = [
     sourcePath: "evals/completeness_required_sections.yaml",
     description: "Ensure the plan includes the minimum reviewable planning sections.",
     type: "completeness",
+    datasetRef: {
+      id: "specwright.default.completeness_required_sections",
+      version: "1.0.0",
+      path: "packages/eval-runner/fixtures/default-datasets/completeness_required_sections.json",
+      contentId:
+        "sha256:63af2df0e9262c396ab8918c9bac53adf1b3753977f3b7448eb2cc79a79ffd7a"
+    },
     target: {
       artifactId: "plan"
     },
