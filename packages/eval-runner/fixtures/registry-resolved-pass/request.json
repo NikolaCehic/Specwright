@@ -1,0 +1,77 @@
+{
+  "harnessPackageId": "specwright.default@0.1.0",
+  "evalId": "artifact_schema_presence",
+  "evalDefinitions": [
+    {
+      "id": "artifact_schema_presence",
+      "description": "Ensure the plan artifact exists and exposes required schema fields.",
+      "type": "deterministic",
+      "target": {
+        "artifactId": "plan"
+      },
+      "artifactSchemas": [
+        "plan"
+      ],
+      "requiredArtifacts": [
+        "plan"
+      ],
+      "blocking": true,
+      "checks": [
+        {
+          "id": "plan_required_fields",
+          "type": "schema",
+          "requiredFields": [
+            "goal",
+            "steps",
+            "claims",
+            "sections"
+          ]
+        },
+        {
+          "id": "plan_sections_required",
+          "type": "schema",
+          "path": "sections",
+          "requiredFields": [
+            "goal",
+            "evidence",
+            "steps",
+            "risks",
+            "verification"
+          ]
+        }
+      ],
+      "onFail": {
+        "action": "create_repair_task"
+      }
+    }
+  ],
+  "input": {
+    "artifacts": {
+      "plan": {
+        "artifactId": "plan",
+        "artifactType": "plan",
+        "content": {
+          "goal": "Ship governed eval definitions.",
+          "steps": [
+            "register",
+            "verify"
+          ],
+          "claims": [
+            {
+              "id": "claim.registry",
+              "claim": "Registry fixture is governed.",
+              "level": "assumption"
+            }
+          ],
+          "sections": {
+            "goal": "Ship governed eval definitions.",
+            "evidence": "Registry fixture.",
+            "steps": "Register and verify.",
+            "risks": "Hash drift.",
+            "verification": "Focused tests."
+          }
+        }
+      }
+    }
+  }
+}

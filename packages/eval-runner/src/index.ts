@@ -5,6 +5,19 @@ import {
   type EvalSeverity,
   type EvalVerdict
 } from "@specwright/schemas";
+import {
+  DEFAULT_EVAL_REGISTRY,
+  DEFAULT_HARNESS_PACKAGE_ID,
+  buildEvalRegistry,
+  checksForDefinition,
+  evalKind,
+  isUnsupportedEvalKind,
+  resolveFromRegistry,
+  schemaRequiredFields,
+  targetCandidates,
+  type EvalRegistryManifest,
+  type EvalDefinitionResolution
+} from "./registry";
 
 export const DEFAULT_EVAL_RUNNER_EVALUATOR = "specwright.eval-runner.v0";
 
@@ -75,6 +88,8 @@ export type FixtureEvalDefinition = EvalDefinition & {
 } & Record<string, unknown>;
 
 export type RunEvalRequest = {
+  harnessPackageId?: string | undefined;
+  evalRegistry?: EvalRegistryManifest | undefined;
   evalId?: string | undefined;
   evalDefinition?: FixtureEvalDefinition | undefined;
   evalDefinitions?:
@@ -86,7 +101,7 @@ export type RunEvalRequest = {
 };
 
 export type RunEvalsRequest = Omit<RunEvalRequest, "evalDefinition"> & {
-  evalDefinitions:
+  evalDefinitions?:
     | readonly FixtureEvalDefinition[]
     | Record<string, FixtureEvalDefinition>;
 };
@@ -115,10 +130,36 @@ type CheckEvaluation =
     };
 
 export function runEval(request: RunEvalRequest): EvalVerdict {
-  const definition = resolveEvalDefinition(request);
-  const evalId = request.evalId ?? definition?.id ?? "unknown_eval";
+  const resolution = resolveEvalDefinition(request);
+  const definition = resolution.status === "resolved" ? resolution.definition : undefined;
+  const evalId = request.evalId ?? request.evalDefinition?.id ?? resolution.definitionId;
   const evaluatorRef =
     request.evaluatorRef ?? DEFAULT_EVAL_RUNNER_EVALUATOR;
+
+  if (resolution.status === "untrusted") {
+    return buildVerdict({
+      evalId,
+      targetRef: `eval:${evalId}`,
+      status: "fail",
+      severity: "blocking",
+      findings: [
+        makeFinding({
+          message: `Eval definition ${evalId} does not match the governed registry entry`,
+          code: "eval.definition.untrusted",
+          targetRef: `eval:${evalId}`,
+          severity: "blocking",
+          repairHint:
+            "Use the eval definition signed into the loaded harness package registry.",
+          metadata: {
+            registeredContentHash: resolution.registeredContentHash,
+            suppliedContentHash: resolution.suppliedContentHash
+          }
+        })
+      ],
+      evidenceRefs: [],
+      evaluatorRef
+    });
+  }
 
   if (definition === undefined) {
     return buildVerdict({
@@ -260,13 +301,15 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
 }
 
 export function runEvals(request: RunEvalsRequest): EvalVerdict[] {
-  const definitions = Array.isArray(request.evalDefinitions)
-    ? request.evalDefinitions
-    : Object.values(request.evalDefinitions);
+  const registry = registryForRequest(request);
+  const definitions = registry.entries.map((entry) => entry.definition);
 
   return definitions.map((definition) =>
     runEval({
       evalDefinition: definition,
+      evalDefinitions: definitions,
+      evalRegistry: registry,
+      harnessPackageId: registry.harnessPackageId,
       input: request.input,
       evaluatorRef: request.evaluatorRef
     })
@@ -510,98 +553,33 @@ function evaluateCompletenessCheck(
   };
 }
 
-function resolveEvalDefinition(
+export function resolveEvalDefinition(
   request: RunEvalRequest
-): FixtureEvalDefinition | undefined {
-  if (request.evalDefinition !== undefined) {
-    return request.evalDefinition;
-  }
+): EvalDefinitionResolution {
+  const definitionId =
+    request.evalId ?? request.evalDefinition?.id ?? "unknown_eval";
+  const registry = registryForRequest(request);
 
-  if (request.evalId === undefined || request.evalDefinitions === undefined) {
-    return undefined;
-  }
-
-  const definitions = request.evalDefinitions;
-
-  if (isEvalDefinitionArray(definitions)) {
-    return definitions.find(
-      (definition) => definition.id === request.evalId
-    );
-  }
-
-  return definitions[request.evalId];
+  return resolveFromRegistry({
+    registry,
+    harnessPackageId: request.harnessPackageId ?? registry.harnessPackageId,
+    definitionId,
+    suppliedDefinition: request.evalDefinition
+  });
 }
 
-function isEvalDefinitionArray(
-  definitions: NonNullable<RunEvalRequest["evalDefinitions"]>
-): definitions is readonly FixtureEvalDefinition[] {
-  return Array.isArray(definitions);
-}
-
-function checksForDefinition(
-  definition: FixtureEvalDefinition,
-  kind: string
-): FixtureEvalCheck[] {
-  const declaredChecks = Array.isArray(definition.checks)
-    ? definition.checks.filter(isRecord).map((check, index) =>
-        normalizeCheck(check, definition, kind, index)
-      )
-    : [];
-
-  if (declaredChecks.length > 0) {
-    return declaredChecks;
+function registryForRequest(request: RunEvalRequest): EvalRegistryManifest {
+  if (request.evalRegistry !== undefined) {
+    return request.evalRegistry;
   }
 
-  switch (kind) {
-    case "schema":
-    case "presence":
-    case "artifact_schema":
-      return [
-        {
-          id: `${definition.id}.schema`,
-          type: "schema",
-          requiredFields: uniqueStrings([
-            ...stringArrayFrom(definition.requiredFields),
-            ...schemaRequiredFields(definition.schema)
-          ]),
-          path: stringFrom(definition.path)
-        }
-      ];
-    case "source_fidelity":
-      return [
-        {
-          id: `${definition.id}.source_fidelity`,
-          type: "source_fidelity",
-          claimsPath: definition.claimsPath
-        }
-      ];
-    case "completeness":
-      return [
-        {
-          id: `${definition.id}.completeness`,
-          type: "completeness",
-          requiredSections: stringArrayFrom(definition.requiredSections),
-          sectionsPath: definition.sectionsPath
-        }
-      ];
-    case "deterministic":
-      return [];
-    default:
-      return [];
-  }
-}
+  const harnessPackageId = request.harnessPackageId ?? DEFAULT_HARNESS_PACKAGE_ID;
 
-function normalizeCheck(
-  check: Record<string, unknown>,
-  definition: FixtureEvalDefinition,
-  kind: string,
-  index: number
-): FixtureEvalCheck {
-  return {
-    ...check,
-    id: stringFrom(check.id) ?? `${definition.id}.check.${index + 1}`,
-    type: stringFrom(check.type) ?? kind
-  };
+  if (harnessPackageId === DEFAULT_EVAL_REGISTRY.harnessPackageId) {
+    return DEFAULT_EVAL_REGISTRY;
+  }
+
+  return buildEvalRegistry(harnessPackageId, []);
 }
 
 function resolveTargetArtifact(
@@ -687,32 +665,6 @@ function artifactMatchesCandidate(
     .includes(candidate);
 }
 
-function targetCandidates(definition: FixtureEvalDefinition): string[] {
-  const target = definition.target;
-  const values: string[] = [];
-
-  values.push(...definedStrings([definition.targetRef, definition.artifactId]));
-
-  if (typeof target === "string") {
-    values.push(target);
-  } else if (isRecord(target)) {
-    values.push(
-      ...definedStrings([
-        stringFrom(target.ref),
-        stringFrom(target.id),
-        stringFrom(target.artifactId),
-        stringFrom(target.artifactType)
-      ])
-    );
-  }
-
-  values.push(...refsFromHarnessReferences(definition.targetArtifacts));
-  values.push(...refsFromHarnessReferences(definition.requiredArtifacts));
-  values.push(...refsFromHarnessReferences(definition.artifacts));
-
-  return uniqueStrings(values);
-}
-
 function targetRefFromDefinition(
   definition: FixtureEvalDefinition
 ): string | undefined {
@@ -732,81 +684,6 @@ function targetRefForArtifact(key: string, artifact: EvalArtifactSnapshot) {
   const id = artifact.artifactId ?? artifact.id ?? key;
 
   return id.startsWith("artifact:") ? id : `artifact:${id}`;
-}
-
-function refsFromHarnessReferences(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value.flatMap((item) => {
-    if (typeof item === "string") {
-      return [item];
-    }
-
-    if (isRecord(item) && typeof item.id === "string") {
-      return [item.id];
-    }
-
-    return [];
-  });
-}
-
-function evalKind(definition: FixtureEvalDefinition): string {
-  const metadata = isRecord(definition.metadata) ? definition.metadata : undefined;
-  const explicit = firstString([
-    definition.type,
-    definition.evalType,
-    definition.kind,
-    definition.category,
-    metadata?.type,
-    metadata?.evalType
-  ]);
-
-  if (explicit !== undefined && normalizeKind(explicit) !== "deterministic") {
-    return normalizeKind(explicit);
-  }
-
-  if (Array.isArray(definition.checks) && definition.checks.length > 0) {
-    return "deterministic";
-  }
-
-  if (
-    stringArrayFrom(definition.requiredFields).length > 0 ||
-    schemaRequiredFields(definition.schema).length > 0
-  ) {
-    return "schema";
-  }
-
-  if (
-    stringArrayFrom(definition.requiredSections).length > 0 ||
-    definition.id.includes("completeness")
-  ) {
-    return "completeness";
-  }
-
-  if (
-    definition.claimsPath !== undefined ||
-    definition.id.includes("source_fidelity")
-  ) {
-    return "source_fidelity";
-  }
-
-  if (explicit !== undefined) {
-    return normalizeKind(explicit);
-  }
-
-  return "deterministic";
-}
-
-function isUnsupportedEvalKind(kind: string) {
-  return new Set([
-    "model_assisted",
-    "model_graded",
-    "visual",
-    "browser",
-    "human_review"
-  ]).has(kind);
 }
 
 function unsupportedStatus(definition: FixtureEvalDefinition): EvalVerdict["status"] {
@@ -1182,14 +1059,6 @@ function collectEvidenceRefs(value: unknown, depth = 0): Set<string> {
   }
 
   return refs;
-}
-
-function schemaRequiredFields(schema: unknown): string[] {
-  if (!isRecord(schema)) {
-    return [];
-  }
-
-  return stringArrayFrom(schema.required);
 }
 
 function normalizeJsonPath(path: string) {

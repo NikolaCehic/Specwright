@@ -1,0 +1,20 @@
+{
+  "evalId": "not_registered",
+  "targetRef": "eval:not_registered",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "message": "Eval definition not_registered is missing",
+      "code": "eval.definition.missing",
+      "targetRef": "eval:not_registered",
+      "severity": "blocking",
+      "repairHint": "Provide a declared eval definition before running it."
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  }
+}

@@ -27,5 +27,30 @@
         }
       }
     }
+  },
+  "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+  "evalRegistry": {
+    "schemaVersion": "specwright.eval-registry.v0",
+    "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+    "entries": [
+      {
+        "definitionId": "artifact_schema_eval",
+        "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+        "kind": "artifact_schema",
+        "contentHash": "sha256:d0bcd6351e360c186ef13dedacba5eb0c4387081995e619d010bc16e9a13a8d5",
+        "definition": {
+          "id": "artifact_schema_eval",
+          "type": "schema",
+          "target": {
+            "artifactId": "plan"
+          },
+          "requiredFields": [
+            "title",
+            "steps"
+          ],
+          "severity": "blocking"
+        }
+      }
+    ]
   }
 }
