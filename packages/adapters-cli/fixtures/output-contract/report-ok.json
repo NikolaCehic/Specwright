@@ -1,0 +1,12 @@
+{
+  "apiVersion": 1,
+  "command": "report",
+  "outcome": "ok",
+  "runId": "run-contract",
+  "data": {
+    "runId": "run-contract",
+    "summaryPath": "/workspace/.archetype/runs/run-contract/summary.md",
+    "markdown": "# Run Summary\n\n- Status: running\n",
+    "missingInputs": []
+  }
+}

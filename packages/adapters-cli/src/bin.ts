@@ -1,7 +1,10 @@
 #!/usr/bin/env bun
 import { executeCli } from "./index.js";
+import { contextForProcess } from "./context.js";
 
-const result = await executeCli(process.argv.slice(2));
+const result = await executeCli(process.argv.slice(2), undefined, {
+  context: contextForProcess(process.env)
+});
 
 if (result.stdout.length > 0) {
   process.stdout.write(result.stdout);
