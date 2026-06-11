@@ -1,0 +1,45 @@
+{
+  "harnessPackageId": "specwright.default@0.1.0",
+  "evalId": "not_registered",
+  "evalDefinitions": [
+    {
+      "id": "artifact_schema_presence",
+      "description": "Ensure the plan artifact exists and exposes required schema fields.",
+      "type": "deterministic",
+      "target": {
+        "artifactId": "plan"
+      },
+      "artifactSchemas": [
+        "plan"
+      ],
+      "requiredArtifacts": [
+        "plan"
+      ],
+      "blocking": true,
+      "checks": [
+        {
+          "id": "plan_required_fields",
+          "type": "schema",
+          "requiredFields": [
+            "goal",
+            "steps",
+            "claims",
+            "sections"
+          ]
+        }
+      ],
+      "onFail": {
+        "action": "create_repair_task"
+      }
+    }
+  ],
+  "input": {
+    "artifacts": {
+      "plan": {
+        "artifactId": "plan",
+        "artifactType": "plan",
+        "content": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,143 @@
+{
+  "schemaVersion": "specwright.eval-registry.v0",
+  "harnessPackageId": "specwright.default@0.1.0",
+  "entries": [
+    {
+      "definitionId": "artifact_schema_presence",
+      "harnessPackageId": "specwright.default@0.1.0",
+      "kind": "artifact_schema",
+      "contentHash": "sha256:bd738b2849111e348ba6b9678d821605b89a3f44bdfb0f66300b737441b73eb7",
+      "definition": {
+        "id": "artifact_schema_presence",
+        "description": "Ensure the plan artifact exists and exposes required schema fields.",
+        "type": "deterministic",
+        "target": {
+          "artifactId": "plan"
+        },
+        "artifactSchemas": [
+          "plan"
+        ],
+        "requiredArtifacts": [
+          "plan"
+        ],
+        "blocking": true,
+        "checks": [
+          {
+            "id": "plan_required_fields",
+            "type": "schema",
+            "requiredFields": [
+              "goal",
+              "steps",
+              "claims",
+              "sections"
+            ]
+          },
+          {
+            "id": "plan_sections_required",
+            "type": "schema",
+            "path": "sections",
+            "requiredFields": [
+              "goal",
+              "evidence",
+              "steps",
+              "risks",
+              "verification"
+            ]
+          }
+        ],
+        "onFail": {
+          "action": "create_repair_task"
+        },
+        "sourcePath": "evals/artifact_schema_presence.yaml"
+      }
+    },
+    {
+      "definitionId": "source_fidelity",
+      "harnessPackageId": "specwright.default@0.1.0",
+      "kind": "source_fidelity",
+      "contentHash": "sha256:522ff57f239a5d121237de668ffeb647ec2dd346325bf62af61fb065720d4607",
+      "definition": {
+        "id": "source_fidelity",
+        "description": "Verify important plan claims are backed by recorded evidence.",
+        "type": "source_fidelity",
+        "target": {
+          "artifactId": "plan"
+        },
+        "artifactSchemas": [
+          "plan",
+          "evidence-graph"
+        ],
+        "requiredArtifacts": [
+          "plan",
+          "evidence-graph"
+        ],
+        "claimsPath": "claims",
+        "blocking": true,
+        "checks": [
+          {
+            "id": "important_claims_have_evidence",
+            "type": "source_fidelity",
+            "claimsPath": "claims",
+            "importantClaimLevels": [
+              "source_fact",
+              "derived_fact",
+              "inference",
+              "human_decision"
+            ]
+          }
+        ],
+        "onFail": {
+          "action": "create_repair_task"
+        },
+        "sourcePath": "evals/source_fidelity.yaml"
+      }
+    },
+    {
+      "definitionId": "completeness_required_sections",
+      "harnessPackageId": "specwright.default@0.1.0",
+      "kind": "completeness",
+      "contentHash": "sha256:363ef7cffb66ee2750b8c36ccfb8000d889360fa9d19ebfd90debb19508b674e",
+      "definition": {
+        "id": "completeness_required_sections",
+        "description": "Ensure the plan includes the minimum reviewable planning sections.",
+        "type": "completeness",
+        "target": {
+          "artifactId": "plan"
+        },
+        "artifactSchemas": [
+          "plan"
+        ],
+        "requiredArtifacts": [
+          "plan"
+        ],
+        "requiredSections": [
+          "goal",
+          "evidence",
+          "steps",
+          "risks",
+          "verification"
+        ],
+        "sectionsPath": "sections",
+        "blocking": true,
+        "checks": [
+          {
+            "id": "plan_sections_complete",
+            "type": "completeness",
+            "sectionsPath": "sections",
+            "requiredSections": [
+              "goal",
+              "evidence",
+              "steps",
+              "risks",
+              "verification"
+            ]
+          }
+        ],
+        "onFail": {
+          "action": "create_repair_task"
+        },
+        "sourcePath": "evals/completeness_required_sections.yaml"
+      }
+    }
+  ]
+}
