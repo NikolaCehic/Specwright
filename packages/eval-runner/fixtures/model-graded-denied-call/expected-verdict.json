@@ -1,0 +1,60 @@
+{
+  "evalId": "model_graded_denied_call",
+  "targetRef": "artifact:plan",
+  "status": "needs_review",
+  "severity": "advisory",
+  "findings": [
+    {
+      "code": "eval.grader.denied",
+      "message": "Model-assisted grader call returned denied",
+      "severity": "advisory",
+      "targetRef": "artifact:plan",
+      "metadata": {
+        "modelAssisted": {
+          "grader": "specwright.semantic-grader@1.0.0",
+          "modelTool": "tool.model.semantic_grade",
+          "rubricRef": "rubric:semantic-quality@1.0.0",
+          "rubricHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "modelCallId": "model-call:sha256:abad58a03a2db4efee8905af2d532865a7652df29b9886619faffda8e3628485",
+          "outcome": "denied",
+          "toolCallId": "toolcall_denied_call",
+          "toolStatus": "denied",
+          "toolSpan": {
+            "toolId": "tool.model.semantic_grade",
+            "toolVersion": "1.0.0",
+            "argsHash": "sha256:0fdc4247d531f003101197d866432546b3aa310950f371207dfd0e445c38ce30",
+            "cacheStatus": "bypass",
+            "traceId": "trace_denied_call",
+            "tokenBudget": 512
+          },
+          "requestedBy": {
+            "phase": "quality_gate",
+            "evalId": "model_graded_denied_call",
+            "modelCallId": "model-call:sha256:abad58a03a2db4efee8905af2d532865a7652df29b9886619faffda8e3628485"
+          },
+          "idempotencyKey": "eval-grading:sha256:4714cabdd82e2ed28a687c114bbbc1b39d671dfed8efd30d1232efb3d59cf1ca",
+          "outcomeLabel": "denied"
+        }
+      }
+    }
+  ],
+  "evidenceRefs": [
+    "evidence:brief"
+  ],
+  "producedBy": {
+    "kind": "model_assisted",
+    "ref": "specwright.semantic-grader@1.0.0"
+  },
+  "provenance": {
+    "runId": "run_model_graded_fixture",
+    "phase": "quality_gate",
+    "decisionHash": "sha256:6a1502efc8aaf3702aa6556fc0bbbfaa52fbfd7eb81b61b1dd61eb98103ba1c5",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:3cf6f7be0d9849c42a8f6545577a3222d0a86defaaee20971ac305eb16f4d815",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:02693f9e6dd3e1cdce83af4153cdb43418d27a9da53b71be75f26695d70dfdff",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:a27cc96ff1cf31f80e65561a66191126152d65140541dd54b4eff1292471faec"
+    ],
+    "traceId": "trace_model_graded_fixture"
+  }
+}

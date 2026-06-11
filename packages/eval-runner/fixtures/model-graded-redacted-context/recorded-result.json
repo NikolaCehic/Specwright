@@ -1,0 +1,22 @@
+{
+  "toolCallId": "toolcall_redacted_context",
+  "status": "success",
+  "output": {
+    "status": "needs_review",
+    "message": "Review semantic fit with the customer note.",
+    "evidenceRefs": [
+      "evidence:customer-note"
+    ]
+  },
+  "provenance": {
+    "toolId": "tool.model.semantic_grade",
+    "toolVersion": "1.0.0",
+    "argsHash": "sha256:44e3d0cd0163844dc29d0b10b5d6b343abaede726aa6111e1fb0eac2a551a894",
+    "resultHash": "sha256:0396728a51f306d5caab2dc58d7d48572c926b276988319f6e2a72c3836bd143",
+    "cacheStatus": "hit",
+    "traceId": "trace_redacted_context",
+    "adapterVersion": "model-adapter.v0",
+    "decisionHash": "sha256:010dd9d573520a4b7e715505504704fb557f12617e161ee37f1240ebae47c8f5",
+    "spanId": "span_redacted_context"
+  }
+}

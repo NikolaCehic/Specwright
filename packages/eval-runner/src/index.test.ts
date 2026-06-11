@@ -5,6 +5,8 @@ import { fileURLToPath } from "node:url";
 import {
   EvalVerdictSchema,
   EvalVerdictStatusSchema,
+  type ToolCallRequest,
+  type ToolCallResult,
   type EvalVerdict
 } from "@specwright/schemas";
 import { loadHarnessPackage } from "@specwright/harness-loader";
@@ -14,6 +16,7 @@ import {
   recomputeDecisionHash,
   hashResolvedInputs,
   runEval,
+  runEvalAsync,
   resolveEvalDefinition,
   stableStringify,
   type DecisionInputHashes,
@@ -48,6 +51,29 @@ const fixtureCases = [
   "schema-pass-mutated-target"
 ];
 
+const modelGradedFixtureCases = [
+  {
+    name: "model-graded-deterministic-fail-short-circuit",
+    expectedBrokerCalls: 0
+  },
+  {
+    name: "model-graded-invalid-output-fails-closed",
+    expectedBrokerCalls: 1
+  },
+  {
+    name: "model-graded-redacted-context",
+    expectedBrokerCalls: 1
+  },
+  {
+    name: "model-graded-advisory-pass",
+    expectedBrokerCalls: 1
+  },
+  {
+    name: "model-graded-denied-call",
+    expectedBrokerCalls: 1
+  }
+];
+
 const decisionHashPattern = /^sha256:[a-f0-9]{64}$/u;
 
 describe("eval runner fixtures", () => {
@@ -73,6 +99,296 @@ describe("eval runner fixtures", () => {
       expect(recomputeDecisionHash(result)).toBe(result.provenance?.decisionHash);
     });
   }
+});
+
+describe("model-assisted eval runner fixtures", () => {
+  for (const fixture of modelGradedFixtureCases) {
+    test(fixture.name, async () => {
+      const fixtureDir = join(fixturesDir, fixture.name);
+      const request = (await readJson(join(
+        fixtureDir,
+        "request.json"
+      ))) as RunEvalRequest;
+      const recordedResult = (await readJson(join(
+        fixtureDir,
+        "recorded-result.json"
+      ))) as ToolCallResult;
+      const expected = await readJson(join(fixtureDir, "expected-verdict.json"));
+      const replay = replayBroker(recordedResult);
+
+      const result = await runEvalAsync({
+        ...request,
+        broker: replay.callTool
+      });
+
+      expect(EvalVerdictSchema.parse(result)).toEqual(result);
+      expect(result).toEqual(expected);
+      expect(replay.calls).toHaveLength(fixture.expectedBrokerCalls);
+      expectValidDecisionProvenance(result);
+      expect(recomputeDecisionHash(result)).toBe(result.provenance?.decisionHash);
+
+      const rerun = replayBroker(recordedResult);
+      expect(
+        await runEvalAsync({
+          ...request,
+          broker: rerun.callTool
+        })
+      ).toEqual(result);
+      expect(rerun.calls).toHaveLength(fixture.expectedBrokerCalls);
+
+      if (fixture.name === "model-graded-redacted-context") {
+        const context = replay.calls[0]?.args.context;
+        const serialized = stableStringify(context);
+
+        expect(context).toEqual({
+          target: {
+            content: {
+              summary: "Customer requires audit-friendly model grading."
+            }
+          },
+          evidence: {
+            records: [
+              {
+                id: "evidence:customer-note",
+                quote: "Audit-friendly grading is required."
+              }
+            ]
+          }
+        });
+        expect(serialized).not.toContain("do-not-send");
+        expect(serialized).not.toContain("password");
+        expect(serialized).not.toContain("token");
+        expect(serialized).not.toContain("apiKey");
+      }
+
+      if (fixture.name === "model-graded-advisory-pass") {
+        expect(result.producedBy.kind).toBe("model_assisted");
+        expect(result.producedBy.ref).toBe("specwright.semantic-grader@1.0.0");
+        expect(result.status).toBe("pass");
+        expect(result.severity).toBe("advisory");
+      }
+
+      if (fixture.name === "model-graded-deterministic-fail-short-circuit") {
+        expect(result.status).toBe("fail");
+        expect(result.producedBy.kind).toBe("deterministic");
+      }
+    });
+  }
+
+  test("sync model-assisted callers keep failing closed without broker use", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "model-graded-advisory-pass",
+      "request.json"
+    ))) as RunEvalRequest;
+
+    const result = runEval(request);
+
+    expect(result.status).toBe("needs_review");
+    expect(result.findings[0]?.code).toBe("eval.type.unsupported");
+    expect(result.producedBy.kind).toBe("deterministic");
+  });
+
+  test("approval_required, failed, oversized, incomplete, and over-budget model paths fail closed", async () => {
+    const fixtureDir = join(fixturesDir, "model-graded-advisory-pass");
+    const request = (await readJson(join(
+      fixtureDir,
+      "request.json"
+    ))) as RunEvalRequest;
+    const recordedResult = (await readJson(join(
+      fixtureDir,
+      "recorded-result.json"
+    ))) as ToolCallResult;
+
+    const approvalRequired = replayBroker({
+      ...recordedResult,
+      status: "approval_required",
+      output: undefined,
+      provenance: {
+        toolId: recordedResult.provenance.toolId,
+        toolVersion: recordedResult.provenance.toolVersion,
+        argsHash: recordedResult.provenance.argsHash,
+        cacheStatus: "bypass",
+        traceId: "trace_approval_required"
+      }
+    });
+    const approvalVerdict = await runEvalAsync({
+      ...request,
+      broker: approvalRequired.callTool
+    });
+    expect(approvalVerdict.status).toBe("needs_review");
+    expect(approvalVerdict.findings[0]?.code).toBe(
+      "eval.grader.approval_required"
+    );
+
+    const failed = replayBroker({
+      ...recordedResult,
+      status: "failed",
+      output: undefined,
+      error: {
+        code: "adapter_failed",
+        message: "Adapter failed.",
+        retryable: false
+      },
+      provenance: {
+        toolId: recordedResult.provenance.toolId,
+        toolVersion: recordedResult.provenance.toolVersion,
+        argsHash: recordedResult.provenance.argsHash,
+        cacheStatus: "bypass",
+        traceId: "trace_failed"
+      }
+    });
+    const failedVerdict = await runEvalAsync({
+      ...request,
+      broker: failed.callTool
+    });
+    expect(failedVerdict.status).toBe("needs_review");
+    expect(failedVerdict.findings[0]?.code).toBe("eval.grader.failed");
+
+    const oversized = replayBroker({
+      ...recordedResult,
+      output: {
+        status: "pass",
+        message: "x".repeat(10_000)
+      }
+    });
+    const oversizedVerdict = await runEvalAsync({
+      ...request,
+      broker: oversized.callTool
+    });
+    expect(oversizedVerdict.status).toBe("needs_review");
+    expect(oversizedVerdict.findings[0]?.code).toBe(
+      "eval.grader.output_over_budget"
+    );
+
+    const incomplete = await runEvalAsync(
+      requestWithUpdatedDefinition(request, (definition) => {
+        const grader = { ...(definition.grader as Record<string, unknown>) };
+        delete grader.outputSchema;
+
+        return {
+          ...definition,
+          grader
+        };
+      })
+    );
+    expect(incomplete.status).toBe("needs_review");
+    expect(incomplete.findings[0]?.code).toBe("eval.grader.incomplete");
+
+    const overBudgetReplay = replayBroker(recordedResult);
+    const overBudget = await runEvalAsync({
+      ...requestWithUpdatedDefinition(request, (definition) => ({
+        ...definition,
+        grader: {
+          ...(definition.grader as Record<string, unknown>),
+          maxTokens: 1
+        }
+      })),
+      broker: overBudgetReplay.callTool
+    });
+    expect(overBudget.status).toBe("needs_review");
+    expect(overBudget.findings[0]?.code).toBe(
+      "eval.grader.context_over_budget"
+    );
+    expect(overBudgetReplay.calls).toHaveLength(0);
+  });
+
+  test("malformed broker result envelopes fail closed without throwing", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "model-graded-advisory-pass",
+      "request.json"
+    ))) as RunEvalRequest;
+    const calls: ToolCallRequest[] = [];
+
+    const result = await runEvalAsync({
+      ...request,
+      broker: async (toolRequest) => {
+        calls.push(toolRequest);
+
+        return {
+          toolCallId: "toolcall_missing_provenance",
+          status: "success",
+          output: {
+            status: "pass",
+            message: "This valid-looking model output is not enough."
+          }
+        } as unknown as ToolCallResult;
+      }
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(EvalVerdictSchema.parse(result)).toEqual(result);
+    expect(result.status).toBe("needs_review");
+    expect(result.findings[0]?.code).toBe("eval.grader.result_invalid");
+    expect(result.findings[0]?.metadata?.modelAssisted).toMatchObject({
+      outcome: "invalid_result",
+      toolStatus: undefined
+    });
+    expect(recomputeDecisionHash(result)).toBe(result.provenance?.decisionHash);
+  });
+
+  test("broker throws and rejections fail closed without rejecting runEvalAsync", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "model-graded-advisory-pass",
+      "request.json"
+    ))) as RunEvalRequest;
+
+    const thrown = await runEvalAsync({
+      ...request,
+      broker: async () => {
+        throw new Error("broker unavailable");
+      }
+    });
+
+    expect(EvalVerdictSchema.parse(thrown)).toEqual(thrown);
+    expect(thrown.status).toBe("needs_review");
+    expect(thrown.findings[0]?.code).toBe("eval.grader.result_invalid");
+    expect(thrown.findings[0]?.metadata?.modelAssisted).toMatchObject({
+      outcome: "invalid_result"
+    });
+
+    const rejected = await runEvalAsync({
+      ...request,
+      broker: () => Promise.reject(new Error("broker rejected"))
+    });
+
+    expect(EvalVerdictSchema.parse(rejected)).toEqual(rejected);
+    expect(rejected.status).toBe("needs_review");
+    expect(rejected.findings[0]?.code).toBe("eval.grader.result_invalid");
+    expect(recomputeDecisionHash(rejected)).toBe(
+      rejected.provenance?.decisionHash
+    );
+  });
+
+  test("model pass cannot create a standalone blocking pass", async () => {
+    const request = (await readJson(join(
+      fixturesDir,
+      "model-graded-advisory-pass",
+      "request.json"
+    ))) as RunEvalRequest;
+    const recordedResult = (await readJson(join(
+      fixturesDir,
+      "model-graded-advisory-pass",
+      "recorded-result.json"
+    ))) as ToolCallResult;
+    const replay = replayBroker(recordedResult);
+    const result = await runEvalAsync({
+      ...requestWithUpdatedDefinition(request, (definition) => ({
+        ...definition,
+        severity: "blocking"
+      })),
+      broker: replay.callTool
+    });
+
+    expect(result.status).toBe("needs_review");
+    expect(result.severity).toBe("blocking");
+    expect(result.findings[0]?.code).toBe(
+      "eval.grader.blocking_pass_not_authoritative"
+    );
+    expect(result.producedBy.kind).toBe("model_assisted");
+  });
 });
 
 describe("eval decision hash integrity", () => {
@@ -638,5 +954,35 @@ function sourceFidelityRequestWith(input: {
       },
       evidence: input.evidence
     }
+  };
+}
+
+function replayBroker(recordedResult: ToolCallResult) {
+  const calls: ToolCallRequest[] = [];
+
+  return {
+    calls,
+    callTool: async (request: ToolCallRequest) => {
+      calls.push(request);
+      return recordedResult;
+    }
+  };
+}
+
+function requestWithUpdatedDefinition(
+  request: RunEvalRequest,
+  update: (definition: FixtureEvalDefinition) => FixtureEvalDefinition
+): RunEvalRequest {
+  if (request.evalDefinition === undefined) {
+    throw new Error("test request must include evalDefinition");
+  }
+
+  const definition = update(request.evalDefinition);
+  const harnessPackageId = request.harnessPackageId ?? "harness.test@1.0.0";
+
+  return {
+    ...request,
+    evalDefinition: definition,
+    evalRegistry: buildEvalRegistry(harnessPackageId, [definition])
   };
 }

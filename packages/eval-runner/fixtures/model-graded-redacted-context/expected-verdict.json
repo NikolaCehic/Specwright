@@ -1,0 +1,72 @@
+{
+  "evalId": "model_graded_redacted_context",
+  "targetRef": "artifact:summary",
+  "status": "needs_review",
+  "severity": "advisory",
+  "findings": [
+    {
+      "code": "eval.grader.needs_review",
+      "message": "Review semantic fit with the customer note.",
+      "severity": "advisory",
+      "targetRef": "artifact:summary",
+      "evidenceRefs": [
+        "evidence:customer-note"
+      ],
+      "metadata": {
+        "modelAssisted": {
+          "grader": "specwright.semantic-grader@1.0.0",
+          "modelTool": "tool.model.semantic_grade",
+          "rubricRef": "rubric:semantic-quality@1.0.0",
+          "rubricHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "modelCallId": "model-call:sha256:efe0c4d9a60ab2c4b26ebcbd1caca102173816d9848b488535f8ee2e5653deb7",
+          "outcome": "success",
+          "toolCallId": "toolcall_redacted_context",
+          "toolStatus": "success",
+          "toolSpan": {
+            "toolId": "tool.model.semantic_grade",
+            "toolVersion": "1.0.0",
+            "argsHash": "sha256:44e3d0cd0163844dc29d0b10b5d6b343abaede726aa6111e1fb0eac2a551a894",
+            "resultHash": "sha256:0396728a51f306d5caab2dc58d7d48572c926b276988319f6e2a72c3836bd143",
+            "cacheStatus": "hit",
+            "traceId": "trace_redacted_context",
+            "spanId": "span_redacted_context",
+            "tokenBudget": 512
+          },
+          "requestedBy": {
+            "phase": "quality_gate",
+            "evalId": "model_graded_redacted_context",
+            "modelCallId": "model-call:sha256:efe0c4d9a60ab2c4b26ebcbd1caca102173816d9848b488535f8ee2e5653deb7"
+          },
+          "idempotencyKey": "eval-grading:sha256:fa1c960fab5ab88cbb354e840cce8ee62e27b41e0a5c833ec3281e53cea4bfe4",
+          "outcomeLabel": "success",
+          "modelOutput": {
+            "status": "needs_review",
+            "message": "Review semantic fit with the customer note.",
+            "evidenceRefs": [
+              "evidence:customer-note"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "evidenceRefs": [
+    "evidence:customer-note"
+  ],
+  "producedBy": {
+    "kind": "model_assisted",
+    "ref": "specwright.semantic-grader@1.0.0"
+  },
+  "provenance": {
+    "runId": "run_model_graded_fixture",
+    "phase": "quality_gate",
+    "decisionHash": "sha256:fdc59cfef4b9d82212259d2e236311d6a6d86b594b39dcbe701c243f2bbcae3d",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:b116b0a0dd6c93e8e02f69bcc119bca3ba8b26136d95df09328124b9da73521a",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:c9af239aea35ba826d5f361d3d798bb7bcaf6d16248404f52a467d8f658ac376",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:47dca892aee94e6050c76c438bdcfee86c3ad3bd37e10080d0ac51e22a61fa4f",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:fe5781248e641e7cb0b710702dd23331f66ab6b54ab8d0c0d34daa6d4bd33671"
+    ],
+    "traceId": "trace_redacted_context"
+  }
+}
