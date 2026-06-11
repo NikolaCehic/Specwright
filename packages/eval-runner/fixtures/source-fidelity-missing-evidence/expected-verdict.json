@@ -5,11 +5,11 @@
   "severity": "blocking",
   "findings": [
     {
-      "message": "1 important claim(s) lack required evidence",
       "code": "source_fidelity.failed",
+      "message": "1 important claim(s) lack required evidence",
+      "severity": "blocking",
       "targetRef": "artifact:ux_contract",
       "path": "$.claims",
-      "severity": "blocking",
       "metadata": {
         "findings": [
           {
@@ -30,5 +30,14 @@
   "producedBy": {
     "kind": "deterministic",
     "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:bd9548a3efc9693bd37599b7c7e112852cc18cc6d291829022d9dcc3ee9fb9e2",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:99a6e3212ff0b2465d41503f8c00f19d7157d0861941b23645c3f4ecce38d719",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:532deda3db5d376f771657d529eb342420a9c50fc919f7d9f5013343b914efd7",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:3497a7a4fdc1abe8d1fd6527fb8608d1c60fed55ef67aed4571ce1732a7c6393",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:97712616103c4747f33d5a7a7a4bb819c8878fc628d23804ea980a52daa98bb6"
+    ]
   }
 }

@@ -5,10 +5,10 @@
   "severity": "advisory",
   "findings": [
     {
-      "message": "Eval type model_assisted requires capabilities outside the deterministic EvalRunner slice",
       "code": "eval.type.unsupported",
-      "targetRef": "artifact:summary",
+      "message": "Eval type model_assisted requires capabilities outside the deterministic EvalRunner slice",
       "severity": "advisory",
+      "targetRef": "artifact:summary",
       "repairHint": "Route this eval through an explicit ToolBroker-backed or human review path."
     }
   ],
@@ -16,5 +16,14 @@
   "producedBy": {
     "kind": "deterministic",
     "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:3c8aee2a8f7e4622a76049d4824ca64f1581293832a11bdda043b9116ee91b1e",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:f58202ef75bcdbe1ec4ce2adba09ca2a92be19f587618106df662475d6bdb068",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:cb17bd1cdb33e75e3fb4b2e05cb01b8183a48c3b5b929cc17ac80585206d41e5",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ]
   }
 }
