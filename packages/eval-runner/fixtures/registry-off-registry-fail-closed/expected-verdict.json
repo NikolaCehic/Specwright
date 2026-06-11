@@ -5,10 +5,10 @@
   "severity": "blocking",
   "findings": [
     {
-      "message": "Eval definition not_registered is missing",
       "code": "eval.definition.missing",
-      "targetRef": "eval:not_registered",
+      "message": "Eval definition not_registered is missing",
       "severity": "blocking",
+      "targetRef": "eval:not_registered",
       "repairHint": "Provide a declared eval definition before running it."
     }
   ],
@@ -16,5 +16,14 @@
   "producedBy": {
     "kind": "deterministic",
     "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:a1c4c74eadd8838278877786a5b6bc4937f75fb2ccbe2bce4f496d5d53f92768",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:11973c343f59fa37594831877f0a9149df87191bf6d361d03295b7ee63e54129",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:36829db2583cd99102282064465523de22ce14a764a95f258b017884c6492af0",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ]
   }
 }

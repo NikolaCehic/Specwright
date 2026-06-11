@@ -5,10 +5,10 @@
   "severity": "blocking",
   "findings": [
     {
-      "message": "Eval definition artifact_schema_presence does not match the governed registry entry",
       "code": "eval.definition.untrusted",
-      "targetRef": "eval:artifact_schema_presence",
+      "message": "Eval definition artifact_schema_presence does not match the governed registry entry",
       "severity": "blocking",
+      "targetRef": "eval:artifact_schema_presence",
       "repairHint": "Use the eval definition signed into the loaded harness package registry.",
       "metadata": {
         "registeredContentHash": "sha256:bd738b2849111e348ba6b9678d821605b89a3f44bdfb0f66300b737441b73eb7",
@@ -20,5 +20,14 @@
   "producedBy": {
     "kind": "deterministic",
     "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:f1dd97bfc3619c912857040c8b509e89b60ecde23989c23142ea3837d57eec89",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:11973c343f59fa37594831877f0a9149df87191bf6d361d03295b7ee63e54129",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:971aea027c2aa42144cc243c7fd776568882afcd63b8bd183887b5802e4a033b",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ]
   }
 }

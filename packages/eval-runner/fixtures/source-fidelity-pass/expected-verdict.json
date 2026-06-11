@@ -10,5 +10,14 @@
   "producedBy": {
     "kind": "deterministic",
     "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:49e3ff33bebbe0e1f2acf417ea2f0f82db70488b1e5b46197693a86915ef0044",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:37bb51a1bd8b817a47bad1e224678f3bd289feaa06928abbe6bf8c71351dad20",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:532deda3db5d376f771657d529eb342420a9c50fc919f7d9f5013343b914efd7",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:3497a7a4fdc1abe8d1fd6527fb8608d1c60fed55ef67aed4571ce1732a7c6393",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:97d7696926c80534d2ac9af46ee5e061c9119efd179e426e5861c40756d14836"
+    ]
   }
 }

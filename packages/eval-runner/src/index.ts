@@ -18,6 +18,34 @@ import {
   type EvalRegistryManifest,
   type EvalDefinitionResolution
 } from "./registry";
+import {
+  DECISION_HASH_FAIL_CLOSED_CODE,
+  DecisionHashError,
+  computeDecisionHash,
+  hashResolvedInputs,
+  hashValue,
+  inputHashesToCausationIds,
+  unresolvedDecisionInputHashes,
+  type OrderedCheckResult,
+  type ResolvedInputsHashInput
+} from "./decision-hash";
+
+export {
+  DECISION_HASH_FAIL_CLOSED_CODE,
+  computeDecisionHash,
+  hashResolvedInputs,
+  hashValue,
+  inputHashesFromVerdict,
+  inputHashesToCausationIds,
+  recomputeDecisionHash,
+  stableStringify,
+  normalizeStable,
+  type DecisionHashInput,
+  type DecisionInputHashes,
+  type HashDigest,
+  type OrderedCheckResult,
+  type ResolvedInputsHashInput
+} from "./decision-hash";
 
 export const DEFAULT_EVAL_RUNNER_EVALUATOR = "specwright.eval-runner.v0";
 
@@ -157,7 +185,8 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
         })
       ],
       evidenceRefs: [],
-      evaluatorRef
+      evaluatorRef,
+      decisionContext: decisionContextFor({ request, resolution })
     });
   }
 
@@ -177,7 +206,8 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
         })
       ],
       evidenceRefs: [],
-      evaluatorRef
+      evaluatorRef,
+      decisionContext: decisionContextFor({ request, resolution })
     });
   }
 
@@ -193,7 +223,13 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
       severity,
       findings: [],
       evidenceRefs: target?.evidenceRefs ?? [],
-      evaluatorRef
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target
+      })
     });
   }
 
@@ -220,7 +256,13 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
               })
             ],
       evidenceRefs: target?.evidenceRefs ?? [],
-      evaluatorRef
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target
+      })
     });
   }
 
@@ -243,12 +285,23 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
         })
       ],
       evidenceRefs: target?.evidenceRefs ?? [],
-      evaluatorRef
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target
+      })
     });
   }
 
-  const evaluations = checks.map((check) =>
-    evaluateCheck(check, definition, target, request.input, severity)
+  const evaluatedChecks = checks.map((check) => ({
+    check,
+    evaluation: evaluateCheck(check, definition, target, request.input, severity)
+  }));
+  const evaluations = evaluatedChecks.map(({ evaluation }) => evaluation);
+  const checkResults = evaluatedChecks.map(({ check, evaluation }) =>
+    normalizeCheckResult(check, definition, evaluation)
   );
   const failed = evaluations.filter(
     (evaluation): evaluation is Extract<CheckEvaluation, { status: "fail" }> =>
@@ -273,7 +326,14 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
       severity,
       findings: failed.map((evaluation) => evaluation.finding),
       evidenceRefs,
-      evaluatorRef
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target,
+        checkResults
+      })
     });
   }
 
@@ -285,7 +345,14 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
       severity,
       findings: needsReview.map((evaluation) => evaluation.finding),
       evidenceRefs,
-      evaluatorRef
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target,
+        checkResults
+      })
     });
   }
 
@@ -296,7 +363,14 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
     severity,
     findings: [],
     evidenceRefs,
-    evaluatorRef
+    evaluatorRef,
+    decisionContext: decisionContextFor({
+      request,
+      resolution,
+      definition,
+      target,
+      checkResults
+    })
   });
 }
 
@@ -746,6 +820,58 @@ function needsReviewForCheck(
   };
 }
 
+function decisionContextFor(input: {
+  request: RunEvalRequest;
+  resolution: EvalDefinitionResolution;
+  definition?: FixtureEvalDefinition | undefined;
+  target?: ResolvedArtifact | undefined;
+  checkResults?: readonly OrderedCheckResult[] | undefined;
+}): ResolvedInputsHashInput {
+  return {
+    targetContent: input.target?.content,
+    evidenceSnapshot: input.request.input?.evidence,
+    definition: input.definition,
+    definitionHash: definitionHashForResolution(input.resolution),
+    checkResults: input.checkResults ?? []
+  };
+}
+
+function definitionHashForResolution(
+  resolution: EvalDefinitionResolution
+): string | undefined {
+  switch (resolution.status) {
+    case "resolved":
+      return resolution.contentHash;
+    case "untrusted":
+      return hashValue({
+        status: "untrusted",
+        registeredContentHash: resolution.registeredContentHash,
+        suppliedContentHash: resolution.suppliedContentHash
+      });
+    case "missing":
+      return undefined;
+    default:
+      return assertNever(resolution);
+  }
+}
+
+function normalizeCheckResult(
+  check: FixtureEvalCheck,
+  definition: FixtureEvalDefinition,
+  evaluation: CheckEvaluation
+): OrderedCheckResult {
+  const finding =
+    evaluation.status === "pass" ? undefined : evaluation.finding;
+
+  return {
+    checkId: check.id,
+    type: normalizeKind(check.type ?? evalKind(definition)),
+    status: evaluation.status,
+    code: finding?.code,
+    path: finding?.path
+  };
+}
+
 function buildVerdict(input: {
   evalId: string;
   targetRef: string;
@@ -754,19 +880,83 @@ function buildVerdict(input: {
   findings: EvalFinding[];
   evidenceRefs: string[];
   evaluatorRef: string;
+  decisionContext: ResolvedInputsHashInput;
 }): EvalVerdict {
-  return EvalVerdictSchema.parse({
-    evalId: input.evalId,
-    targetRef: input.targetRef,
-    status: input.status,
-    severity: input.severity,
-    findings: input.findings,
-    evidenceRefs: uniqueStrings(input.evidenceRefs),
-    producedBy: {
-      kind: "deterministic",
-      ref: input.evaluatorRef
+  const producedBy = {
+    kind: "deterministic" as const,
+    ref: input.evaluatorRef
+  };
+
+  try {
+    const inputHashes = hashResolvedInputs(input.decisionContext);
+    const decisionHash = computeDecisionHash({
+      evalId: input.evalId,
+      targetRef: input.targetRef,
+      status: input.status,
+      severity: input.severity,
+      producedByRef: producedBy.ref,
+      ...inputHashes
+    });
+
+    return EvalVerdictSchema.parse({
+      evalId: input.evalId,
+      targetRef: input.targetRef,
+      status: input.status,
+      severity: input.severity,
+      findings: input.findings,
+      evidenceRefs: uniqueStrings(input.evidenceRefs),
+      producedBy,
+      provenance: {
+        decisionHash,
+        causationIds: inputHashesToCausationIds(inputHashes)
+      }
+    });
+  } catch (error) {
+    if (!(error instanceof DecisionHashError)) {
+      throw error;
     }
-  });
+
+    const reason = error instanceof Error ? error.message : "unknown hash error";
+    const inputHashes = unresolvedDecisionInputHashes(reason);
+    const decisionHash = computeDecisionHash({
+      evalId: input.evalId,
+      targetRef: input.targetRef,
+      status: "fail",
+      severity: "blocking",
+      producedByRef: producedBy.ref,
+      ...inputHashes
+    });
+
+    return EvalVerdictSchema.parse({
+      evalId: input.evalId,
+      targetRef: input.targetRef,
+      status: "fail",
+      severity: "blocking",
+      findings: [
+        makeFinding({
+          message: "Eval decision hash could not be computed from resolved inputs",
+          code: DECISION_HASH_FAIL_CLOSED_CODE,
+          targetRef: input.targetRef,
+          severity: "blocking",
+          repairHint:
+            "Provide JSON-canonicalizable eval inputs before treating this verdict as authoritative.",
+          metadata: {
+            reason
+          }
+        })
+      ],
+      evidenceRefs: [],
+      producedBy,
+      provenance: {
+        decisionHash,
+        causationIds: inputHashesToCausationIds(inputHashes)
+      }
+    });
+  }
+}
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled eval runner state ${String(value)}`);
 }
 
 function makeFinding(input: {

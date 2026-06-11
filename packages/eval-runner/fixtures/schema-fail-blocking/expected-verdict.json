@@ -5,10 +5,10 @@
   "severity": "blocking",
   "findings": [
     {
-      "message": "Artifact is missing required fields: steps",
       "code": "artifact.required_fields.missing",
-      "targetRef": "artifact:plan",
+      "message": "Artifact is missing required fields: steps",
       "severity": "blocking",
+      "targetRef": "artifact:plan",
       "repairHint": "Add the required fields or adjust the artifact schema."
     }
   ],
@@ -18,5 +18,14 @@
   "producedBy": {
     "kind": "deterministic",
     "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:9cad11bf87eb051192445838751b58aab7179fec7ce8d0c34e8d7a1f315e5c4f",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:70f3c37ea2a2f2f0bbab4759ad07f4626559e34e6b6e9daae781ecb99a321f0b",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:d0bcd6351e360c186ef13dedacba5eb0c4387081995e619d010bc16e9a13a8d5",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:9de333bce077ce7ccf0713b75d849acc8a3d862cdf41239ef87c4b7ed61a4564"
+    ]
   }
 }
