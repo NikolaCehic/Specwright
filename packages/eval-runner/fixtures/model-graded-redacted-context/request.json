@@ -1,0 +1,281 @@
+{
+  "evalDefinition": {
+    "id": "model_graded_redacted_context",
+    "type": "model_graded",
+    "target": {
+      "artifactId": "summary"
+    },
+    "severity": "advisory",
+    "checks": [
+      {
+        "id": "summary_present",
+        "type": "schema",
+        "requiredFields": [
+          "summary"
+        ]
+      }
+    ],
+    "grader": {
+      "grader": "specwright.semantic-grader@1.0.0",
+      "modelTool": "tool.model.semantic_grade",
+      "rubric": {
+        "ref": "rubric:semantic-quality@1.0.0",
+        "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "target",
+          "evidence"
+        ],
+        "properties": {
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "content": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "summary"
+                ],
+                "properties": {
+                  "summary": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "records"
+            ],
+            "properties": {
+              "records": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "id",
+                    "quote"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "quote": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "enum": [
+              "pass",
+              "needs_review",
+              "fail"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "evidenceRefs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "allowedContextRefs": [
+        "target.content.summary",
+        "evidence.records"
+      ],
+      "maxTokens": 512,
+      "onInvalidOutput": "needs_review"
+    }
+  },
+  "input": {
+    "artifacts": {
+      "summary": {
+        "artifactId": "summary",
+        "artifactType": "summary",
+        "evidenceRefs": [
+          "evidence:customer-note"
+        ],
+        "metadata": {
+          "owner": "quality",
+          "apiKey": "metadata-secret"
+        },
+        "content": {
+          "summary": "Customer requires audit-friendly model grading.",
+          "password": "do-not-send",
+          "secretNote": {
+            "classification": "secret",
+            "value": "do-not-send"
+          }
+        }
+      }
+    },
+    "evidence": {
+      "records": [
+        {
+          "id": "evidence:customer-note",
+          "quote": "Audit-friendly grading is required.",
+          "token": "do-not-send"
+        }
+      ],
+      "apiKey": "do-not-send"
+    }
+  },
+  "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+  "evalRegistry": {
+    "schemaVersion": "specwright.eval-registry.v0",
+    "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+    "entries": [
+      {
+        "definitionId": "model_graded_redacted_context",
+        "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+        "kind": "model_graded",
+        "contentHash": "sha256:47dca892aee94e6050c76c438bdcfee86c3ad3bd37e10080d0ac51e22a61fa4f",
+        "definition": {
+          "id": "model_graded_redacted_context",
+          "type": "model_graded",
+          "target": {
+            "artifactId": "summary"
+          },
+          "severity": "advisory",
+          "checks": [
+            {
+              "id": "summary_present",
+              "type": "schema",
+              "requiredFields": [
+                "summary"
+              ]
+            }
+          ],
+          "grader": {
+            "grader": "specwright.semantic-grader@1.0.0",
+            "modelTool": "tool.model.semantic_grade",
+            "rubric": {
+              "ref": "rubric:semantic-quality@1.0.0",
+              "hash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "inputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "target",
+                "evidence"
+              ],
+              "properties": {
+                "target": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "content"
+                  ],
+                  "properties": {
+                    "content": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "summary"
+                      ],
+                      "properties": {
+                        "summary": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                },
+                "evidence": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "records"
+                  ],
+                  "properties": {
+                    "records": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "id",
+                          "quote"
+                        ],
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "quote": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "outputSchema": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "status"
+              ],
+              "properties": {
+                "status": {
+                  "enum": [
+                    "pass",
+                    "needs_review",
+                    "fail"
+                  ]
+                },
+                "message": {
+                  "type": "string"
+                },
+                "evidenceRefs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "allowedContextRefs": [
+              "target.content.summary",
+              "evidence.records"
+            ],
+            "maxTokens": 512,
+            "onInvalidOutput": "needs_review"
+          }
+        }
+      }
+    ]
+  },
+  "phase": "quality_gate",
+  "runId": "run_model_graded_fixture",
+  "traceId": "trace_model_graded_fixture"
+}

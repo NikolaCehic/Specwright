@@ -1,0 +1,72 @@
+{
+  "evalId": "model_graded_advisory_pass",
+  "targetRef": "artifact:plan",
+  "status": "pass",
+  "severity": "advisory",
+  "findings": [
+    {
+      "code": "eval.grader.advisory_pass",
+      "message": "No rubric issues.",
+      "severity": "advisory",
+      "targetRef": "artifact:plan",
+      "evidenceRefs": [
+        "evidence:brief"
+      ],
+      "metadata": {
+        "modelAssisted": {
+          "grader": "specwright.semantic-grader@1.0.0",
+          "modelTool": "tool.model.semantic_grade",
+          "rubricRef": "rubric:semantic-quality@1.0.0",
+          "rubricHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "modelCallId": "model-call:sha256:d4b2470ae541f7a2ec127209ee7ffb889c6194a8a9dafa51edd30bf754287ce3",
+          "outcome": "success",
+          "toolCallId": "toolcall_advisory_pass",
+          "toolStatus": "success",
+          "toolSpan": {
+            "toolId": "tool.model.semantic_grade",
+            "toolVersion": "1.0.0",
+            "argsHash": "sha256:5037d576456b69088b6979bb00cb6002a9349bba0ded449658424b284a3701e7",
+            "resultHash": "sha256:3c7dd15471aacdb584b576cbe7cc6122872648aa16091553e9fa32d55e84150e",
+            "cacheStatus": "hit",
+            "traceId": "trace_advisory_pass",
+            "spanId": "span_advisory_pass",
+            "tokenBudget": 512
+          },
+          "requestedBy": {
+            "phase": "quality_gate",
+            "evalId": "model_graded_advisory_pass",
+            "modelCallId": "model-call:sha256:d4b2470ae541f7a2ec127209ee7ffb889c6194a8a9dafa51edd30bf754287ce3"
+          },
+          "idempotencyKey": "eval-grading:sha256:a4a31a319134b0057c4723a49bb47d45584797a466ce64ad8b6a787b2e5f99c6",
+          "outcomeLabel": "success",
+          "modelOutput": {
+            "status": "pass",
+            "message": "No rubric issues.",
+            "evidenceRefs": [
+              "evidence:brief"
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "evidenceRefs": [
+    "evidence:brief"
+  ],
+  "producedBy": {
+    "kind": "model_assisted",
+    "ref": "specwright.semantic-grader@1.0.0"
+  },
+  "provenance": {
+    "runId": "run_model_graded_fixture",
+    "phase": "quality_gate",
+    "decisionHash": "sha256:e832b0f2380b75c40dd03e86da6947ea4940635d9d52847bdb9bba936fda83cf",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:4c3e506ee527d211e81d55fc2ba9358c86a719dea6b5529dcc7a880e0887da21",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:444d48b06eae814ba59b5f1409deedf2e59fb6d45c1fc7af70235caf2fb9f0d5",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:49b92c426e17bbc7a9bd2d482a0df197812fe39f38f46f9dc5ef477143344673"
+    ],
+    "traceId": "trace_advisory_pass"
+  }
+}

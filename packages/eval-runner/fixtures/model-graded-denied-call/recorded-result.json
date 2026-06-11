@@ -1,0 +1,16 @@
+{
+  "toolCallId": "toolcall_denied_call",
+  "status": "denied",
+  "error": {
+    "code": "policy_denied",
+    "message": "Policy denied model grading.",
+    "retryable": false
+  },
+  "provenance": {
+    "toolId": "tool.model.semantic_grade",
+    "toolVersion": "1.0.0",
+    "argsHash": "sha256:0fdc4247d531f003101197d866432546b3aa310950f371207dfd0e445c38ce30",
+    "cacheStatus": "bypass",
+    "traceId": "trace_denied_call"
+  }
+}

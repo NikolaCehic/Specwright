@@ -2,6 +2,7 @@ import {
   EvalVerdictSchema,
   type EvalDefinition,
   type EvalFinding,
+  type EvalProducedBy,
   type EvalSeverity,
   type EvalVerdict
 } from "@specwright/schemas";
@@ -29,6 +30,10 @@ import {
   type OrderedCheckResult,
   type ResolvedInputsHashInput
 } from "./decision-hash";
+import {
+  evaluateModelAssistedGrader,
+  type EvalBrokerPort
+} from "./model-assisted";
 
 export {
   DECISION_HASH_FAIL_CLOSED_CODE,
@@ -46,6 +51,15 @@ export {
   type OrderedCheckResult,
   type ResolvedInputsHashInput
 } from "./decision-hash";
+export type {
+  EvalBrokerContext,
+  EvalBrokerPort,
+  JsonSchemaLike,
+  ModelAssistedFailureStatus,
+  ModelAssistedGrader,
+  ModelAssistedSchema,
+  ProjectedGraderContext
+} from "./model-assisted";
 
 export const DEFAULT_EVAL_RUNNER_EVALUATOR = "specwright.eval-runner.v0";
 
@@ -126,6 +140,10 @@ export type RunEvalRequest = {
     | undefined;
   input?: EvalRunnerInput | undefined;
   evaluatorRef?: string | undefined;
+  broker?: EvalBrokerPort | undefined;
+  phase?: string | undefined;
+  runId?: string | undefined;
+  traceId?: string | undefined;
 };
 
 export type RunEvalsRequest = Omit<RunEvalRequest, "evalDefinition"> & {
@@ -374,6 +392,295 @@ export function runEval(request: RunEvalRequest): EvalVerdict {
   });
 }
 
+export async function runEvalAsync(request: RunEvalRequest): Promise<EvalVerdict> {
+  const resolution = resolveEvalDefinition(request);
+  const definition = resolution.status === "resolved" ? resolution.definition : undefined;
+  const evalId = request.evalId ?? request.evalDefinition?.id ?? resolution.definitionId;
+  const evaluatorRef =
+    request.evaluatorRef ?? DEFAULT_EVAL_RUNNER_EVALUATOR;
+
+  if (resolution.status === "untrusted") {
+    return buildVerdict({
+      evalId,
+      targetRef: `eval:${evalId}`,
+      status: "fail",
+      severity: "blocking",
+      findings: [
+        makeFinding({
+          message: `Eval definition ${evalId} does not match the governed registry entry`,
+          code: "eval.definition.untrusted",
+          targetRef: `eval:${evalId}`,
+          severity: "blocking",
+          repairHint:
+            "Use the eval definition signed into the loaded harness package registry.",
+          metadata: {
+            registeredContentHash: resolution.registeredContentHash,
+            suppliedContentHash: resolution.suppliedContentHash
+          }
+        })
+      ],
+      evidenceRefs: [],
+      evaluatorRef,
+      decisionContext: decisionContextFor({ request, resolution })
+    });
+  }
+
+  if (definition === undefined) {
+    return buildVerdict({
+      evalId,
+      targetRef: `eval:${evalId}`,
+      status: "fail",
+      severity: "blocking",
+      findings: [
+        makeFinding({
+          message: `Eval definition ${evalId} is missing`,
+          code: "eval.definition.missing",
+          targetRef: `eval:${evalId}`,
+          severity: "blocking",
+          repairHint: "Provide a declared eval definition before running it."
+        })
+      ],
+      evidenceRefs: [],
+      evaluatorRef,
+      decisionContext: decisionContextFor({ request, resolution })
+    });
+  }
+
+  const severity = evalSeverity(definition);
+  const target = resolveTargetArtifact(definition, request.input);
+  const targetRef = target?.ref ?? targetRefFromDefinition(definition) ?? `eval:${evalId}`;
+
+  if (definition.skip === true || definition.enabled === false) {
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status: "skipped",
+      severity,
+      findings: [],
+      evidenceRefs: target?.evidenceRefs ?? [],
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target
+      })
+    });
+  }
+
+  const kind = evalKind(definition);
+
+  if (isUnsupportedEvalKind(kind) && !isModelAssistedKind(kind)) {
+    const status = unsupportedStatus(definition);
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status,
+      severity,
+      findings:
+        status === "skipped"
+          ? []
+          : [
+              makeFinding({
+                message: `Eval type ${kind} requires capabilities outside the deterministic EvalRunner slice`,
+                code: "eval.type.unsupported",
+                targetRef,
+                severity,
+                repairHint:
+                  "Route this eval through an explicit ToolBroker-backed or human review path."
+              })
+            ],
+      evidenceRefs: target?.evidenceRefs ?? [],
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target
+      })
+    });
+  }
+
+  const checks = checksForDefinition(definition, kind);
+
+  if (!isModelAssistedKind(kind) && checks.length === 0) {
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status: "needs_review",
+      severity,
+      findings: [
+        makeFinding({
+          message: "Eval definition does not declare deterministic checks",
+          code: "eval.checks.missing",
+          targetRef,
+          severity,
+          repairHint:
+            "Declare schema, source_fidelity, or completeness checks for deterministic execution."
+        })
+      ],
+      evidenceRefs: target?.evidenceRefs ?? [],
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target
+      })
+    });
+  }
+
+  const deterministicChecks = isModelAssistedKind(kind)
+    ? checks.filter((check) => !isModelAssistedKind(normalizeKind(check.type ?? kind)))
+    : checks;
+  const evaluatedChecks = deterministicChecks.map((check) => ({
+    check,
+    evaluation: evaluateCheck(check, definition, target, request.input, severity)
+  }));
+  const evaluations = evaluatedChecks.map(({ evaluation }) => evaluation);
+  const checkResults = evaluatedChecks.map(({ check, evaluation }) =>
+    normalizeCheckResult(check, definition, evaluation)
+  );
+  const failed = evaluations.filter(
+    (evaluation): evaluation is Extract<CheckEvaluation, { status: "fail" }> =>
+      evaluation.status === "fail"
+  );
+  const needsReview = evaluations.filter(
+    (
+      evaluation
+    ): evaluation is Extract<CheckEvaluation, { status: "needs_review" }> =>
+      evaluation.status === "needs_review"
+  );
+  const evidenceRefs = uniqueStrings([
+    ...(target?.evidenceRefs ?? []),
+    ...evaluations.flatMap((evaluation) => evaluation.evidenceRefs)
+  ]);
+
+  if (failed.length > 0) {
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status: "fail",
+      severity,
+      findings: failed.map((evaluation) => evaluation.finding),
+      evidenceRefs,
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target,
+        checkResults
+      })
+    });
+  }
+
+  if (!isModelAssistedKind(kind) && needsReview.length > 0) {
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status: "needs_review",
+      severity,
+      findings: needsReview.map((evaluation) => evaluation.finding),
+      evidenceRefs,
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target,
+        checkResults
+      })
+    });
+  }
+
+  if (!isModelAssistedKind(kind)) {
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status: "pass",
+      severity,
+      findings: [],
+      evidenceRefs,
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target,
+        checkResults
+      })
+    });
+  }
+
+  if (needsReview.length > 0) {
+    return buildVerdict({
+      evalId,
+      targetRef,
+      status: "needs_review",
+      severity,
+      findings: needsReview.map((evaluation) => evaluation.finding),
+      evidenceRefs,
+      evaluatorRef,
+      decisionContext: decisionContextFor({
+        request,
+        resolution,
+        definition,
+        target,
+        checkResults
+      })
+    });
+  }
+
+  const modelEvaluation = await evaluateModelAssistedGrader({
+    definition,
+    evalId,
+    targetRef,
+    target,
+    evidence: request.input?.evidence,
+    severity,
+    definitionHash: definitionHashForResolution(resolution),
+    deterministicCheckResults: checkResults,
+    broker: request.broker,
+    phase: request.phase,
+    runId: request.runId,
+    traceId: request.traceId
+  });
+  const modelCheckResults = [...checkResults, modelEvaluation.checkResult];
+
+  return buildVerdict({
+    evalId,
+    targetRef,
+    status: modelEvaluation.status,
+    severity,
+    findings: modelEvaluation.finding === undefined ? [] : [modelEvaluation.finding],
+    evidenceRefs: uniqueStrings([
+      ...evidenceRefs,
+      ...modelEvaluation.evidenceRefs
+    ]),
+    evaluatorRef,
+    producedBy:
+      modelEvaluation.contributed && modelEvaluation.producedByRef.length > 0
+        ? { kind: "model_assisted", ref: modelEvaluation.producedByRef }
+        : undefined,
+    provenance: {
+      runId: request.runId,
+      phase: request.phase,
+      traceId:
+        modelEvaluation.contributed && modelEvaluation.traceId !== undefined
+          ? modelEvaluation.traceId
+          : request.traceId
+    },
+    decisionContext: decisionContextFor({
+      request,
+      resolution,
+      definition,
+      target,
+      checkResults: modelCheckResults
+    })
+  });
+}
+
 export function runEvals(request: RunEvalsRequest): EvalVerdict[] {
   const registry = registryForRequest(request);
   const definitions = registry.entries.map((entry) => entry.definition);
@@ -387,6 +694,30 @@ export function runEvals(request: RunEvalsRequest): EvalVerdict[] {
       input: request.input,
       evaluatorRef: request.evaluatorRef
     })
+  );
+}
+
+export async function runEvalsAsync(
+  request: RunEvalsRequest
+): Promise<EvalVerdict[]> {
+  const registry = registryForRequest(request);
+  const definitions = registry.entries.map((entry) => entry.definition);
+
+  return Promise.all(
+    definitions.map((definition) =>
+      runEvalAsync({
+        evalDefinition: definition,
+        evalDefinitions: definitions,
+        evalRegistry: registry,
+        harnessPackageId: registry.harnessPackageId,
+        input: request.input,
+        evaluatorRef: request.evaluatorRef,
+        broker: request.broker,
+        phase: request.phase,
+        runId: request.runId,
+        traceId: request.traceId
+      })
+    )
   );
 }
 
@@ -768,6 +1099,10 @@ function unsupportedStatus(definition: FixtureEvalDefinition): EvalVerdict["stat
     : "needs_review";
 }
 
+function isModelAssistedKind(kind: string) {
+  return kind === "model_assisted" || kind === "model_graded";
+}
+
 function evalSeverity(definition: FixtureEvalDefinition): EvalSeverity {
   if (definition.severity === "advisory" || definition.severity === "blocking") {
     return definition.severity;
@@ -880,12 +1215,21 @@ function buildVerdict(input: {
   findings: EvalFinding[];
   evidenceRefs: string[];
   evaluatorRef: string;
+  producedBy?: EvalProducedBy | undefined;
+  provenance?:
+    | {
+        runId?: string | undefined;
+        phase?: string | undefined;
+        traceId?: string | undefined;
+      }
+    | undefined;
   decisionContext: ResolvedInputsHashInput;
 }): EvalVerdict {
-  const producedBy = {
-    kind: "deterministic" as const,
-    ref: input.evaluatorRef
-  };
+  const producedBy =
+    input.producedBy ?? {
+      kind: "deterministic" as const,
+      ref: input.evaluatorRef
+    };
 
   try {
     const inputHashes = hashResolvedInputs(input.decisionContext);
@@ -907,6 +1251,7 @@ function buildVerdict(input: {
       evidenceRefs: uniqueStrings(input.evidenceRefs),
       producedBy,
       provenance: {
+        ...definedProvenance(input.provenance),
         decisionHash,
         causationIds: inputHashesToCausationIds(inputHashes)
       }
@@ -948,11 +1293,38 @@ function buildVerdict(input: {
       evidenceRefs: [],
       producedBy,
       provenance: {
+        ...definedProvenance(input.provenance),
         decisionHash,
         causationIds: inputHashesToCausationIds(inputHashes)
       }
     });
   }
+}
+
+function definedProvenance(
+  provenance:
+    | {
+        runId?: string | undefined;
+        phase?: string | undefined;
+        traceId?: string | undefined;
+      }
+    | undefined
+) {
+  const output: Record<string, string> = {};
+
+  if (provenance?.runId !== undefined) {
+    output.runId = provenance.runId;
+  }
+
+  if (provenance?.phase !== undefined) {
+    output.phase = provenance.phase;
+  }
+
+  if (provenance?.traceId !== undefined) {
+    output.traceId = provenance.traceId;
+  }
+
+  return output;
 }
 
 function assertNever(value: never): never {

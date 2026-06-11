@@ -1,0 +1,31 @@
+{
+  "evalId": "model_graded_deterministic_fail_short_circuit",
+  "targetRef": "artifact:plan",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "code": "artifact.required_fields.missing",
+      "message": "Artifact is missing required fields: steps",
+      "severity": "blocking",
+      "targetRef": "artifact:plan",
+      "repairHint": "Add the required fields or adjust the artifact schema."
+    }
+  ],
+  "evidenceRefs": [
+    "evidence:brief"
+  ],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:4496597d28de7ef0c907452fc6a63b33652a2c51eb441b28c4e323945820139f",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:1269a27d3368d11487fbdb171693aed130e506cfd7018250d3692dc2d6ca9965",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:1fd7fe98eee14dcc9e994d47b2d678d0762227be96d9ae2782c5de77c8b0bd4f",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:e19aa05895a9202f3d32dec8024c50022bf4d6f856148a0eb4436ff4c1b97ef9"
+    ]
+  }
+}
