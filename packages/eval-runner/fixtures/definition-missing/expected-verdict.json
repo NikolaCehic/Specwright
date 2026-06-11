@@ -1,0 +1,29 @@
+{
+  "evalId": "definition_missing",
+  "targetRef": "eval:definition_missing",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "code": "eval.definition.missing",
+      "message": "Eval definition definition_missing is missing",
+      "severity": "blocking",
+      "targetRef": "eval:definition_missing",
+      "repairHint": "Provide a declared eval definition before running it."
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:11790b5f1c3d9d0252db9c5982a03cbf0fcdaa88adaed47c108acda91ce40576",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:11973c343f59fa37594831877f0a9149df87191bf6d361d03295b7ee63e54129",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:36829db2583cd99102282064465523de22ce14a764a95f258b017884c6492af0",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ]
+  }
+}

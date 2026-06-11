@@ -1,0 +1,29 @@
+{
+  "evalId": "injection_prose_ignored",
+  "targetRef": "artifact:plan",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "code": "artifact.required_fields.missing",
+      "message": "Artifact is missing required fields: steps",
+      "severity": "blocking",
+      "targetRef": "artifact:plan",
+      "repairHint": "Add the required fields or adjust the artifact schema."
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:e83752087d9c547eeffd8b7d0c69a2e4a941130bf9131ff7eafbbf3eed953ac6",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:5954af92af05073dc5e4c8fbb330430b886d32f8e7c3c9600617b79ee57ae6a7",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:fd628327a6e0ce5ded6581f8b7a8464cfc159346c74262a4e0cce1e1b04684e0",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:2de9a5c57b0a9bf1f6549ebbb49133a9ada169d9e3a70c78727af14cee16c735"
+    ]
+  }
+}

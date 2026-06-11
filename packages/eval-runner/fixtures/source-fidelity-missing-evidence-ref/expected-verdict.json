@@ -1,0 +1,49 @@
+{
+  "evalId": "source_fidelity_missing_evidence_ref",
+  "targetRef": "artifact:ux_contract",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "code": "source_fidelity.failed",
+      "message": "1 important claim(s) lack required evidence",
+      "severity": "blocking",
+      "targetRef": "artifact:ux_contract",
+      "evidenceRefs": [
+        "evidence:brief#approval-review"
+      ],
+      "path": "$.claims",
+      "metadata": {
+        "findings": [
+          {
+            "message": "Important claim claim.unrecorded references missing evidence: evidence:brief#approval-review",
+            "code": "claim.evidence.missing",
+            "targetRef": "artifact:ux_contract",
+            "path": "$.claims[0]",
+            "severity": "blocking",
+            "evidenceRefs": [
+              "evidence:brief#approval-review"
+            ],
+            "repairHint": "Record the referenced evidence or replace the claim evidenceRefs."
+          }
+        ]
+      }
+    }
+  ],
+  "evidenceRefs": [
+    "evidence:brief#approval-review"
+  ],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:71727d350b0cab973910b9e8f9e0427fb75fa0e60207834a42c729830f035ffe",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:b41ce4e86d3c99595021de2cb69cf059ce1b60bb2fb7630280e09d8ba62ac62f",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:30265d4b2e1652c6b941071615fd5e900117dd234a03c492a2d854326289e5f9",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:eb7d6d67e86a4851b7b72afc790f84828b8cbf2f14e92cab993e3d830d539e2f",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:592fd9acad78b8eaa8c14261fe098f35d8b4e3e2c8895c51edb1a82a8974791d"
+    ]
+  }
+}

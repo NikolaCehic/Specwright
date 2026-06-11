@@ -1,0 +1,30 @@
+{
+  "evalId": "source_fidelity_claims_missing",
+  "targetRef": "artifact:ux_contract",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "code": "claims.missing",
+      "message": "Source fidelity eval found no structured claims",
+      "severity": "blocking",
+      "targetRef": "artifact:ux_contract",
+      "repairHint": "Add structured claims with claim level and evidenceRefs.",
+      "path": "$.claims"
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:096a56f3c26ec0bdbc5f8ad95a2f8070942fc5e1d009d464ee69a32bed318b3b",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:6d088ecc9556cab8dc3f376a83b7b6865ea56faa112695082befa7b90f8c5e43",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:c4c4517fc96e5e549190b8ff90867ab8d01306749bc37ff6ee9e4a81e78deac0",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:c61b7a2720d38c7d8f2976dbdd2bcf47539fbb79e63c4008e29bd3c2eeec3bc9",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:e0abc5406ecb8bae9be4dac10735dfc795c0aea444c01bbf93450bbb85abd543"
+    ]
+  }
+}

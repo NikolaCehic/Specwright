@@ -1,0 +1,29 @@
+{
+  "evalId": "no_checks",
+  "targetRef": "artifact:plan",
+  "status": "needs_review",
+  "severity": "blocking",
+  "findings": [
+    {
+      "code": "eval.checks.missing",
+      "message": "Eval definition does not declare deterministic checks",
+      "severity": "blocking",
+      "targetRef": "artifact:plan",
+      "repairHint": "Declare schema, source_fidelity, or completeness checks for deterministic execution."
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:8e5e7d193de6fa5a13a0eac827e7bb0160029fdcb3335ea98996d0b92a4ef393",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:1522be3e1646428b12f63eb181953a30871b1c6efa3bafc3b0af1d1a1033c702",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:2c7f1bc285249698973c3c3e9b9faadfe419bc42fcd7fdbe1bc09b964ee41deb",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+    ]
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "evalId": "target_missing",
+  "targetRef": "artifact:plan",
+  "status": "fail",
+  "severity": "blocking",
+  "findings": [
+    {
+      "code": "eval.target.missing",
+      "message": "Eval target artifact is missing",
+      "severity": "blocking",
+      "repairHint": "Provide the target artifact declared by this eval definition."
+    }
+  ],
+  "evidenceRefs": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.eval-runner.v0"
+  },
+  "provenance": {
+    "decisionHash": "sha256:30f384a6d6dcaeef4a5c3b79f1721eb95408b4974b39cfa9d8266ab869a6eaed",
+    "causationIds": [
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:11973c343f59fa37594831877f0a9149df87191bf6d361d03295b7ee63e54129",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:7734bf95c4081f3ff20672cf74bad553355e98b82425d8f8cc1b74e213c9baec",
+      "specwright.eval-runner.input-hash.checkResultsHash=sha256:600033dc69e3f7bb31932d03908e07d237316b2d6baf2d53b706c61490e6a640"
+    ]
+  }
+}

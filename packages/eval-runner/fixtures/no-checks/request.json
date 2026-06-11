@@ -1,0 +1,42 @@
+{
+  "evalDefinition": {
+    "id": "no_checks",
+    "type": "deterministic",
+    "target": {
+      "artifactId": "plan"
+    },
+    "severity": "blocking"
+  },
+  "input": {
+    "artifacts": {
+      "plan": {
+        "artifactId": "plan",
+        "artifactType": "plan",
+        "content": {
+          "title": "Plan"
+        }
+      }
+    }
+  },
+  "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+  "evalRegistry": {
+    "schemaVersion": "specwright.eval-registry.v0",
+    "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+    "entries": [
+      {
+        "definitionId": "no_checks",
+        "harnessPackageId": "specwright.eval-runner.fixtures@0.0.0",
+        "kind": "deterministic",
+        "contentHash": "sha256:2c7f1bc285249698973c3c3e9b9faadfe419bc42fcd7fdbe1bc09b964ee41deb",
+        "definition": {
+          "id": "no_checks",
+          "type": "deterministic",
+          "target": {
+            "artifactId": "plan"
+          },
+          "severity": "blocking"
+        }
+      }
+    ]
+  }
+}
