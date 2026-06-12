@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appendArtifact } from "@specwright/artifact-store";
@@ -9,14 +9,22 @@ import {
   appendEvent,
   createRun,
   getRunStorePaths,
+  readEvents,
   type HarnessSnapshot,
   type RedactionProfile
 } from "@specwright/run-store";
-import type { EvalVerdict, EvidenceRecord, RunInput } from "@specwright/schemas";
-import { recordTraceSpan } from "@specwright/trace-recorder";
+import type {
+  EvalVerdict,
+  EvidenceRecord,
+  RunInput,
+  RuntimeEvent
+} from "@specwright/schemas";
+import { readTrace, recordTraceSpan, writeTrace } from "@specwright/trace-recorder";
 import {
   generateRunReport,
   readRunSummary,
+  reconcileEventsAndTrace,
+  reconcileRun,
   writeRunReport
 } from "./index";
 
@@ -341,6 +349,302 @@ describe("run reports", () => {
     );
     expect(await readFile(paths.summaryPath, "utf8")).toContain("# Run Summary");
   });
+
+  test("reconciles a fully linked run as consistent and emits metrics", async () => {
+    const fixture = await createFullyTracedRun("run-reconciled-clean");
+
+    const result = await reconcileRun({
+      rootDir,
+      runId: fixture.runId
+    });
+
+    expect(result.verdict).toBe("consistent");
+    expect(result.gaps).toEqual([]);
+    expect(result.mismatches).toEqual([]);
+    expect(result.integrityMetrics.map((metric) => metric.class)).toEqual([
+      "trace-to-event-consistency-rate",
+      "missing-input-rate",
+      "schema-validation-failure-rate"
+    ]);
+    expect(metric(result, "trace-to-event-consistency-rate")?.value).toBe(1);
+  });
+
+  test("flags a mandatory span linked to an unknown event as an unlinkable gap", async () => {
+    const fixture = await createFullyTracedRun("run-reconciled-unlinkable");
+    await recordTraceSpan({
+      rootDir,
+      runId: fixture.runId,
+      traceId: `trace-${fixture.runId}`,
+      span: {
+        spanId: "span-unlinkable-tool",
+        kind: "tool",
+        name: "tool.fs.read",
+        status: "success",
+        startedAt: "2026-05-29T00:00:09.000Z",
+        eventIds: ["event-does-not-exist"],
+        metadata: toolTraceMetadata()
+      }
+    });
+
+    const result = await reconcileRun({
+      rootDir,
+      runId: fixture.runId
+    });
+
+    expect(result.verdict).toBe("gap");
+    expect(result.gaps).toContainEqual(
+      expect.objectContaining({
+        kind: "unlinkable_span_event",
+        spanId: "span-unlinkable-tool",
+        unknownEventId: "event-does-not-exist"
+      })
+    );
+    expect(result.mandatoryCoverage).toContainEqual(
+      expect.objectContaining({
+        status: "unlinkable",
+        spanId: "span-unlinkable-tool"
+      })
+    );
+  });
+
+  test("flags mandatory-kind spans without eventIds as non-attestable gaps", async () => {
+    const fixture = await createFullyTracedRun("run-reconciled-unlinked-span");
+    await recordTraceSpan({
+      rootDir,
+      runId: fixture.runId,
+      traceId: `trace-${fixture.runId}`,
+      span: {
+        spanId: "span-tool-without-event-ids",
+        kind: "tool",
+        name: "tool.fs.read",
+        status: "success",
+        startedAt: "2026-05-29T00:00:09.000Z",
+        metadata: toolTraceMetadata()
+      }
+    });
+
+    const result = await reconcileRun({
+      rootDir,
+      runId: fixture.runId
+    });
+
+    expect(result.verdict).toBe("gap");
+    expect(result.gaps).toContainEqual(
+      expect.objectContaining({
+        kind: "missing_span_event_link",
+        spanId: "span-tool-without-event-ids",
+        spanKind: "tool",
+        requiredSpanKind: "tool"
+      })
+    );
+    expect(result.mandatoryCoverage).toContainEqual(
+      expect.objectContaining({
+        status: "unlinkable",
+        spanId: "span-tool-without-event-ids",
+        spanKind: "tool"
+      })
+    );
+  });
+
+  test("flags an active mandatory lifecycle event with no covering span as a gap", async () => {
+    await createSuccessfulRun("run-reconciled-missing-coverage");
+    await writeTrace({
+      rootDir,
+      runId: "run-reconciled-missing-coverage",
+      trace: {
+        runId: "run-reconciled-missing-coverage",
+        traceId: "trace-run-reconciled-missing-coverage",
+        spans: [],
+        metadata: {}
+      }
+    });
+
+    const result = await reconcileRun({
+      rootDir,
+      runId: "run-reconciled-missing-coverage"
+    });
+
+    expect(result.verdict).toBe("gap");
+    expect(result.gaps).toContainEqual(
+      expect.objectContaining({
+        kind: "missing_coverage",
+        eventType: "phase.entered",
+        requiredSpanKind: "phase"
+      })
+    );
+  });
+
+  test("reports trace status disagreement as a mismatch and keeps the event authoritative", async () => {
+    const fixture = await createFullyTracedRun("run-reconciled-mismatch");
+    const trace = await readTrace({
+      rootDir,
+      runId: fixture.runId
+    });
+
+    await writeTrace({
+      rootDir,
+      runId: fixture.runId,
+      trace: {
+        ...trace,
+        spans: trace.spans.map((span) =>
+          span.spanId === fixture.toolSpanId
+            ? { ...span, status: "failed" }
+            : span
+        )
+      }
+    });
+
+    const result = await reconcileRun({
+      rootDir,
+      runId: fixture.runId
+    });
+
+    expect(result.verdict).toBe("mismatch");
+    expect(result.mismatches).toContainEqual(
+      expect.objectContaining({
+        eventId: fixture.toolCompletedEventId,
+        eventType: "tool.completed",
+        spanId: fixture.toolSpanId,
+        observedSpanStatus: "failed",
+        authoritativeEventStatus: "success"
+      })
+    );
+  });
+
+  test("flags terminal tool spans without linked outcome events as mismatches", async () => {
+    for (const spanStatus of ["denied", "failed"] as const) {
+      const fixture = await createFullyTracedRun(
+        `run-reconciled-request-only-${spanStatus}`
+      );
+      const trace = await readTrace({
+        rootDir,
+        runId: fixture.runId
+      });
+
+      await writeTrace({
+        rootDir,
+        runId: fixture.runId,
+        trace: {
+          ...trace,
+          spans: trace.spans.map((span) =>
+            span.spanId === fixture.toolSpanId
+              ? {
+                  ...span,
+                  status: spanStatus,
+                  eventIds: [fixture.toolRequestedEventId]
+                }
+              : span
+          )
+        }
+      });
+
+      const result = await reconcileRun({
+        rootDir,
+        runId: fixture.runId
+      });
+
+      expect(result.verdict).toBe("mismatch");
+      expect(result.mismatches).toContainEqual(
+        expect.objectContaining({
+          kind: "span_event_status_disagreement",
+          eventId: fixture.toolRequestedEventId,
+          eventType: "tool.requested",
+          spanId: fixture.toolSpanId,
+          assertedSpanStatus: spanStatus,
+          observedSpanStatus: spanStatus,
+          requiredAuthoritativeEventType:
+            spanStatus === "denied" ? "tool.denied" : "tool.completed"
+        })
+      );
+    }
+  });
+
+  test("surfaces schema validation failures in reconciliation metrics", async () => {
+    await createSuccessfulRun("run-reconciled-schema-failures");
+    const events = await readEvents({
+      rootDir,
+      runId: "run-reconciled-schema-failures"
+    });
+
+    const result = reconcileEventsAndTrace({
+      events,
+      missingInputs: [],
+      schemaValidationFailures: 2
+    });
+    const schemaMetric = metric(result, "schema-validation-failure-rate");
+
+    expect(schemaMetric).toEqual(
+      expect.objectContaining({
+        numerator: 2,
+        denominator: events.length,
+        value: 2 / events.length
+      })
+    );
+  });
+
+  test("surfaces missing report inputs in the missing-input-rate metric", async () => {
+    await createSuccessfulRun("run-reconciled-missing-inputs");
+    const paths = getRunStorePaths(rootDir, "run-reconciled-missing-inputs");
+
+    await rm(paths.tracePath, { force: true });
+    await rm(paths.artifactsDir, { recursive: true, force: true });
+    await rm(paths.evidenceDir, { recursive: true, force: true });
+    await rm(paths.evalsDir, { recursive: true, force: true });
+
+    const report = await generateRunReport({
+      rootDir,
+      runId: "run-reconciled-missing-inputs"
+    });
+    const missingInputMetric = metric(report.reconciliation, "missing-input-rate");
+
+    expect(report.missingInputs).toEqual([
+      "trace.json",
+      "artifacts/index.jsonl",
+      "evidence/index.jsonl",
+      "evals/*.json"
+    ]);
+    expect(missingInputMetric).toEqual(
+      expect.objectContaining({
+        numerator: 4,
+        denominator: 4,
+        value: 1
+      })
+    );
+  });
+
+  test("stamps metrics with the authoritative event source range", async () => {
+    const fixture = await createFullyTracedRun("run-reconciled-range");
+
+    const result = await reconcileRun({
+      rootDir,
+      runId: fixture.runId
+    });
+
+    expect(result.sourceEventRange).toEqual({
+      firstSequence: 0,
+      lastSequence: fixture.events.length - 1,
+      eventCount: fixture.events.length
+    });
+    expect(result.integrityMetrics.every((metricRecord) =>
+      JSON.stringify(metricRecord.sourceEventRange) ===
+      JSON.stringify(result.sourceEventRange)
+    )).toBe(true);
+  });
+
+  test("produces deterministic reconciliation JSON for repeated reads", async () => {
+    const fixture = await createFullyTracedRun("run-reconciled-deterministic");
+
+    const first = await reconcileRun({
+      rootDir,
+      runId: fixture.runId
+    });
+    const second = await reconcileRun({
+      rootDir,
+      runId: fixture.runId
+    });
+
+    expect(JSON.stringify(first)).toBe(JSON.stringify(second));
+  });
 });
 
 async function createSuccessfulRun(runId: string) {
@@ -504,4 +808,161 @@ function sourceFact(id: string): EvidenceRecord {
       toolCallId: "tool-call-1"
     }
   };
+}
+
+async function createFullyTracedRun(runId: string) {
+  await createSuccessfulRun(runId);
+  await appendArtifact({
+    rootDir,
+    runId,
+    record: {
+      artifactId: "artifact-plan",
+      artifactType: "plan",
+      content: {
+        steps: ["Read source files"]
+      },
+      evidenceRefs: ["evidence:repo:package-json"],
+      claimLevel: "source_fact",
+      producedBy: {
+        phase: "planning",
+        actionId: "record-plan",
+        toolCallId: "tool-call-1"
+      },
+      metadata: {}
+    }
+  });
+  await appendEvidence({
+    rootDir,
+    runId,
+    record: sourceFact("evidence:repo:package-json")
+  });
+  await writeEvalVerdictFile(runId);
+
+  const events = await readEvents({ rootDir, runId });
+  const phaseEntered = requiredEvent(events, "phase.entered");
+  const toolRequested = requiredEvent(events, "tool.requested");
+  const toolCompleted = requiredEvent(events, "tool.completed");
+  const gateEvaluated = requiredEvent(events, "gate.evaluated");
+  const evalCompleted = requiredEvent(events, "eval.completed");
+  const toolSpanId = `span-tool-${runId}`;
+
+  await recordTraceSpan({
+    rootDir,
+    runId,
+    traceId: `trace-${runId}`,
+    span: {
+      spanId: `span-phase-${runId}`,
+      kind: "phase",
+      name: "intake",
+      status: "success",
+      startedAt: "2026-05-29T00:00:01.000Z",
+      eventIds: [phaseEntered.id],
+      metadata: {
+        phaseId: "intake"
+      }
+    }
+  });
+  await recordTraceSpan({
+    rootDir,
+    runId,
+    traceId: `trace-${runId}`,
+    span: {
+      spanId: toolSpanId,
+      kind: "tool",
+      name: "tool.fs.read",
+      status: "success",
+      startedAt: "2026-05-29T00:00:02.000Z",
+      durationMs: 12,
+      eventIds: [toolRequested.id, toolCompleted.id],
+      metadata: toolTraceMetadata()
+    }
+  });
+  await recordTraceSpan({
+    rootDir,
+    runId,
+    traceId: `trace-${runId}`,
+    span: {
+      spanId: `span-gate-${runId}`,
+      kind: "gate",
+      name: "context_sufficiency",
+      status: "pass",
+      startedAt: "2026-05-29T00:00:04.000Z",
+      eventIds: [gateEvaluated.id],
+      metadata: {
+        gateId: "context_sufficiency",
+        phaseId: "evidence",
+        instruction: "continue"
+      }
+    }
+  });
+  await recordTraceSpan({
+    rootDir,
+    runId,
+    traceId: `trace-${runId}`,
+    span: {
+      spanId: `span-eval-${runId}`,
+      kind: "eval",
+      name: "source_fidelity",
+      status: "pass",
+      startedAt: "2026-05-29T00:00:07.000Z",
+      eventIds: [evalCompleted.id],
+      metadata: {
+        evalId: "source_fidelity",
+        phaseId: "verification"
+      }
+    }
+  });
+
+  return {
+    runId,
+    events,
+    toolRequestedEventId: toolRequested.id,
+    toolCompletedEventId: toolCompleted.id,
+    toolSpanId
+  };
+}
+
+function toolTraceMetadata() {
+  return {
+    toolId: "tool.fs.read",
+    toolVersion: "0.1.0",
+    toolCallId: "tool-call-1",
+    toolStatus: "success",
+    cacheStatus: "bypass",
+    policyStatus: "allow",
+    phaseId: "evidence"
+  };
+}
+
+function requiredEvent(events: readonly RuntimeEvent[], type: RuntimeEvent["type"]) {
+  const event = events.find((candidate) => candidate.type === type);
+
+  if (event === undefined) {
+    throw new Error(`Missing fixture event ${type}`);
+  }
+
+  return event;
+}
+
+async function writeEvalVerdictFile(runId: string) {
+  const paths = getRunStorePaths(rootDir, runId);
+
+  await mkdir(paths.evalsDir, { recursive: true });
+  await writeFile(
+    join(paths.evalsDir, "source_fidelity.json"),
+    JSON.stringify(passedEval),
+    "utf8"
+  );
+}
+
+function metric(
+  result: Awaited<ReturnType<typeof reconcileRun>>,
+  metricClass:
+    | "trace-to-event-consistency-rate"
+    | "missing-input-rate"
+    | "schema-validation-failure-rate"
+) {
+  return result.integrityMetrics.find(
+    (metricRecord) => metricRecord.class === metricClass
+  );
 }

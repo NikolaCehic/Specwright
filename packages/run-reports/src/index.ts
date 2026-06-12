@@ -23,6 +23,30 @@ import {
   type RuntimeEvent
 } from "@specwright/schemas";
 import { readTrace, type TraceFile, type TraceSpan } from "@specwright/trace-recorder";
+import type { IntegrityMetric } from "./integrity-metrics";
+import {
+  reconcileEventsAndTrace,
+  type ReconciliationResult
+} from "./reconciliation";
+
+export {
+  computeIntegrityMetrics,
+  type ComputeIntegrityMetricsInput,
+  type IntegrityMetric,
+  type IntegrityMetricClass,
+  type SourceEventRange
+} from "./integrity-metrics";
+export {
+  reconcileEventsAndTrace,
+  type MandatoryCoverageRecord,
+  type MandatoryCoverageStatus,
+  type ReconcileEventsAndTraceInput,
+  type ReconciliationGap,
+  type ReconciliationGapKind,
+  type ReconciliationMismatch,
+  type ReconciliationResult,
+  type ReconciliationVerdict
+} from "./reconciliation";
 
 export const RUN_REPORTS_VERSION = "0.1.0";
 
@@ -41,10 +65,14 @@ export type RunReport = {
   summaryPath: string;
   markdown: string;
   missingInputs: string[];
+  reconciliation?: ReconciliationResult;
+  integrityMetrics?: IntegrityMetric[];
 };
 
 type RunFacts = {
+  authoritativeEvents: RuntimeEvent[];
   events: ReportEvent[];
+  rawTrace?: TraceFile | undefined;
   trace?: TraceFile | undefined;
   artifacts: unknown[];
   evidence: unknown[];
@@ -105,13 +133,22 @@ export async function generateRunReport(
 ): Promise<RunReport> {
   const facts = await loadRunFacts(options);
   const markdown = renderReport(facts);
+  const reconciliation = reconcileFacts(facts);
 
   return {
     runId: options.runId,
     summaryPath: facts.paths.summaryPath,
     markdown,
-    missingInputs: facts.missingInputs
+    missingInputs: facts.missingInputs,
+    reconciliation,
+    integrityMetrics: reconciliation.integrityMetrics
   };
+}
+
+export async function reconcileRun(
+  options: GenerateRunReportOptions
+): Promise<ReconciliationResult> {
+  return reconcileFacts(await loadRunFacts(options));
 }
 
 export async function writeRunReport(
@@ -150,20 +187,22 @@ export async function writeSummary(options: GenerateRunReportOptions & {
 async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts> {
   const paths = getRunStorePaths(options.rootDir, options.runId);
   const redactionOptions = redactionOptionsFromReportOptions(options);
-  const events = (await readEvents({
+  const authoritativeEvents = await readEvents({
     rootDir: options.rootDir,
     runId: options.runId
-  })).map((event) => redactReportEvent(event, redactionOptions));
-  const missingInputs: string[] = [];
-  const trace = await optional("trace.json", missingInputs, async () =>
-    redactTrace(
-      await readTrace({
-        rootDir: options.rootDir,
-        runId: options.runId
-      }),
-      redactionOptions
-    )
+  });
+  const events = authoritativeEvents.map((event) =>
+    redactReportEvent(event, redactionOptions)
   );
+  const missingInputs: string[] = [];
+  const rawTrace = await optional("trace.json", missingInputs, async () =>
+    readTrace({
+      rootDir: options.rootDir,
+      runId: options.runId
+    })
+  );
+  const trace =
+    rawTrace === undefined ? undefined : redactTrace(rawTrace, redactionOptions);
   const artifacts = await optionalIndexedRecords(
     "artifacts/index.jsonl",
     getArtifactStorePaths(options.rootDir, options.runId).indexPath,
@@ -189,7 +228,9 @@ async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts
   );
 
   return {
+    authoritativeEvents,
     events,
+    rawTrace,
     trace,
     artifacts: artifacts ?? [],
     evidence: evidence ?? [],
@@ -198,6 +239,15 @@ async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts
     paths,
     redactionProfileId: (options.profile ?? DEFAULT_REDACTION_PROFILE).id
   };
+}
+
+function reconcileFacts(facts: RunFacts): ReconciliationResult {
+  return reconcileEventsAndTrace({
+    events: facts.authoritativeEvents,
+    trace: facts.rawTrace,
+    missingInputs: facts.missingInputs,
+    schemaValidationFailures: 0
+  });
 }
 
 function redactReportEvent(
