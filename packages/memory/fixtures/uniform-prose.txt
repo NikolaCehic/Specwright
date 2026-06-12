@@ -1,0 +1,1 @@
+Specwright memory keeps recall honest by binding every retrieved sentence to provenance. The corpus stores durable source bytes, and chunking creates deterministic windows over those bytes. A later retrieval result is only advisory context, never an instruction or a source fact. Deterministic chunking makes replay possible when the same source and strategy are pinned.
