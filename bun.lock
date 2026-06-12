@@ -85,6 +85,17 @@
         "zod": "^3.22.4",
       },
     },
+    "packages/operations": {
+      "name": "@specwright/operations",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/run-reports": "workspace:*",
+        "@specwright/run-store": "workspace:*",
+        "@specwright/schemas": "workspace:*",
+        "@specwright/trace-recorder": "workspace:*",
+        "zod": "^3.22.4",
+      },
+    },
     "packages/policy-engine": {
       "name": "@specwright/policy-engine",
       "version": "0.0.0",
@@ -168,6 +179,8 @@
     "@specwright/gate-engine": ["@specwright/gate-engine@workspace:packages/gate-engine"],
 
     "@specwright/harness-loader": ["@specwright/harness-loader@workspace:packages/harness-loader"],
+
+    "@specwright/operations": ["@specwright/operations@workspace:packages/operations"],
 
     "@specwright/policy-engine": ["@specwright/policy-engine@workspace:packages/policy-engine"],
 

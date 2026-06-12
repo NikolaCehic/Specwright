@@ -36,6 +36,12 @@
       "@specwright/run-reports/*": [
         "packages/run-reports/src/*"
       ],
+      "@specwright/operations": [
+        "packages/operations/src/index.ts"
+      ],
+      "@specwright/operations/*": [
+        "packages/operations/src/*"
+      ],
       "@specwright/evidence-store": [
         "packages/evidence-store/src/index.ts"
       ],
