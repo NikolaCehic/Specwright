@@ -1,5 +1,8 @@
 import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import type { RuntimeApi, RuntimeToolCallOptions } from "@specwright/runtime";
+import { getRunStorePaths } from "@specwright/run-store";
 import {
   ArtifactRecordSchema,
   EvalVerdictSchema,
@@ -58,6 +61,28 @@ import {
   mcpSpanStatusForOutcome,
   type McpSpanWriter
 } from "./observability/spans";
+import {
+  AdapterLimitConfigError,
+  AdapterLimitController,
+  createAdapterLimitController,
+  measureMcpPayloadBytes,
+  type AdapterLimitDecision,
+  type AdapterLimitsInput
+} from "./limits";
+import {
+  MCP_ADAPTER_PROTOCOL_VERSION,
+  SUPPORTED_MCP_PROTOCOL_RANGE,
+  contractDescriptorMetadata,
+  contractForName,
+  createMcpContractRegistry,
+  negotiateProtocolVersion,
+  requireSupportedContractVersion,
+  type McpContractDescriptorMetadata,
+  type McpContractRegistry,
+  type McpContractVersion,
+  type McpProtocolNegotiationResult,
+  type McpProtocolVersionRange
+} from "./versioning";
 
 export {
   MCP_AUDIT_SCHEMA_VERSION,
@@ -113,6 +138,9 @@ export {
   type McpAuditExportBundle
 } from "./audit/export";
 export * from "./observability";
+export * from "./limits";
+export * from "./versioning";
+export * from "./conformance";
 export {
   EXTERNAL_MCP_CAPABILITY_ID_PREFIX,
   ExternalMcpManifestError,
@@ -218,16 +246,22 @@ export type McpToolDescriptor = {
   metadata: {
     runtimeOperation: RuntimeOperationName;
     requiredScopes: readonly string[];
+    contract?: McpContractDescriptorMetadata | undefined;
   };
 };
 
 export type McpToolsListResponse = {
   tools: McpToolDescriptor[];
+  protocol?: {
+    version: string;
+    supportedRange: McpProtocolVersionRange;
+  } | undefined;
 } | (McpErrorResponse & { tools: [] });
 
 export type McpToolsCallRequest = {
   name: string;
   arguments?: unknown;
+  contractVersion?: string | undefined;
   credential?: unknown;
   subject?: unknown;
   requestedScopes?: readonly string[] | undefined;
@@ -246,6 +280,15 @@ export type McpToolError = {
   operatorAction: string;
   issues?: McpValidationIssue[] | undefined;
   approvalId?: string | undefined;
+  retryAfterMs?: number | undefined;
+  supportedProtocolRange?: McpProtocolVersionRange | undefined;
+  contract?: {
+    id: string;
+    version: string;
+    compatibilityClass?: string | undefined;
+    requestedVersion?: string | undefined;
+    migrationNote?: string | undefined;
+  } | undefined;
 };
 
 type McpToolErrorInput = Omit<
@@ -389,6 +432,7 @@ export type McpResourceDescriptor = {
     projection: string;
     payloadSchemaRef: string;
     openContractItem?: string | undefined;
+    contract?: McpContractDescriptorMetadata | undefined;
   };
 };
 
@@ -399,6 +443,8 @@ export type McpResourceCatalog = {
 
 export type McpResourcesListRequest = {
   principal?: McpClientPrincipal | undefined;
+  cursor?: number | undefined;
+  pageSize?: number | undefined;
   credential?: unknown;
   subject?: unknown;
   requestedScopes?: readonly string[] | undefined;
@@ -406,11 +452,20 @@ export type McpResourcesListRequest = {
 
 export type McpResourcesListResponse = {
   resources: McpResourceDescriptor[];
+  pagination?: {
+    cursor: number;
+    requestedPageSize: number;
+    pageSize: number;
+    maxPageSize: number;
+    bounded: boolean;
+    nextCursor?: number | undefined;
+  } | undefined;
 } | (McpErrorResponse & { resources: [] });
 
 export type McpResourcesReadRequest = {
   uri: string;
   options?: z.infer<typeof lookupOptionsSchema> | undefined;
+  contractVersion?: string | undefined;
   credential?: unknown;
   subject?: unknown;
   requestedScopes?: readonly string[] | undefined;
@@ -483,6 +538,7 @@ export type McpPromptDescriptor = {
   description: string;
   metadata: {
     toolName: string;
+    contract?: McpContractDescriptorMetadata | undefined;
   };
 };
 
@@ -497,6 +553,7 @@ export type McpPromptsListResponse = {
 
 export type McpPromptsGetRequest = {
   name: string;
+  contractVersion?: string | undefined;
   credential?: unknown;
   subject?: unknown;
   requestedScopes?: readonly string[] | undefined;
@@ -706,6 +763,7 @@ const toolsCallRequestSchema = z
   .object({
     name: nonEmptyString,
     arguments: z.unknown().optional(),
+    contractVersion: nonEmptyString.optional(),
     credential: z.unknown().optional(),
     subject: z.unknown().optional(),
     requestedScopes: z.array(scopeNameSchema).optional()
@@ -786,6 +844,7 @@ const resourcesReadRequestSchema = z
   .object({
     uri: nonEmptyString,
     options: lookupOptionsSchema.optional(),
+    contractVersion: nonEmptyString.optional(),
     credential: z.unknown().optional(),
     subject: z.unknown().optional(),
     requestedScopes: z.array(scopeNameSchema).optional()
@@ -794,6 +853,8 @@ const resourcesReadRequestSchema = z
 const resourcesListRequestSchema = z
   .object({
     principal: z.record(z.string(), z.unknown()).optional(),
+    cursor: z.number().int().nonnegative().optional(),
+    pageSize: z.number().int().positive().optional(),
     credential: z.unknown().optional(),
     subject: z.unknown().optional(),
     requestedScopes: z.array(scopeNameSchema).optional()
@@ -802,6 +863,7 @@ const resourcesListRequestSchema = z
 const promptsGetRequestSchema = z
   .object({
     name: nonEmptyString,
+    contractVersion: nonEmptyString.optional(),
     credential: z.unknown().optional(),
     subject: z.unknown().optional(),
     requestedScopes: z.array(scopeNameSchema).optional()
@@ -1184,6 +1246,14 @@ export type McpAdapter = {
   dispatch(request: McpProtocolRequest): Promise<McpProtocolResponse>;
 };
 
+export type McpVersioningOptions = {
+  clientProtocolVersion?: string | undefined;
+  supportedProtocolRange?: McpProtocolVersionRange | undefined;
+  contractRegistry?: McpContractRegistry | undefined;
+  contractOverrides?: readonly Partial<McpContractVersion>[] | undefined;
+  requireClientContractVersions?: boolean | undefined;
+};
+
 export function createMcpAdapter(
   runtime: RuntimeApi,
   options: {
@@ -1193,6 +1263,9 @@ export function createMcpAdapter(
     applyEgressRedaction?: McpEgressRedaction | undefined;
     auth?: McpAuthOptions | undefined;
     observability?: McpObservabilityOptions | undefined;
+    versioning?: McpVersioningOptions | undefined;
+    limits?: AdapterLimitsInput | undefined;
+    limitController?: AdapterLimitController | undefined;
   } = {}
 ): McpAdapter {
   const catalog = normalizeCatalog(options.catalog);
@@ -1201,79 +1274,312 @@ export function createMcpAdapter(
   const redact = options.applyEgressRedaction ?? applyEgressRedaction;
   const security = normalizeMcpSecurity(options.auth);
   const observability = normalizeMcpObservability(options.observability);
+  const versioning = normalizeMcpVersioning(
+    options.versioning,
+    catalog,
+    resourceCatalog,
+    promptCatalog
+  );
+  const limitController =
+    options.limitController ?? createAdapterLimitController(options.limits);
+  const idempotentMutations = createMcpIdempotentMutationCache();
 
   const adapter: McpAdapter = {
     tools: {
       list(request = {}) {
-        return listMcpTools(catalog, request, security, observability);
+        const protocolError = protocolErrorForList(versioning.protocol);
+
+        if (protocolError !== undefined) {
+          return {
+            ...protocolError,
+            tools: []
+          };
+        }
+
+        const limited = acquireAdapterLimit({
+          limitController,
+          observability,
+          kind: "list",
+          request
+        });
+
+        if (!("release" in limited)) {
+          return {
+            ...limitDecisionResponse(limited),
+            tools: []
+          };
+        }
+
+        try {
+          return stampToolsListResponse(
+            listMcpTools(catalog, request, security, observability),
+            versioning
+          );
+        } finally {
+          limited.release();
+        }
       },
       async call(request) {
-        return callMcpTool(
-          runtime,
-          catalog,
-          request,
-          redact,
-          security,
-          observability
-        );
+        const protocolError = protocolErrorForCall(versioning.protocol);
+
+        if (protocolError !== undefined) {
+          return protocolError;
+        }
+
+        const contractError = contractErrorForRequest({
+          registry: versioning.contractRegistry,
+          requireClientVersion: versioning.requireClientContractVersions,
+          kind: "tool",
+          name: isRecord(request) && typeof request.name === "string"
+            ? request.name
+            : "unknown",
+          requestedVersion: isRecord(request) && typeof request.contractVersion === "string"
+            ? request.contractVersion
+            : undefined
+        });
+
+        if (contractError !== undefined) {
+          return contractError;
+        }
+
+        const limited = acquireAdapterLimit({
+          limitController,
+          observability,
+          kind: "tool-call",
+          request
+        });
+
+        if (!("release" in limited)) {
+          return limitDecisionResponse(limited);
+        }
+
+        try {
+          return await callMcpTool(
+            runtime,
+            catalog,
+            request,
+            redact,
+            security,
+            observability,
+            idempotentMutations
+          );
+        } finally {
+          limited.release();
+        }
       }
     },
     resources: {
       list(request = {}) {
-        return listMcpResources(resourceCatalog, request, security, observability);
+        const protocolError = protocolErrorForList(versioning.protocol);
+
+        if (protocolError !== undefined) {
+          return {
+            ...protocolError,
+            resources: []
+          };
+        }
+
+        const limited = acquireAdapterLimit({
+          limitController,
+          observability,
+          kind: "list",
+          request
+        });
+
+        if (!("release" in limited)) {
+          return {
+            ...limitDecisionResponse(limited),
+            resources: []
+          };
+        }
+
+        try {
+          return boundResourcesListResponse(
+            stampResourcesListResponse(
+              listMcpResources(resourceCatalog, request, security, observability),
+              versioning
+            ),
+            request,
+            limitController
+          );
+        } finally {
+          limited.release();
+        }
       },
       async read(request) {
-        return readMcpResource(
-          runtime,
-          resourceCatalog,
-          request,
-          redact,
-          security,
-          observability
+        const protocolError = protocolErrorForCall(versioning.protocol);
+
+        if (protocolError !== undefined) {
+          return protocolError;
+        }
+
+        const resourceName = resourceContractNameFromUri(
+          isRecord(request) && typeof request.uri === "string" ? request.uri : ""
         );
+        const contractError =
+          resourceName === undefined
+            ? undefined
+            : contractErrorForRequest({
+                registry: versioning.contractRegistry,
+                requireClientVersion: versioning.requireClientContractVersions,
+                kind: "resource",
+                name: resourceName,
+                requestedVersion:
+                  isRecord(request) && typeof request.contractVersion === "string"
+                    ? request.contractVersion
+                    : undefined
+              });
+
+        if (contractError !== undefined) {
+          return contractError;
+        }
+
+        const limited = acquireAdapterLimit({
+          limitController,
+          observability,
+          kind: "read",
+          request
+        });
+
+        if (!("release" in limited)) {
+          return limitDecisionResponse(limited);
+        }
+
+        try {
+          const response = await readMcpResource(
+            runtime,
+            resourceCatalog,
+            request,
+            redact,
+            security,
+            observability
+          );
+
+          if (response.isError) {
+            return response;
+          }
+
+          const projectionLimit = limitController.checkResourceReadBytes(
+            measureMcpPayloadBytes(response.contents[0].text)
+          );
+
+          return projectionLimit.ok
+            ? response
+            : limitDecisionResponse(projectionLimit);
+        } finally {
+          limited.release();
+        }
       }
     },
     prompts: {
       list(request = {}) {
-        return listMcpPrompts(
-          promptCatalog,
-          catalog,
-          request,
-          security,
-          observability
-        );
+        const protocolError = protocolErrorForList(versioning.protocol);
+
+        if (protocolError !== undefined) {
+          return {
+            ...protocolError,
+            prompts: []
+          };
+        }
+
+        const limited = acquireAdapterLimit({
+          limitController,
+          observability,
+          kind: "prompt",
+          request
+        });
+
+        if (!("release" in limited)) {
+          return {
+            ...limitDecisionResponse(limited),
+            prompts: []
+          };
+        }
+
+        try {
+          return stampPromptsListResponse(
+            listMcpPrompts(
+              promptCatalog,
+              catalog,
+              request,
+              security,
+              observability
+            ),
+            versioning
+          );
+        } finally {
+          limited.release();
+        }
       },
       get(request) {
-        return getMcpPrompt(
-          promptCatalog,
-          catalog,
-          request,
-          redact,
-          security,
-          observability
-        );
+        const protocolError = protocolErrorForCall(versioning.protocol);
+
+        if (protocolError !== undefined) {
+          return protocolError;
+        }
+
+        const contractError = contractErrorForRequest({
+          registry: versioning.contractRegistry,
+          requireClientVersion: versioning.requireClientContractVersions,
+          kind: "prompt",
+          name: isRecord(request) && typeof request.name === "string"
+            ? request.name
+            : "unknown",
+          requestedVersion: isRecord(request) && typeof request.contractVersion === "string"
+            ? request.contractVersion
+            : undefined
+        });
+
+        if (contractError !== undefined) {
+          return contractError;
+        }
+
+        const limited = acquireAdapterLimit({
+          limitController,
+          observability,
+          kind: "prompt",
+          request
+        });
+
+        if (!("release" in limited)) {
+          return limitDecisionResponse(limited);
+        }
+
+        try {
+          return getMcpPrompt(
+            promptCatalog,
+            catalog,
+            request,
+            redact,
+            security,
+            observability
+          );
+        } finally {
+          limited.release();
+        }
       }
     },
     async dispatch(request) {
-      return dispatchMcpRequest(
-        runtime,
-        catalog,
-        resourceCatalog,
-        promptCatalog,
-        redact,
-        security,
-        observability,
-        request
-      );
+      return dispatchMcpRequest(adapter, observability, request);
     }
   };
 
   if (observability !== undefined) {
     adapter.observability = {
       openSession() {
+        const opened = limitController.openSession({
+          sessionId: observability.session.sessionId,
+          tenantId: observability.session.tenantId
+        });
+
+        if (!opened.ok) {
+          throw new AdapterLimitConfigError(opened.message);
+        }
+
         return openMcpObservedSession(observability);
       },
       closeSession() {
+        limitController.closeSession(observability.session.sessionId);
         return closeMcpObservedSession(observability);
       },
       metrics() {
@@ -1483,6 +1789,392 @@ type NormalizedMcpObservability = {
   openedAt?: string | undefined;
 };
 
+type NormalizedMcpVersioning = {
+  protocol: McpProtocolNegotiationResult;
+  contractRegistry: McpContractRegistry;
+  requireClientContractVersions: boolean;
+};
+
+type McpIdempotentMutationCache = {
+  readonly records: Map<string, McpIdempotentMutationRecord>;
+};
+
+type McpIdempotentMutationRecord = {
+  identityHash: string;
+  response: McpToolsCallResponse;
+};
+
+const durableMcpIdempotentMutationRecordSchema = z
+  .object({
+    version: z.literal(1),
+    identityHash: z.string(),
+    response: z.unknown()
+  })
+  .strict();
+
+type McpIdempotentMutationScope = {
+  toolName: string;
+  runtimeOperation: RuntimeOperationName;
+  idempotencyKey: string;
+  args: unknown;
+  tenantId: string;
+  clientId?: string | undefined;
+  subjectId?: string | undefined;
+  runId?: string | undefined;
+  rootDir?: string | undefined;
+};
+
+type McpIdempotentMutationDecision =
+  | {
+      kind: "disabled";
+    }
+  | {
+      kind: "miss";
+      cacheKey: string;
+      identityHash: string;
+      scope: McpIdempotentMutationScope;
+    }
+  | {
+      kind: "hit";
+      response: McpToolsCallResponse;
+    }
+  | {
+      kind: "conflict";
+      response: McpErrorResponse;
+    };
+
+function createMcpIdempotentMutationCache(): McpIdempotentMutationCache {
+  return {
+    records: new Map()
+  };
+}
+
+function checkMcpIdempotentMutation(input: {
+  cache: McpIdempotentMutationCache;
+  binding: EnabledMcpToolBinding;
+  args: unknown;
+  authorization: AuthorizationResult;
+}): McpIdempotentMutationDecision {
+  const idempotencyKey = idempotencyKeyForRuntimeArgs(
+    input.binding.runtimeOperation,
+    input.args
+  );
+
+  if (!input.binding.mutates || idempotencyKey === undefined) {
+    return {
+      kind: "disabled"
+    };
+  }
+
+  const scope = mcpIdempotentMutationScope({
+    binding: input.binding,
+    args: input.args,
+    authorization: input.authorization,
+    idempotencyKey
+  });
+  const cacheKey = mcpIdempotencyCacheKey(scope);
+  const identityHash = mcpIdempotencyIdentityHash(scope);
+  const existing = input.cache.records.get(cacheKey);
+
+  if (existing === undefined) {
+    return {
+      kind: "miss",
+      cacheKey,
+      identityHash,
+      scope
+    };
+  }
+
+  if (existing.identityHash !== identityHash) {
+    return {
+      kind: "conflict",
+      response: mcpIdempotencyConflictResponse()
+    };
+  }
+
+  return {
+    kind: "hit",
+    response: cloneMcpToolsCallResponse(existing.response)
+  };
+}
+
+function storeMcpIdempotentMutation(input: {
+  cache: McpIdempotentMutationCache;
+  decision: McpIdempotentMutationDecision;
+  response: McpToolsCallResponse;
+}) {
+  if (input.decision.kind !== "miss") {
+    return;
+  }
+
+  input.cache.records.set(input.decision.cacheKey, {
+    identityHash: input.decision.identityHash,
+    response: cloneMcpToolsCallResponse(input.response)
+  });
+}
+
+async function checkDurableMcpIdempotentMutation(input: {
+  runtime: RuntimeApi;
+  decision: McpIdempotentMutationDecision;
+}): Promise<McpIdempotentMutationDecision> {
+  const decision = input.decision;
+
+  if (decision.kind !== "miss") {
+    return decision;
+  }
+
+  const path = await mcpIdempotencyDurableRecordPath({
+    runtime: input.runtime,
+    decision
+  });
+
+  if (path === undefined) {
+    return input.decision;
+  }
+
+  let text: string;
+
+  try {
+    text = await readFile(path, "utf8");
+  } catch (error) {
+    return isErrno(error, "ENOENT")
+      ? decision
+      : {
+          kind: "conflict",
+          response: mcpIdempotencyConflictResponse(
+            "MCP idempotency record could not be read safely."
+          )
+        };
+  }
+
+  let parsedJson: unknown;
+
+  try {
+    parsedJson = JSON.parse(text);
+  } catch {
+    return {
+      kind: "conflict",
+      response: mcpIdempotencyConflictResponse(
+        "MCP idempotency record is not valid JSON."
+      )
+    };
+  }
+
+  const parsed = durableMcpIdempotentMutationRecordSchema.safeParse(parsedJson);
+
+  if (!parsed.success) {
+    return {
+      kind: "conflict",
+      response: mcpIdempotencyConflictResponse(
+        "MCP idempotency record does not match the durable record contract."
+      )
+    };
+  }
+
+  if (parsed.data.identityHash !== decision.identityHash) {
+    return {
+      kind: "conflict",
+      response: mcpIdempotencyConflictResponse()
+    };
+  }
+
+  return {
+    kind: "hit",
+    response: cloneMcpToolsCallResponse(
+      parsed.data.response as McpToolsCallResponse
+    )
+  };
+}
+
+async function storeDurableMcpIdempotentMutation(input: {
+  runtime: RuntimeApi;
+  decision: McpIdempotentMutationDecision;
+  response: McpToolsCallResponse;
+}) {
+  const decision = input.decision;
+
+  if (decision.kind !== "miss") {
+    return;
+  }
+
+  const path = await mcpIdempotencyDurableRecordPath({
+    runtime: input.runtime,
+    decision
+  });
+
+  if (path === undefined) {
+    return;
+  }
+
+  try {
+    await mkdir(dirname(path), { recursive: true });
+    await writeFile(
+      path,
+      `${JSON.stringify(
+        {
+          version: 1,
+        identityHash: decision.identityHash,
+          response: cloneMcpToolsCallResponse(input.response)
+        },
+        null,
+        2
+      )}\n`,
+      "utf8"
+    );
+  } catch {
+    return;
+  }
+}
+
+function mcpIdempotencyConflictResponse(message?: string) {
+  return errorResponse({
+    code: "idempotency_conflict",
+    message:
+      message ??
+      "MCP idempotency key was reused for a different tool operation, request body, or principal context.",
+    retryable: false,
+    operatorAction:
+      "Retry with the original request body and principal context or generate a new idempotency key."
+  });
+}
+
+function mcpIdempotentMutationScope(input: {
+  binding: EnabledMcpToolBinding;
+  args: unknown;
+  authorization: AuthorizationResult;
+  idempotencyKey: string;
+}): McpIdempotentMutationScope {
+  const principal =
+    input.authorization.kind === "authenticated"
+      ? input.authorization.context.clientPrincipal
+      : undefined;
+  const subject =
+    input.authorization.kind === "authenticated"
+      ? input.authorization.context.subject
+      : undefined;
+
+  return {
+    toolName: input.binding.name,
+    runtimeOperation: input.binding.runtimeOperation,
+    idempotencyKey: input.idempotencyKey,
+    args: input.args,
+    tenantId: principal?.tenantId ?? "tenant.default",
+    clientId: principal?.clientId,
+    subjectId: subject?.subjectId,
+    runId: runIdForRuntimeArgs(input.binding.runtimeOperation, input.args),
+    rootDir: rootDirForRuntimeArgs(input.binding.runtimeOperation, input.args)
+  };
+}
+
+async function mcpIdempotencyDurableRecordPath(input: {
+  runtime: RuntimeApi;
+  decision: Extract<McpIdempotentMutationDecision, { kind: "miss" }>;
+}) {
+  if (input.decision.scope.runId === undefined) {
+    return undefined;
+  }
+
+  const rootDir = await mcpIdempotencyRootDir(input);
+
+  if (rootDir === undefined) {
+    return undefined;
+  }
+
+  return join(
+    getRunStorePaths(rootDir, input.decision.scope.runId).runDir,
+    "mcp-idempotency",
+    `${input.decision.cacheKey.replace(/[^a-z0-9.-]/gi, "_")}.json`
+  );
+}
+
+async function mcpIdempotencyRootDir(input: {
+  runtime: RuntimeApi;
+  decision: Extract<McpIdempotentMutationDecision, { kind: "miss" }>;
+}) {
+  if (input.decision.scope.rootDir !== undefined) {
+    return input.decision.scope.rootDir;
+  }
+
+  const runId = input.decision.scope.runId;
+
+  if (runId === undefined) {
+    return undefined;
+  }
+
+  const events = await readEventsSafely(input.runtime, runId);
+
+  for (const event of events) {
+    if (event.type === "run.started") {
+      return readStringProperty(
+        recordValue(readProperty(event.payload, "input")),
+        "cwd"
+      );
+    }
+  }
+
+  return undefined;
+}
+
+function mcpIdempotencyCacheKey(scope: McpIdempotentMutationScope) {
+  return stableSha256({
+    idempotencyKey: scope.idempotencyKey
+  });
+}
+
+function mcpIdempotencyIdentityHash(scope: McpIdempotentMutationScope) {
+  return stableSha256({
+    toolName: scope.toolName,
+    runtimeOperation: scope.runtimeOperation,
+    args: scope.args,
+    tenantId: scope.tenantId,
+    clientId: scope.clientId,
+    subjectId: scope.subjectId
+  });
+}
+
+function stableSha256(value: unknown) {
+  return `sha256:${createHash("sha256").update(canonicalJsonText(value)).digest("hex")}`;
+}
+
+function cloneMcpToolsCallResponse(
+  response: McpToolsCallResponse
+): McpToolsCallResponse {
+  return JSON.parse(JSON.stringify(response)) as McpToolsCallResponse;
+}
+
+function isErrno(error: unknown, code: string) {
+  return isRecord(error) && error.code === code;
+}
+
+function normalizeMcpVersioning(
+  options: McpVersioningOptions | undefined,
+  catalog: McpCatalog,
+  resourceCatalog: McpResourceCatalog,
+  promptCatalog: McpPromptCatalog
+): NormalizedMcpVersioning {
+  const contractRegistry =
+    options?.contractRegistry ??
+    createMcpContractRegistry({
+      tools: catalog.enabledBindings,
+      resources: resourceCatalog.bindings,
+      prompts: promptCatalog.bindings,
+      ...(options?.contractOverrides === undefined
+        ? {}
+        : { overrides: options.contractOverrides })
+    });
+  const supportedRange =
+    options?.supportedProtocolRange ?? SUPPORTED_MCP_PROTOCOL_RANGE;
+  const offeredVersion =
+    options?.clientProtocolVersion ?? MCP_ADAPTER_PROTOCOL_VERSION;
+
+  return {
+    protocol: negotiateProtocolVersion(offeredVersion, supportedRange),
+    contractRegistry,
+    requireClientContractVersions:
+      options?.requireClientContractVersions ?? false
+  };
+}
+
 type AuthorizationResult =
   | {
       kind: "disabled";
@@ -1558,6 +2250,292 @@ function normalizeMcpObservability(
     requestCount: 0,
     denialCount: 0
   };
+}
+
+function protocolErrorForList(
+  protocol: McpProtocolNegotiationResult
+): McpErrorResponse | undefined {
+  return protocol.ok ? undefined : protocolNegotiationErrorResponse(protocol);
+}
+
+function protocolErrorForCall(
+  protocol: McpProtocolNegotiationResult
+): McpErrorResponse | undefined {
+  return protocol.ok ? undefined : protocolNegotiationErrorResponse(protocol);
+}
+
+function protocolNegotiationErrorResponse(
+  protocol: Extract<McpProtocolNegotiationResult, { ok: false }>
+) {
+  return errorResponse({
+    code: protocol.code,
+    message: protocol.message,
+    retryable: protocol.retryable,
+    operatorAction:
+      "Negotiate an MCP protocol version inside the advertised supported range.",
+    supportedProtocolRange: protocol.supportedRange
+  });
+}
+
+function contractErrorForRequest(input: {
+  registry: McpContractRegistry;
+  requireClientVersion: boolean;
+  kind: "tool" | "resource" | "prompt";
+  name: string;
+  requestedVersion?: string | undefined;
+}): McpErrorResponse | undefined {
+  if (!input.registry.byKindAndName.has(`${input.kind}:${input.name}`)) {
+    return undefined;
+  }
+
+  const result = requireSupportedContractVersion(input);
+
+  if (result.ok) {
+    return undefined;
+  }
+
+  return errorResponse({
+    code: result.code,
+    message:
+      result.code === "contract_version_required"
+        ? `MCP ${input.kind} ${input.name} requires explicit contract version ${result.contract.version}.`
+        : `MCP ${input.kind} ${input.name} requires migration from ${result.requestedVersion ?? "unknown"} to ${result.contract.version}.`,
+    retryable: result.retryable,
+    operatorAction: result.migrationNote,
+    contract: {
+      id: result.contract.id,
+      version: result.contract.version,
+      compatibilityClass: result.contract.compatibilityClass,
+      requestedVersion: result.requestedVersion,
+      migrationNote: result.migrationNote
+    }
+  });
+}
+
+function acquireAdapterLimit(input: {
+  limitController: AdapterLimitController;
+  observability: NormalizedMcpObservability | undefined;
+  kind: "tool-call" | "read" | "list" | "prompt";
+  request: unknown;
+}): AdapterLimitDecision | { release(): void } {
+  const context = adapterLimitContext(input.observability);
+
+  return input.limitController.acquireRequest({
+    ...context,
+    kind: input.kind,
+    payloadBytes: measureMcpPayloadBytes(input.request)
+  });
+}
+
+function adapterLimitContext(observability: NormalizedMcpObservability | undefined) {
+  return {
+    sessionId: observability?.session.sessionId ?? "session.default",
+    tenantId: observability?.session.tenantId ?? "tenant.default",
+    clientId: observability?.session.clientId ?? "client.default"
+  };
+}
+
+function limitDecisionResponse(decision: AdapterLimitDecision): McpErrorResponse {
+  if (decision.ok) {
+    throw new Error("Cannot render a successful limit decision as an error.");
+  }
+
+  return errorResponse({
+    code: decision.code,
+    message: decision.message,
+    retryable: decision.retryable,
+    retryAfterMs: decision.retryAfterMs,
+    operatorAction:
+      decision.retryable
+        ? "Honor retry-after and retry within the configured MCP tenant limits."
+        : "Reduce the request size or requested projection and retry."
+  });
+}
+
+function stampToolsListResponse(
+  response: MaybePromise<McpToolsListResponse>,
+  versioning: NormalizedMcpVersioning
+): MaybePromise<McpToolsListResponse> {
+  if (isPromiseLike(response)) {
+    return response.then((resolved) => stampToolsListResponse(resolved, versioning));
+  }
+
+  if (isMcpErrorResponse(response)) {
+    return response;
+  }
+
+  return {
+    ...response,
+    protocol: versioning.protocol.ok
+      ? {
+          version: versioning.protocol.agreedVersion,
+          supportedRange: versioning.protocol.supportedRange
+        }
+      : undefined,
+    tools: response.tools.map((tool) => {
+      const contract = contractForName(
+        versioning.contractRegistry,
+        "tool",
+        tool.name
+      );
+
+      return {
+        ...tool,
+        metadata: {
+          ...tool.metadata,
+          contract: contractDescriptorMetadata(contract)
+        }
+      };
+    })
+  };
+}
+
+function stampResourcesListResponse(
+  response: MaybePromise<McpResourcesListResponse>,
+  versioning: NormalizedMcpVersioning
+): MaybePromise<McpResourcesListResponse> {
+  if (isPromiseLike(response)) {
+    return response.then((resolved) =>
+      stampResourcesListResponse(resolved, versioning)
+    );
+  }
+
+  if (isMcpErrorResponse(response)) {
+    return response;
+  }
+
+  return {
+    ...response,
+    resources: response.resources.map((resource) => {
+      const name = resourceContractNameFromTemplate(resource.uriTemplate);
+      const contract = contractForName(
+        versioning.contractRegistry,
+        "resource",
+        name
+      );
+
+      return {
+        ...resource,
+        metadata: {
+          ...resource.metadata,
+          contract: contractDescriptorMetadata(contract)
+        }
+      };
+    })
+  };
+}
+
+function stampPromptsListResponse(
+  response: MaybePromise<McpPromptsListResponse>,
+  versioning: NormalizedMcpVersioning
+): MaybePromise<McpPromptsListResponse> {
+  if (isPromiseLike(response)) {
+    return response.then((resolved) =>
+      stampPromptsListResponse(resolved, versioning)
+    );
+  }
+
+  if (isMcpErrorResponse(response)) {
+    return response;
+  }
+
+  return {
+    ...response,
+    prompts: response.prompts.map((prompt) => {
+      const contract = contractForName(
+        versioning.contractRegistry,
+        "prompt",
+        prompt.name
+      );
+
+      return {
+        ...prompt,
+        metadata: {
+          ...prompt.metadata,
+          contract: contractDescriptorMetadata(contract)
+        }
+      };
+    })
+  };
+}
+
+function boundResourcesListResponse(
+  response: MaybePromise<McpResourcesListResponse>,
+  request: McpResourcesListRequest,
+  limitController: AdapterLimitController
+): MaybePromise<McpResourcesListResponse> {
+  if (isPromiseLike(response)) {
+    return response.then((resolved) =>
+      boundResourcesListResponse(resolved, request, limitController)
+    );
+  }
+
+  if (isMcpErrorResponse(response)) {
+    return response;
+  }
+
+  const page = limitController.boundedPage(response.resources, {
+    ...(request.cursor === undefined ? {} : { cursor: request.cursor }),
+    ...(request.pageSize === undefined ? {} : { pageSize: request.pageSize })
+  });
+
+  return {
+    ...response,
+    resources: page.page,
+    pagination: page.pagination
+  };
+}
+
+function resourceContractNameFromTemplate(uriTemplate: string) {
+  switch (uriTemplate) {
+    case "specwright://runs/<run-id>/state":
+      return "run-state";
+    case "specwright://runs/<run-id>/events":
+      return "run-events";
+    case "specwright://runs/<run-id>/artifacts/<artifact-id>":
+      return "run-artifact";
+    case "specwright://runs/<run-id>/evidence":
+      return "run-evidence";
+    case "specwright://runs/<run-id>/evals":
+      return "run-evals";
+    case "specwright://runs/<run-id>/trace":
+      return "run-trace";
+    case "specwright://runs/<run-id>/report":
+      return "run-report";
+    case "specwright://harnesses/<harness-id>/spec":
+      return "harness-spec";
+    default:
+      return uriTemplate;
+  }
+}
+
+function resourceContractNameFromUri(uri: string): string | undefined {
+  if (/^specwright:\/\/runs\/[^/]+\/state$/.test(uri)) {
+    return "run-state";
+  }
+  if (/^specwright:\/\/runs\/[^/]+\/events$/.test(uri)) {
+    return "run-events";
+  }
+  if (/^specwright:\/\/runs\/[^/]+\/artifacts\/[^/]+$/.test(uri)) {
+    return "run-artifact";
+  }
+  if (/^specwright:\/\/runs\/[^/]+\/evidence$/.test(uri)) {
+    return "run-evidence";
+  }
+  if (/^specwright:\/\/runs\/[^/]+\/evals$/.test(uri)) {
+    return "run-evals";
+  }
+  if (/^specwright:\/\/runs\/[^/]+\/trace$/.test(uri)) {
+    return "run-trace";
+  }
+  if (/^specwright:\/\/runs\/[^/]+\/report$/.test(uri)) {
+    return "run-report";
+  }
+  if (/^specwright:\/\/harnesses\/[^/]+\/spec$/.test(uri)) {
+    return "harness-spec";
+  }
+
+  return undefined;
 }
 
 async function openMcpObservedSession(observability: NormalizedMcpObservability) {
@@ -2766,12 +3744,7 @@ function getMcpPrompt(
 }
 
 async function dispatchMcpRequest(
-  runtime: RuntimeApi,
-  catalog: McpCatalog,
-  resourceCatalog: McpResourceCatalog,
-  promptCatalog: McpPromptCatalog,
-  redact: McpEgressRedaction,
-  security: NormalizedMcpSecurity,
+  adapter: McpAdapter,
   observability: NormalizedMcpObservability | undefined,
   request: McpProtocolRequest
 ): Promise<McpProtocolResponse> {
@@ -2795,60 +3768,31 @@ async function dispatchMcpRequest(
 
   switch (parsedRequest.data.method) {
     case "tools/list":
-      return listMcpTools(
-        catalog,
+      return adapter.tools.list(
         isRecord(parsedRequest.data.params)
           ? (parsedRequest.data.params as McpTransportCredentialRequest)
-          : {},
-        security,
-        observability
+          : {}
       );
     case "tools/call":
-      return callMcpTool(
-        runtime,
-        catalog,
-        parsedRequest.data.params as McpToolsCallRequest,
-        redact,
-        security,
-        observability
-      );
+      return adapter.tools.call(parsedRequest.data.params as McpToolsCallRequest);
     case "resources/list":
-      return listMcpResources(
-        resourceCatalog,
+      return adapter.resources.list(
         isRecord(parsedRequest.data.params)
           ? (parsedRequest.data.params as McpResourcesListRequest)
-          : {},
-        security,
-        observability
+          : {}
       );
     case "resources/read":
-      return readMcpResource(
-        runtime,
-        resourceCatalog,
-        parsedRequest.data.params as McpResourcesReadRequest,
-        redact,
-        security,
-        observability
+      return adapter.resources.read(
+        parsedRequest.data.params as McpResourcesReadRequest
       );
     case "prompts/list":
-      return listMcpPrompts(
-        promptCatalog,
-        catalog,
+      return adapter.prompts.list(
         isRecord(parsedRequest.data.params)
           ? (parsedRequest.data.params as McpTransportCredentialRequest)
-          : {},
-        security,
-        observability
+          : {}
       );
     case "prompts/get":
-      return getMcpPrompt(
-        promptCatalog,
-        catalog,
-        parsedRequest.data.params as McpPromptsGetRequest,
-        redact,
-        security,
-        observability
-      );
+      return adapter.prompts.get(parsedRequest.data.params as McpPromptsGetRequest);
     default:
       const response = errorResponse({
         code: "method_not_found",
@@ -2876,7 +3820,8 @@ async function callMcpTool(
   request: McpToolsCallRequest,
   redact: McpEgressRedaction,
   security: NormalizedMcpSecurity,
-  observability: NormalizedMcpObservability | undefined
+  observability: NormalizedMcpObservability | undefined,
+  idempotentMutations: McpIdempotentMutationCache
 ): Promise<McpToolsCallResponse> {
   if (observability !== undefined) {
     return callMcpToolObserved(
@@ -2885,7 +3830,8 @@ async function callMcpTool(
       request,
       redact,
       security,
-      observability
+      observability,
+      idempotentMutations
     );
   }
 
@@ -2942,6 +3888,20 @@ async function callMcpTool(
     );
   }
 
+  const idempotency = await checkDurableMcpIdempotentMutation({
+    runtime,
+    decision: checkMcpIdempotentMutation({
+      cache: idempotentMutations,
+      binding,
+      args: parsed.data,
+      authorization
+    })
+  });
+
+  if (idempotency.kind === "hit" || idempotency.kind === "conflict") {
+    return idempotency.response;
+  }
+
   try {
     const result = await invokeRuntime(
       runtime,
@@ -2950,7 +3910,7 @@ async function callMcpTool(
       authorization.kind === "authenticated" ? authorization.context : undefined
     );
 
-    return await redactToolResponseIfNeeded(
+    const response = await redactToolResponseIfNeeded(
       resultForRuntimeValue(result),
       redact,
       redactionContextForTool({
@@ -2958,6 +3918,18 @@ async function callMcpTool(
         authorization
       })
     );
+
+    storeMcpIdempotentMutation({
+      cache: idempotentMutations,
+      decision: idempotency,
+      response
+    });
+    await storeDurableMcpIdempotentMutation({
+      runtime,
+      decision: idempotency,
+      response
+    });
+    return response;
   } catch (error) {
     if (isZodError(error)) {
       return validationErrorResponse(error);
@@ -2985,7 +3957,8 @@ async function callMcpToolObserved(
   request: McpToolsCallRequest,
   redact: McpEgressRedaction,
   security: NormalizedMcpSecurity,
-  observability: NormalizedMcpObservability
+  observability: NormalizedMcpObservability,
+  idempotentMutations: McpIdempotentMutationCache
 ): Promise<McpToolsCallResponse> {
   const parsedRequest = toolsCallRequestSchema.safeParse(request);
   const target = isRecord(request) && typeof request.name === "string"
@@ -3076,6 +4049,42 @@ async function callMcpToolObserved(
       target: binding.name,
       args: parsed.data,
       response,
+      mutates: binding.mutates,
+      runId,
+      principal
+    });
+  }
+
+  const idempotency = await checkDurableMcpIdempotentMutation({
+    runtime,
+    decision: checkMcpIdempotentMutation({
+      cache: idempotentMutations,
+      binding,
+      args: parsed.data,
+      authorization
+    })
+  });
+
+  if (idempotency.kind === "hit") {
+    return observeToolCallFailure({
+      observability,
+      operation: "tools/call",
+      target: binding.name,
+      args: parsed.data,
+      response: idempotency.response,
+      mutates: false,
+      runId,
+      principal
+    });
+  }
+
+  if (idempotency.kind === "conflict") {
+    return observeToolCallFailure({
+      observability,
+      operation: "tools/call",
+      target: binding.name,
+      args: parsed.data,
+      response: idempotency.response,
       mutates: binding.mutates,
       runId,
       principal
@@ -3205,7 +4214,19 @@ async function callMcpToolObserved(
     failClosed: binding.mutates
   });
 
-  return completed ?? response;
+  const finalResponse = completed ?? response;
+
+  storeMcpIdempotentMutation({
+    cache: idempotentMutations,
+    decision: idempotency,
+    response: finalResponse
+  });
+  await storeDurableMcpIdempotentMutation({
+    runtime,
+    decision: idempotency,
+    response: finalResponse
+  });
+  return finalResponse;
 }
 
 async function observeToolCallFailure(input: {
@@ -4537,6 +5558,14 @@ function safeMcpError(error: McpToolErrorInput): McpToolError {
           }))
         }),
     ...(error.approvalId === undefined ? {} : { approvalId: error.approvalId })
+    ,
+    ...(error.retryAfterMs === undefined
+      ? {}
+      : { retryAfterMs: error.retryAfterMs }),
+    ...(error.supportedProtocolRange === undefined
+      ? {}
+      : { supportedProtocolRange: error.supportedProtocolRange }),
+    ...(error.contract === undefined ? {} : { contract: error.contract })
   };
 }
 
@@ -4581,6 +5610,17 @@ function operatorActionForCode(code: string) {
       return "Change the request or policy input; the runtime denied it.";
     case "incomplete_authorization_context":
       return "Configure the MCP adapter authentication context before retrying.";
+    case "unsupported_protocol_version":
+      return "Negotiate an MCP protocol version inside the advertised supported range.";
+    case "contract_version_required":
+    case "migration_required":
+      return "Update the MCP client contract version using the supplied migration note.";
+    case "backpressure":
+    case "session_limit_exceeded":
+      return "Retry after the advertised delay and stay within configured MCP limits.";
+    case "payload_too_large":
+    case "projection_too_large":
+      return "Reduce request or projection size and retry.";
     default:
       return "Inspect the request contract and retry with valid inputs.";
   }
