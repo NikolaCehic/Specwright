@@ -9,6 +9,7 @@ export const TRACE_RECORDER_VERSION = "0.1.0";
 export type TraceSpanKind =
   | "phase"
   | "tool"
+  | "mcp"
   | "policy"
   | "eval"
   | "gate"
@@ -447,6 +448,7 @@ function parseSpanKind(value: unknown): TraceSpanKind {
   if (
     value === "phase" ||
     value === "tool" ||
+    value === "mcp" ||
     value === "policy" ||
     value === "eval" ||
     value === "gate" ||

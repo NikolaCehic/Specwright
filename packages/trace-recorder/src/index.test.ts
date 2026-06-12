@@ -11,6 +11,7 @@ import {
   recordTraceSpan,
   writeTrace
 } from "./index";
+import type { TraceSpanKind } from "./index";
 
 const runInput = {
   task: "Create a traceable run",
@@ -200,6 +201,136 @@ describe("trace recorder", () => {
       }
     });
     expect(trace.spans[0]).toEqual(span);
+  });
+
+  test("continues to accept the known closed span kind set", async () => {
+    const knownKinds = [
+      "phase",
+      "tool",
+      "mcp",
+      "policy",
+      "eval",
+      "gate",
+      "approval",
+      "cache",
+      "harness.load",
+      "harness.fetch",
+      "harness.verify_trust",
+      "harness.parse",
+      "harness.validate",
+      "harness.resolve_deps",
+      "harness.compatibility",
+      "harness.grant_check",
+      "harness.freeze"
+    ] satisfies TraceSpanKind[];
+
+    await writeTrace({
+      rootDir,
+      runId: "run-known-span-kinds",
+      trace: {
+        runId: "run-known-span-kinds",
+        traceId: "trace-known-span-kinds",
+        spans: knownKinds.map((kind, index) => ({
+          runId: "run-known-span-kinds",
+          traceId: "trace-known-span-kinds",
+          spanId: `span-${kind.replace(/\./g, "-")}`,
+          kind,
+          name: `known.${kind}`,
+          status: "success",
+          startedAt: `2026-06-07T00:00:${String(index).padStart(2, "0")}.000Z`,
+          metadata: {}
+        })),
+        metadata: {}
+      }
+    });
+
+    const trace = await readTrace({
+      rootDir,
+      runId: "run-known-span-kinds"
+    });
+
+    expect(trace.spans.map((span) => span.kind)).toEqual(knownKinds);
+  });
+
+  test("records and reads an mcp parent span with a linked child span", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-mcp-trace",
+      traceId: "trace-mcp",
+      input: {
+        ...runInput,
+        host: {
+          kind: "mcp"
+        }
+      },
+      harness
+    });
+
+    const parent = await recordTraceSpan({
+      rootDir,
+      runId: "run-mcp-trace",
+      traceId: "trace-mcp",
+      hostAdapter: "mcp",
+      span: {
+        spanId: "span-mcp-tools-call",
+        kind: "mcp",
+        name: "mcp.tools.call.specwright_call_tool",
+        status: "success",
+        startedAt: "2026-06-07T00:00:00.000Z",
+        endedAt: "2026-06-07T00:00:00.125Z",
+        eventIds: ["event-tool-requested", "event-tool-completed"],
+        metadata: {
+          mcpRequestId: "mcp_req_123",
+          clientId: "client-cli",
+          subjectId: "subject-operator",
+          runtimeOperation: "callTool",
+          toolName: "specwright_call_tool"
+        }
+      }
+    });
+    const child = await recordTraceSpan({
+      rootDir,
+      runId: "run-mcp-trace",
+      traceId: "trace-mcp",
+      span: {
+        spanId: "span-tool-child",
+        parentSpanId: parent.spanId,
+        kind: "tool",
+        name: "tool.fs.read",
+        status: "success",
+        startedAt: "2026-06-07T00:00:00.025Z",
+        endedAt: "2026-06-07T00:00:00.100Z",
+        eventIds: ["event-tool-requested", "event-tool-completed"],
+        metadata: {
+          toolId: "fs.read",
+          toolVersion: "0.1.0",
+          toolCallId: "tool-call-123",
+          cacheStatus: "bypass",
+          policyStatus: "allow"
+        }
+      }
+    });
+    const trace = await readTrace({
+      rootDir,
+      runId: "run-mcp-trace"
+    });
+
+    expect(parent).toMatchObject({
+      kind: "mcp",
+      spanId: "span-mcp-tools-call",
+      status: "success",
+      eventIds: ["event-tool-requested", "event-tool-completed"],
+      metadata: {
+        mcpRequestId: "mcp_req_123",
+        runtimeOperation: "callTool"
+      }
+    });
+    expect(parent.parentSpanId).toBeUndefined();
+    expect(trace.spans).toEqual([parent, child]);
+    expect(trace.spans[1]).toMatchObject({
+      kind: "tool",
+      parentSpanId: "span-mcp-tools-call"
+    });
   });
 
   test("rejects unknown span kinds", async () => {
