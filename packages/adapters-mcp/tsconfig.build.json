@@ -16,6 +16,12 @@
       ],
       "@specwright/schemas/*": [
         "../schemas/dist/*"
+      ],
+      "@specwright/tool-broker": [
+        "../tool-broker/dist/index.d.ts"
+      ],
+      "@specwright/tool-broker/*": [
+        "../tool-broker/dist/*"
       ]
     }
   }
