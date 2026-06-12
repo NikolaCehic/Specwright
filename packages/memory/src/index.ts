@@ -64,3 +64,4 @@ export * from "./dense-contracts";
 export * from "./embedding";
 export * from "./vector";
 export * from "./retrieval";
+export * from "./ranking";
