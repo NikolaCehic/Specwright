@@ -1,0 +1,10 @@
+{
+  "description": "Tiny lexical corpus for hand-computed BM25 and proximity checks.",
+  "documents": [
+    { "id": "doc-alpha-beta", "content": "alpha beta beta" },
+    { "id": "doc-alpha-gamma", "content": "alpha gamma" },
+    { "id": "doc-phrase-adjacent", "content": "strict runtime kernel prevents drift" },
+    { "id": "doc-phrase-scattered", "content": "strict guardrail text appears before runtime and later kernel" }
+  ],
+  "query": "strict runtime kernel"
+}

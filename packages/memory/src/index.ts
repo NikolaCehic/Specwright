@@ -59,3 +59,4 @@ export {
 export type { IngestDocumentInput, IngestDocumentResult } from "./chunk-store";
 export { diffChunks } from "./diff";
 export type { ChunkDiff, ChunkDiffEntry } from "./diff";
+export * from "./lexical";
