@@ -1,0 +1,11 @@
+{
+  "description": "Tiny dense corpus for deterministic local embeddings and HNSW/exact replay checks.",
+  "documents": [
+    { "id": "doc-runtime-kernel", "content": "strict runtime kernel owns lifecycle and advancement" },
+    { "id": "doc-policy", "content": "policy engine evaluates deterministic side effect free verdicts" },
+    { "id": "doc-gate", "content": "gate engine controls promotion and review decisions" },
+    { "id": "doc-memory", "content": "memory retrieval returns advisory context with provenance" },
+    { "id": "doc-vector", "content": "embedding vectors are indexed for dense semantic recall" }
+  ],
+  "query": "runtime lifecycle kernel"
+}
