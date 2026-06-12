@@ -19,7 +19,13 @@ declare module "node:fs/promises" {
     close(): Promise<void>;
     sync(): Promise<void>;
   }
+  export interface Stats {
+    isDirectory(): boolean;
+    isFile(): boolean;
+  }
 
+  export function copyFile(source: string, destination: string): Promise<void>;
+  export function lstat(path: string): Promise<Stats>;
   export function mkdir(
     path: string,
     options?: { recursive?: boolean }

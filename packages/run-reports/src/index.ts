@@ -100,6 +100,36 @@ export {
   type BundleVerificationFailure,
   type BundleVerificationResult
 } from "./audit-bundle-verify";
+export {
+  RETENTION_AUDIT_DIR,
+  RETENTION_AUDIT_FILE,
+  RETENTION_AUDIT_RECORD_VERSION,
+  RetentionApprovalSchema,
+  RetentionErasureRequestSchema,
+  RetentionErasureTargetSchema,
+  RetentionGovernanceAuditRecordSchema,
+  RetentionGovernanceError,
+  RetentionLegalHoldSchema,
+  RetentionPolicyEntrySchema,
+  RetentionPolicySchema,
+  eraseUnderGovernance,
+  readRetentionAuditRecords,
+  scanRetention,
+  type EraseUnderGovernanceOptions,
+  type EraseUnderGovernanceResult,
+  type RetentionApproval,
+  type RetentionAuditOutcome,
+  type RetentionEligibility,
+  type RetentionErasureRequest,
+  type RetentionGovernanceAuditRecord,
+  type RetentionGovernanceErrorCode,
+  type RetentionJsonValue,
+  type RetentionLegalHold,
+  type RetentionPolicy,
+  type RetentionPolicyEntry,
+  type ScanRetentionOptions,
+  type ScanRetentionResult
+} from "./retention";
 
 export const RUN_REPORTS_VERSION = "0.1.0";
 

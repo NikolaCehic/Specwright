@@ -68,6 +68,8 @@ export const READ_MOSTLY_FILE = "read-mostly.json";
 export const RETENTION_FILE = "retention.json";
 export const LEGAL_HOLDS_FILE = "legal-holds.jsonl";
 export const TOMBSTONE_FILE = "archive.tombstone.json";
+export const RUN_PACKAGE_RECORD_TOMBSTONE_VERSION = 1;
+export const RUN_PACKAGE_METRICS_FILE = "metrics.json";
 export const ARCHIVE_MANIFEST_FILE = "archive.manifest.json";
 export const ARCHIVE_DIR = "archives";
 export const ARCHIVE_RUNS_DIR = "runs";
@@ -103,6 +105,14 @@ export const RUN_STORE_BASELINE_REDUCER_ID =
   RUN_STORE_BASELINE_VERSION.projectionVersion;
 export const RUN_STORE_TOOL_ARTIFACT_ADDITIVE_REDUCER_ID =
   "specwright.reducer.tool-artifact-additive.v1";
+export const RETENTION_RECORD_CLASSES = [
+  "events",
+  "decisions",
+  "traces",
+  "reports",
+  "metrics",
+  "audit"
+] as const;
 
 export type RunStoreErrorCode =
   | "approval_mismatch"
@@ -364,6 +374,7 @@ export type MigrationCohortResult = {
 
 const retentionNonEmptyString = z.string().min(1);
 const retentionIsoTimestamp = z.string().datetime({ offset: true });
+export const RetentionRecordClassSchema = z.enum(RETENTION_RECORD_CLASSES);
 const RetentionJsonValueSchema: z.ZodType<RetentionJsonValue> = z.lazy(() =>
   z.union([
     z.string(),
@@ -546,6 +557,59 @@ export const TombstoneSchema = z
   })
   .strict();
 
+export const RunPackageRecordTombstoneSchema = z
+  .object({
+    tombstoneVersion: z.literal(RUN_PACKAGE_RECORD_TOMBSTONE_VERSION),
+    recordKind: z.literal("ops.retention.record_class_tombstone"),
+    tenant: retentionNonEmptyString,
+    runId: retentionNonEmptyString,
+    recordClass: RetentionRecordClassSchema,
+    scope: z
+      .object({
+        tenant: retentionNonEmptyString,
+        runId: retentionNonEmptyString,
+        recordClass: RetentionRecordClassSchema
+      })
+      .strict(),
+    approvers: z.tuple([retentionNonEmptyString, retentionNonEmptyString]),
+    erasedAt: retentionIsoTimestamp,
+    reason: retentionNonEmptyString,
+    requestId: retentionNonEmptyString,
+    policyWindowDays: z.number().int().nonnegative(),
+    priorContentHash: retentionNonEmptyString.optional(),
+    metadata: z.record(RetentionJsonValueSchema).optional()
+  })
+  .strict()
+  .superRefine((tombstone, context) => {
+    if (tombstone.scope.tenant !== tombstone.tenant) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "tombstone scope tenant must match tombstone tenant"
+      });
+    }
+
+    if (tombstone.scope.runId !== tombstone.runId) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "tombstone scope runId must match tombstone runId"
+      });
+    }
+
+    if (tombstone.scope.recordClass !== tombstone.recordClass) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "tombstone scope recordClass must match tombstone recordClass"
+      });
+    }
+
+    if (tombstone.approvers[0] === tombstone.approvers[1]) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "tombstone approvers must be distinct"
+      });
+    }
+  });
+
 export type RetentionJsonValue =
   | string
   | number
@@ -560,6 +624,54 @@ export type RetentionDescriptor = z.infer<typeof RetentionDescriptorSchema>;
 export type LegalHoldRecord = z.infer<typeof LegalHoldRecordSchema>;
 export type ArchiveManifest = z.infer<typeof ArchiveManifestSchema>;
 export type Tombstone = z.infer<typeof TombstoneSchema>;
+export type RetentionRecordClass = z.infer<typeof RetentionRecordClassSchema>;
+export type RunPackageRecordTombstone = z.infer<
+  typeof RunPackageRecordTombstoneSchema
+>;
+
+export type RunPackageNamespace = {
+  rootDir: string;
+  runsDir: string;
+  runIds: string[];
+};
+
+export type RunPackageRecordClassification = {
+  runId: string;
+  recordClass: RetentionRecordClass;
+  path?: string | undefined;
+  present: boolean;
+  authoritative: boolean;
+  erasable: boolean;
+  tombstoned: boolean;
+  lastRelevantTimestamp?: string | undefined;
+  eventRange?: {
+    firstSequence: number;
+    lastSequence: number;
+    eventCount: number;
+  };
+  tombstone?: RunPackageRecordTombstone | undefined;
+};
+
+export type RunPackageRetentionClassification = {
+  runId: string;
+  records: RunPackageRecordClassification[];
+};
+
+export type WriteRunPackageRecordTombstoneOptions = {
+  rootDir?: string | undefined;
+  runId: string;
+  recordClass: RetentionRecordClass;
+  tombstone: RunPackageRecordTombstone;
+};
+
+export type WriteRunPackageRecordTombstoneResult = {
+  runId: string;
+  recordClass: RetentionRecordClass;
+  path: string;
+  tombstone: RunPackageRecordTombstone;
+  priorContentHash: string;
+  status: "written" | "noop_already_tombstoned";
+};
 
 export type RetentionState =
   | {
@@ -1632,6 +1744,186 @@ export async function hardDeleteRun(
   });
 }
 
+export async function enumerateRunPackageNamespace(options: {
+  rootDir?: string | undefined;
+  runsDir?: string | undefined;
+} = {}): Promise<RunPackageNamespace> {
+  const rootDir = resolve(options.rootDir ?? ".");
+  const runsDir = options.runsDir ?? join(rootDir, RUN_STORE_DIR, RUNS_DIR);
+  let entries: string[];
+
+  try {
+    entries = await readdir(runsDir);
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return {
+        rootDir,
+        runsDir,
+        runIds: []
+      };
+    }
+
+    throw error;
+  }
+
+  const runIds: string[] = [];
+
+  for (const entry of entries.sort()) {
+    const candidatePath = join(runsDir, entry);
+    const stats = await lstat(candidatePath);
+
+    if (!stats.isDirectory()) {
+      continue;
+    }
+
+    const runId = assertSafeRunId(entry);
+    const paths = runStorePathsForRunDir({
+      rootDir,
+      runsDir,
+      runDir: candidatePath,
+      runId
+    });
+
+    if (
+      (await fileExists(paths.eventsPath)) ||
+      (await fileExists(paths.tombstonePath))
+    ) {
+      runIds.push(runId);
+    }
+  }
+
+  return {
+    rootDir,
+    runsDir,
+    runIds
+  };
+}
+
+export async function classifyRunPackageRecords(options: {
+  rootDir?: string | undefined;
+  runId: string;
+}): Promise<RunPackageRetentionClassification> {
+  const runId = assertSafeRunId(options.runId);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  const events = await readEvents({
+    rootDir: options.rootDir,
+    runId
+  });
+  const lastEvent = events.at(-1);
+  const lastRelevantTimestamp = lastEvent?.timestamp;
+  const eventRange =
+    events.length === 0
+      ? undefined
+      : {
+          firstSequence: events[0]?.sequence ?? 0,
+          lastSequence: lastEvent?.sequence ?? 0,
+          eventCount: events.length
+        };
+  const records = await Promise.all(
+    RETENTION_RECORD_CLASSES.map(async (recordClass) =>
+      classifyRunPackageRecord({
+        paths,
+        runId,
+        recordClass,
+        lastRelevantTimestamp,
+        eventRange
+      })
+    )
+  );
+
+  return {
+    runId,
+    records
+  };
+}
+
+export async function writeRunPackageRecordTombstone(
+  options: WriteRunPackageRecordTombstoneOptions
+): Promise<WriteRunPackageRecordTombstoneResult> {
+  const runId = assertSafeRunId(options.runId);
+  const recordClass = RetentionRecordClassSchema.parse(options.recordClass);
+  const paths = getRunStorePaths(options.rootDir, runId);
+  const targetPath = runPackageRecordClassPath(paths, recordClass);
+  const tombstone = parseRunPackageRecordTombstone(options.tombstone);
+
+  if (
+    targetPath === undefined ||
+    !isErasableRetentionRecordClass(recordClass)
+  ) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Record class ${recordClass} cannot be erased with a run-package tombstone`
+    );
+  }
+
+  if (
+    tombstone.runId !== runId ||
+    tombstone.recordClass !== recordClass ||
+    tombstone.scope.runId !== runId ||
+    tombstone.scope.recordClass !== recordClass
+  ) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Tombstone scope does not match ${runId}/${recordClass}`
+    );
+  }
+
+  const existing = await readOptionalFile(targetPath);
+
+  if (existing === undefined) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Cannot tombstone missing ${recordClass} record at ${targetPath}`
+    );
+  }
+
+  const existingTombstone = parseExistingRecordClassTombstone(
+    existing,
+    runId,
+    recordClass
+  );
+
+  if (existingTombstone !== undefined) {
+    if (
+      existingTombstone.requestId === tombstone.requestId &&
+      existingTombstone.tenant === tombstone.tenant &&
+      existingTombstone.erasedAt === tombstone.erasedAt
+    ) {
+      return {
+        runId,
+        recordClass,
+        path: targetPath,
+        tombstone: existingTombstone,
+        priorContentHash:
+          existingTombstone.priorContentHash ?? hashRawBytes(existing),
+        status: "noop_already_tombstoned"
+      };
+    }
+
+    throw new RunStoreError(
+      "invalid_projection",
+      `Record class ${recordClass} for run ${runId} already has a different tombstone`
+    );
+  }
+
+  const priorContentHash = hashRawBytes(existing);
+  const sealedTombstone = parseRunPackageRecordTombstone({
+    ...tombstone,
+    priorContentHash
+  });
+
+  await writeJsonAtomic(targetPath, sealedTombstone);
+
+  return {
+    runId,
+    recordClass,
+    path: targetPath,
+    tombstone: sealedTombstone,
+    priorContentHash,
+    status: "written"
+  };
+}
+
 function runStorePathsForRunDir(input: {
   rootDir: string;
   runsDir: string;
@@ -1833,6 +2125,128 @@ function parseTombstone(value: unknown) {
   }
 
   return parsed.data;
+}
+
+function parseRunPackageRecordTombstone(value: unknown) {
+  const parsed = RunPackageRecordTombstoneSchema.safeParse(value);
+
+  if (!parsed.success) {
+    throw new RunStoreError(
+      "invalid_projection",
+      "Run-package record tombstone does not match retention schema",
+      parsed.error
+    );
+  }
+
+  return parsed.data;
+}
+
+async function classifyRunPackageRecord(input: {
+  paths: RunStorePaths;
+  runId: string;
+  recordClass: RetentionRecordClass;
+  lastRelevantTimestamp?: string | undefined;
+  eventRange:
+    | {
+        firstSequence: number;
+        lastSequence: number;
+        eventCount: number;
+      }
+    | undefined;
+}): Promise<RunPackageRecordClassification> {
+  const path = runPackageRecordClassPath(input.paths, input.recordClass);
+  const authoritative = isAuthoritativeRetentionRecordClass(input.recordClass);
+  const erasable = isErasableRetentionRecordClass(input.recordClass);
+  const raw = path === undefined ? undefined : await readOptionalFile(path);
+  const tombstone =
+    raw === undefined
+      ? undefined
+      : parseExistingRecordClassTombstone(
+          raw,
+          input.runId,
+          input.recordClass
+        );
+
+  return {
+    runId: input.runId,
+    recordClass: input.recordClass,
+    ...(path === undefined ? {} : { path }),
+    present: raw !== undefined,
+    authoritative,
+    erasable,
+    tombstoned: tombstone !== undefined,
+    ...(input.lastRelevantTimestamp === undefined
+      ? {}
+      : { lastRelevantTimestamp: input.lastRelevantTimestamp }),
+    ...(input.eventRange === undefined ? {} : { eventRange: input.eventRange }),
+    ...(tombstone === undefined ? {} : { tombstone })
+  };
+}
+
+function runPackageRecordClassPath(
+  paths: RunStorePaths,
+  recordClass: RetentionRecordClass
+): string | undefined {
+  switch (recordClass) {
+    case "events":
+      return paths.eventsPath;
+    case "decisions":
+      return paths.decisionsPath;
+    case "traces":
+      return paths.tracePath;
+    case "reports":
+      return paths.summaryPath;
+    case "metrics":
+      return join(paths.cacheDir, RUN_PACKAGE_METRICS_FILE);
+    case "audit":
+      return undefined;
+  }
+}
+
+function isAuthoritativeRetentionRecordClass(
+  recordClass: RetentionRecordClass
+) {
+  return recordClass === "events" || recordClass === "decisions";
+}
+
+function isErasableRetentionRecordClass(recordClass: RetentionRecordClass) {
+  return (
+    recordClass === "traces" ||
+    recordClass === "reports" ||
+    recordClass === "metrics"
+  );
+}
+
+function parseExistingRecordClassTombstone(
+  raw: string,
+  runId: string,
+  recordClass: RetentionRecordClass
+): RunPackageRecordTombstone | undefined {
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    return undefined;
+  }
+
+  const tombstone = RunPackageRecordTombstoneSchema.safeParse(parsed);
+
+  if (!tombstone.success) {
+    return undefined;
+  }
+
+  if (
+    tombstone.data.runId !== runId ||
+    tombstone.data.recordClass !== recordClass
+  ) {
+    throw new RunStoreError(
+      "invalid_projection",
+      `Tombstone belongs to ${tombstone.data.runId}/${tombstone.data.recordClass}, expected ${runId}/${recordClass}`
+    );
+  }
+
+  return tombstone.data;
 }
 
 async function readArchiveManifest(paths: RunStorePaths, runId: string) {
@@ -3902,6 +4316,19 @@ async function readOptionalFile(path: string) {
   } catch (error) {
     if (isNodeError(error) && error.code === "ENOENT") {
       return undefined;
+    }
+
+    throw error;
+  }
+}
+
+async function fileExists(path: string) {
+  try {
+    await lstat(path);
+    return true;
+  } catch (error) {
+    if (isNodeError(error) && error.code === "ENOENT") {
+      return false;
     }
 
     throw error;
