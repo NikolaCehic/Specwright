@@ -16,13 +16,17 @@ import { fileURLToPath } from "node:url";
 import {
   appendEvent,
   archiveRun,
+  classifyRunPackageRecords,
   computeRetentionState,
   createRun,
+  enumerateRunPackageNamespace,
   getArchivedRunStorePaths,
   getRunStorePaths,
   hardDeleteRun,
   materializeRunState,
   placeLegalHold,
+  RUN_PACKAGE_RECORD_TOMBSTONE_VERSION,
+  RunPackageRecordTombstoneSchema,
   readAdministrationLog,
   readEvents,
   recordApproval,
@@ -31,6 +35,7 @@ import {
   runScopeForRun,
   sealRun,
   verifyRunIntegrity,
+  writeRunPackageRecordTombstone,
   type AdministrationOperation,
   type AdministrationRunScope,
   type HarnessSnapshot,
@@ -451,6 +456,97 @@ describe("run package retention lifecycle", () => {
     expect(after).toEqual(before);
     expect(await optionalFile(paths.tombstonePath)).toBeUndefined();
     expect(await optionalFile(archivePaths.eventsPath)).toBeUndefined();
+  });
+
+  test("classifies governed record classes and tombstones derived records without touching authoritative ledgers", async () => {
+    const runId = "run-record-class-tombstone";
+    await createTerminalRun(runId);
+    const paths = getRunStorePaths(rootDir, runId);
+    await writeFile(paths.summaryPath, "# Retention summary\n", "utf8");
+    const beforeEvents = await readFile(paths.eventsPath, "utf8");
+    const beforeDecisions = await readFile(paths.decisionsPath, "utf8");
+
+    const namespace = await enumerateRunPackageNamespace({ rootDir });
+    const beforeClassification = await classifyRunPackageRecords({
+      rootDir,
+      runId
+    });
+    const tombstone = RunPackageRecordTombstoneSchema.parse({
+      tombstoneVersion: RUN_PACKAGE_RECORD_TOMBSTONE_VERSION,
+      recordKind: "ops.retention.record_class_tombstone",
+      tenant: "tenant-a",
+      runId,
+      recordClass: "traces",
+      scope: {
+        tenant: "tenant-a",
+        runId,
+        recordClass: "traces"
+      },
+      approvers: ["operator-a", "operator-b"],
+      erasedAt: "2026-06-12T12:00:00.000Z",
+      reason: "retention window expired",
+      requestId: "erase-trace-record-class",
+      policyWindowDays: 1
+    });
+
+    const written = await writeRunPackageRecordTombstone({
+      rootDir,
+      runId,
+      recordClass: "traces",
+      tombstone
+    });
+    const repeated = await writeRunPackageRecordTombstone({
+      rootDir,
+      runId,
+      recordClass: "traces",
+      tombstone: written.tombstone
+    });
+    const afterClassification = await classifyRunPackageRecords({
+      rootDir,
+      runId
+    });
+    const traceTombstone = JSON.parse(
+      await readFile(paths.tracePath, "utf8")
+    ) as unknown;
+
+    expect(namespace.runIds).toContain(runId);
+    expect(beforeClassification.records.map((record) => record.recordClass)).toEqual([
+      "events",
+      "decisions",
+      "traces",
+      "reports",
+      "metrics",
+      "audit"
+    ]);
+    expect(
+      beforeClassification.records.find((record) => record.recordClass === "events")
+    ).toMatchObject({
+      authoritative: true,
+      erasable: false,
+      present: true
+    });
+    expect(
+      beforeClassification.records.find((record) => record.recordClass === "traces")
+    ).toMatchObject({
+      authoritative: false,
+      erasable: true,
+      present: true,
+      tombstoned: false
+    });
+    expect(written.status).toBe("written");
+    expect(repeated.status).toBe("noop_already_tombstoned");
+    expect(traceTombstone).toMatchObject({
+      recordKind: "ops.retention.record_class_tombstone",
+      recordClass: "traces",
+      priorContentHash: written.priorContentHash
+    });
+    expect(
+      afterClassification.records.find((record) => record.recordClass === "traces")
+    ).toMatchObject({
+      tombstoned: true
+    });
+    expect(await readFile(paths.eventsPath, "utf8")).toBe(beforeEvents);
+    expect(await readFile(paths.decisionsPath, "utf8")).toBe(beforeDecisions);
   });
 });
 
