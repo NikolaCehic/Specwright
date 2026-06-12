@@ -1,0 +1,34 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@specwright/run-reports": [
+        "../run-reports/dist/index.d.ts"
+      ],
+      "@specwright/run-reports/*": [
+        "../run-reports/dist/*"
+      ],
+      "@specwright/run-store": [
+        "../run-store/dist/index.d.ts"
+      ],
+      "@specwright/run-store/*": [
+        "../run-store/dist/*"
+      ],
+      "@specwright/schemas": [
+        "../schemas/dist/index.d.ts"
+      ],
+      "@specwright/schemas/*": [
+        "../schemas/dist/*"
+      ],
+      "@specwright/trace-recorder": [
+        "../trace-recorder/dist/index.d.ts"
+      ],
+      "@specwright/trace-recorder/*": [
+        "../trace-recorder/dist/*"
+      ]
+    }
+  }
+}
