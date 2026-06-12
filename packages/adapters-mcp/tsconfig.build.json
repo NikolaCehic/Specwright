@@ -11,11 +11,23 @@
       "@specwright/runtime/*": [
         "../runtime/dist/*"
       ],
+      "@specwright/run-store": [
+        "../run-store/dist/index.d.ts"
+      ],
+      "@specwright/run-store/*": [
+        "../run-store/dist/*"
+      ],
       "@specwright/schemas": [
         "../schemas/dist/index.d.ts"
       ],
       "@specwright/schemas/*": [
         "../schemas/dist/*"
+      ],
+      "@specwright/trace-recorder": [
+        "../trace-recorder/dist/index.d.ts"
+      ],
+      "@specwright/trace-recorder/*": [
+        "../trace-recorder/dist/*"
       ],
       "@specwright/tool-broker": [
         "../tool-broker/dist/index.d.ts"
