@@ -105,9 +105,9 @@ describe("runtime facade", () => {
         authority: "user"
       })
     ]);
-    expect(await readRunSummary({ rootDir, runId: handle.runId })).toContain(
-      "# Run Summary"
-    );
+    const startupSummary = await readRunSummary({ rootDir, runId: handle.runId });
+    expect(startupSummary).toContain("# Run Summary");
+    expect(startupSummary).toContain("- Tenant: `local`");
     expect((await readTrace({ rootDir, runId: handle.runId })).spans).toEqual([
       expect.objectContaining({
         kind: "phase",
@@ -161,6 +161,23 @@ describe("runtime facade", () => {
         version: "0.1.0"
       }
     });
+  });
+
+  test("runtime report facade supplies and overrides tenant scope", async () => {
+    const runtime = runtimeForTests({
+      tenantScope: "tenant-runtime"
+    });
+    const handle = await runtime.startRun(runInput);
+
+    const defaultReport = await runtime.generateReport(handle.runId);
+    expect(defaultReport.tenantScope).toBe("tenant-runtime");
+    expect(defaultReport.markdown).toContain("- Tenant: `tenant-runtime`");
+
+    const overriddenReport = await runtime.writeRunReport(handle.runId, {
+      tenantScope: "tenant-report"
+    });
+    expect(overriddenReport.tenantScope).toBe("tenant-report");
+    expect(overriddenReport.markdown).toContain("- Tenant: `tenant-report`");
   });
 
   test("getRun resolves runs started from input cwd on the same facade", async () => {
@@ -465,6 +482,7 @@ describe("runtime facade", () => {
 
     expect(report.markdown).toContain("Task: Create a minimal runtime facade");
     expect(report.markdown).toContain("Harness: `specwright.test@0.1.0`");
+    expect(report.markdown).toContain("- Tenant: `local`");
     expect(report.markdown).toContain("intake (phase.entered");
     expect(report.markdown).toContain("fs.read: success");
     expect(report.markdown).toContain("eval.required: pass");

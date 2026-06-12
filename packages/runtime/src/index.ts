@@ -65,6 +65,7 @@ const DEFAULT_HARNESS_PACKAGE_DIR = fileURLToPath(
   new URL("../../../harnesses/default", import.meta.url)
 );
 const DEFAULT_HARNESS_IDS = new Set(["default", "specwright.default"]);
+const DEFAULT_RUNTIME_TENANT_SCOPE = "local";
 
 export type HarnessPackageReference = string | LoadHarnessPackageOptions;
 
@@ -107,6 +108,7 @@ export type RuntimeOptions = {
         request: EvaluateGateRequest
       ) => GateEvaluationResult | Promise<GateEvaluationResult>)
     | undefined;
+  tenantScope?: string | undefined;
   now?: (() => Date | string) | undefined;
 };
 
@@ -135,7 +137,9 @@ export type RuntimeToolCallOptions = RunLookupOptions & {
 
 export type RuntimeRunEvalRequest = string | RunEvalRequest;
 export type RuntimeEvaluateGateRequest = string | EvaluateGateRequest;
-export type RuntimeReportOptions = RunLookupOptions;
+export type RuntimeReportOptions = RunLookupOptions & {
+  tenantScope?: string | undefined;
+};
 
 export type RuntimeApi = {
   startRun(input: RunInput): Promise<RunHandle>;
@@ -318,7 +322,8 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
 
     await writeRunReportWithReports({
       rootDir,
-      runId: created.runId
+      runId: created.runId,
+      tenantScope: tenantScopeForRuntimeReport({}, options)
     });
 
     return {
@@ -642,7 +647,8 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
   ): Promise<RunReport> {
     return generateRunReport({
       rootDir: rootDirForRun(runId, lookupOptions, options, runRoots),
-      runId
+      runId,
+      tenantScope: tenantScopeForRuntimeReport(lookupOptions, options)
     });
   }
 
@@ -652,7 +658,8 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
   ): Promise<RunReport> {
     return writeRunReportWithReports({
       rootDir: rootDirForRun(runId, lookupOptions, options, runRoots),
-      runId
+      runId,
+      tenantScope: tenantScopeForRuntimeReport(lookupOptions, options)
     });
   }
 
@@ -707,6 +714,17 @@ function rootDirForRun(
   runRoots: ReadonlyMap<string, string | undefined>
 ) {
   return lookupOptions.rootDir ?? runRoots.get(runId) ?? options.rootDir;
+}
+
+function tenantScopeForRuntimeReport(
+  lookupOptions: RuntimeReportOptions,
+  options: RuntimeOptions
+) {
+  return (
+    lookupOptions.tenantScope ??
+    options.tenantScope ??
+    DEFAULT_RUNTIME_TENANT_SCOPE
+  );
 }
 
 function firstDeclaredPhase(harness: HarnessSnapshot) {

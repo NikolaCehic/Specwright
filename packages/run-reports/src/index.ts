@@ -7,7 +7,6 @@ import {
   DEFAULT_REDACTION_PROFILE,
   getRunStorePaths,
   readEvents,
-  redactForEgress,
   type RedactionEgressMode,
   type RedactionGrant,
   type RedactionProfile,
@@ -23,6 +22,13 @@ import {
   type RuntimeEvent
 } from "@specwright/schemas";
 import { readTrace, type TraceFile, type TraceSpan } from "@specwright/trace-recorder";
+import {
+  assertEgressAllowed,
+  enforceEgress,
+  type EgressAuditRecord,
+  type EgressRestrictionRecord,
+  type EgressSink
+} from "./egress";
 import type { IntegrityMetric } from "./integrity-metrics";
 import {
   reconcileEventsAndTrace,
@@ -47,12 +53,38 @@ export {
   type ReconciliationResult,
   type ReconciliationVerdict
 } from "./reconciliation";
+export {
+  assertEgressAllowed,
+  collectTenantScopes,
+  decideRedaction,
+  deterministicContentHash,
+  EGRESS_SINKS,
+  EgressError,
+  enforceEgress,
+  redactedShape,
+  stableEgressJson,
+  type EgressAuditRecord,
+  type EgressErrorCode,
+  type EgressRequest,
+  type EgressRestrictionRecord,
+  type EgressResult,
+  type EgressSink,
+  type RedactedEgressValue,
+  type RedactedShape,
+  type RedactionDecision,
+  type RedactionDecisionAction
+} from "./egress";
 
 export const RUN_REPORTS_VERSION = "0.1.0";
 
 export type GenerateRunReportOptions = {
   rootDir?: string | undefined;
   runId: string;
+  tenantScope?: string | undefined;
+  sink?: EgressSink | undefined;
+  requester?: string | undefined;
+  actor?: string | undefined;
+  requestedAt?: Date | string | undefined;
   profile?: RedactionProfile;
   grant?: RedactionGrant;
   mode?: RedactionEgressMode;
@@ -62,9 +94,12 @@ export type WriteRunReportOptions = GenerateRunReportOptions;
 
 export type RunReport = {
   runId: string;
+  tenantScope?: string | undefined;
   summaryPath: string;
   markdown: string;
   missingInputs: string[];
+  egressAuditRecords?: EgressAuditRecord[] | undefined;
+  egressRestrictions?: EgressRestrictionRecord[] | undefined;
   reconciliation?: ReconciliationResult;
   integrityMetrics?: IntegrityMetric[];
 };
@@ -80,6 +115,10 @@ type RunFacts = {
   missingInputs: string[];
   paths: RunStorePaths;
   redactionProfileId: string;
+  tenantScope: string;
+  sink: EgressSink;
+  egressAuditRecords: EgressAuditRecord[];
+  egressRestrictions: EgressRestrictionRecord[];
 };
 
 type ReportEvent = {
@@ -115,6 +154,7 @@ type ToolSummary = {
   policyStatus?: string | undefined;
   argsHash?: string | undefined;
   resultHash?: string | undefined;
+  decisionHash?: string | undefined;
   durationMs?: number | undefined;
   eventIds: string[];
 };
@@ -126,6 +166,8 @@ type EvidenceReportRecord = {
   sourceRefs: unknown[];
   confidence: string;
   authority: string;
+  redactionPolicy?: unknown;
+  tenantId?: string | undefined;
 };
 
 export async function generateRunReport(
@@ -137,9 +179,12 @@ export async function generateRunReport(
 
   return {
     runId: options.runId,
+    tenantScope: facts.tenantScope,
     summaryPath: facts.paths.summaryPath,
     markdown,
     missingInputs: facts.missingInputs,
+    egressAuditRecords: facts.egressAuditRecords,
+    egressRestrictions: facts.egressRestrictions,
     reconciliation,
     integrityMetrics: reconciliation.integrityMetrics
   };
@@ -191,9 +236,6 @@ async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts
     rootDir: options.rootDir,
     runId: options.runId
   });
-  const events = authoritativeEvents.map((event) =>
-    redactReportEvent(event, redactionOptions)
-  );
   const missingInputs: string[] = [];
   const rawTrace = await optional("trace.json", missingInputs, async () =>
     readTrace({
@@ -201,31 +243,83 @@ async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts
       runId: options.runId
     })
   );
-  const trace =
-    rawTrace === undefined ? undefined : redactTrace(rawTrace, redactionOptions);
-  const artifacts = await optionalIndexedRecords(
+  const rawArtifacts = await optionalIndexedRecords(
     "artifacts/index.jsonl",
     getArtifactStorePaths(options.rootDir, options.runId).indexPath,
     missingInputs,
     async () =>
-      (await listArtifacts({
+      await listArtifacts({
         rootDir: options.rootDir,
         runId: options.runId
-      })).map((artifact) => redactForEgress(artifact, redactionOptions))
+      })
   );
-  const evidence = await optionalIndexedRecords(
+  const rawEvidence = await optionalIndexedRecords(
     "evidence/index.jsonl",
     getEvidenceStorePaths(options.rootDir, options.runId).indexPath,
     missingInputs,
     async () =>
-      (await listEvidence({
+      await listEvidence({
         rootDir: options.rootDir,
         runId: options.runId
-      })).map((record) => redactForEgress(record, redactionOptions))
+      })
   );
-  const evalFileVerdicts = await optional("evals/*.json", missingInputs, () =>
+  const rawEvalFileVerdicts = await optional("evals/*.json", missingInputs, () =>
     readEvalVerdictsFromFiles(paths.evalsDir)
   );
+  const egressRequest = {
+    ...(options.tenantScope === undefined
+      ? {}
+      : { tenantScope: options.tenantScope }),
+    sink: options.sink ?? "report",
+    ...(options.requester === undefined ? {} : { requester: options.requester }),
+    ...(options.actor === undefined ? {} : { actor: options.actor }),
+    ...(options.requestedAt === undefined
+      ? {}
+      : { requestedAt: options.requestedAt }),
+    runId: options.runId,
+    ...((rawTrace?.traceId ?? authoritativeEvents[0]?.traceId) === undefined
+      ? {}
+      : { traceId: rawTrace?.traceId ?? authoritativeEvents[0]?.traceId }),
+    subjectRefs: [`run:${options.runId}`]
+  } satisfies Parameters<typeof enforceEgress>[1];
+  const egress = assertEgressAllowed(
+    enforceEgress(
+      {
+        events: authoritativeEvents,
+        trace: rawTrace,
+        artifacts: rawArtifacts ?? [],
+        evidence: rawEvidence ?? [],
+        evalFileVerdicts: rawEvalFileVerdicts ?? []
+      },
+      egressRequest,
+      redactionOptions
+    )
+  );
+  const projection = recordFromUnknown(egress.value);
+  const redactedEvents = Array.isArray(projection.events)
+    ? projection.events
+    : [];
+  const events = authoritativeEvents.map((event, index) =>
+    reportEventFromUnknown(redactedEvents[index], event)
+  );
+  const redactedTrace = projection.trace;
+  const trace =
+    rawTrace === undefined
+      ? undefined
+      : traceFileFromUnknown(redactedTrace, rawTrace);
+  const artifacts = Array.isArray(projection.artifacts)
+    ? projection.artifacts
+    : [];
+  const evidence = Array.isArray(projection.evidence)
+    ? projection.evidence
+    : [];
+  const evalFileVerdicts = Array.isArray(projection.evalFileVerdicts)
+    ? projection.evalFileVerdicts.flatMap((verdict) => {
+        const parsed = evalVerdictFromUnknown(verdict);
+
+        return parsed === undefined ? [] : [parsed];
+      })
+    : [];
 
   return {
     authoritativeEvents,
@@ -237,7 +331,11 @@ async function loadRunFacts(options: GenerateRunReportOptions): Promise<RunFacts
     evalFileVerdicts: evalFileVerdicts ?? [],
     missingInputs,
     paths,
-    redactionProfileId: (options.profile ?? DEFAULT_REDACTION_PROFILE).id
+    redactionProfileId: (options.profile ?? DEFAULT_REDACTION_PROFILE).id,
+    tenantScope: egress.tenantScope,
+    sink: egress.sink,
+    egressAuditRecords: egress.auditRecords,
+    egressRestrictions: egress.restrictions
   };
 }
 
@@ -250,43 +348,38 @@ function reconcileFacts(facts: RunFacts): ReconciliationResult {
   });
 }
 
-function redactReportEvent(
-  event: RuntimeEvent,
-  options: RedactReportOptions
+function reportEventFromUnknown(
+  value: unknown,
+  event: RuntimeEvent
 ): ReportEvent {
-  const redacted = redactForEgress(event, options);
-  const record = recordFromUnknown(redacted);
+  const record = recordFromUnknown(value);
+  const contractId = stringValue(record.contractId) ?? event.contractId;
+  const contractVersion =
+    stringValue(record.contractVersion) ?? event.contractVersion;
+  const schemaHash = stringValue(record.schemaHash) ?? event.schemaHash;
+  const causationId = stringValue(record.causationId) ?? event.causationId;
+  const correlationId =
+    stringValue(record.correlationId) ?? event.correlationId;
+  const integrity =
+    record.integrity === undefined
+      ? event.integrity
+      : (record.integrity as RuntimeEvent["integrity"]);
 
   return {
-    id: event.id,
-    runId: event.runId,
-    type: event.type,
-    timestamp: event.timestamp,
-    sequence: event.sequence,
-    traceId: event.traceId,
-    ...(event.contractId === undefined ? {} : { contractId: event.contractId }),
-    ...(event.contractVersion === undefined
-      ? {}
-      : { contractVersion: event.contractVersion }),
-    ...(event.schemaHash === undefined ? {} : { schemaHash: event.schemaHash }),
-    ...(event.causationId === undefined
-      ? {}
-      : { causationId: event.causationId }),
-    ...(event.correlationId === undefined
-      ? {}
-      : { correlationId: event.correlationId }),
-    ...(event.integrity === undefined ? {} : { integrity: event.integrity }),
+    id: stringValue(record.id) ?? event.id,
+    runId: stringValue(record.runId) ?? event.runId,
+    type: stringValue(record.type) ?? event.type,
+    timestamp: stringValue(record.timestamp) ?? event.timestamp,
+    sequence: typeof record.sequence === "number" ? record.sequence : event.sequence,
+    traceId: stringValue(record.traceId) ?? event.traceId,
+    ...(contractId === undefined ? {} : { contractId }),
+    ...(contractVersion === undefined ? {} : { contractVersion }),
+    ...(schemaHash === undefined ? {} : { schemaHash }),
+    ...(causationId === undefined ? {} : { causationId }),
+    ...(correlationId === undefined ? {} : { correlationId }),
+    ...(integrity === undefined ? {} : { integrity }),
     payload: record.payload
   };
-}
-
-function redactTrace(
-  trace: TraceFile,
-  options: RedactReportOptions
-): TraceFile {
-  const redacted = redactForEgress(trace, options);
-
-  return traceFileFromUnknown(redacted, trace);
 }
 
 type RedactReportOptions = {
@@ -330,6 +423,8 @@ function renderReport(facts: RunFacts) {
   lines.push("# Run Summary");
   lines.push("");
   lines.push(`- Run: \`${facts.events[0]?.runId ?? facts.paths.runDir}\``);
+  lines.push(`- Tenant: \`${facts.tenantScope}\``);
+  lines.push(`- Egress sink: ${facts.sink}`);
   lines.push(`- Status: ${status}`);
   lines.push(`- Task: ${formatText(runInput.task)}`);
   lines.push(`- Harness: ${formatHarness(harness)}`);
@@ -337,28 +432,28 @@ function renderReport(facts: RunFacts) {
   lines.push(`- Replayable run package: \`${relativeRunPackage}\``);
   lines.push("");
   lines.push("## Phases Executed");
-  lines.push(...bulletOrNone(phases, "No phase transitions were recorded."));
+  lines.push(...tenantScopedLines(facts, phases, "No phase transitions were recorded."));
   lines.push("");
   lines.push("## Gates");
-  lines.push(...bulletOrNone(gates, "No gate verdicts were recorded."));
+  lines.push(...tenantScopedLines(facts, gates, "No gate verdicts were recorded."));
   lines.push("");
   lines.push("## Tools");
-  lines.push(...bulletOrNone(tools, "No tool calls were recorded."));
+  lines.push(...tenantScopedLines(facts, tools, "No tool calls were recorded."));
   lines.push("");
   lines.push("## Evals");
-  lines.push(...bulletOrNone(evals, "No eval verdicts were recorded."));
+  lines.push(...tenantScopedLines(facts, evals, "No eval verdicts were recorded."));
   lines.push("");
   lines.push("## Artifacts");
-  lines.push(...bulletOrNone(artifacts, "No artifacts were recorded."));
+  lines.push(...tenantScopedLines(facts, artifacts, "No artifacts were recorded."));
   lines.push("");
   lines.push("## Evidence And Unknowns");
-  lines.push(...bulletOrNone(evidence, "No evidence records were available."));
+  lines.push(...tenantScopedLines(facts, evidence, "No evidence records were available."));
   lines.push("");
   lines.push("## Decisions");
-  lines.push(...bulletOrNone(decisions, "No human or runtime decisions were recorded."));
+  lines.push(...tenantScopedLines(facts, decisions, "No human or runtime decisions were recorded."));
   lines.push("");
   lines.push("## What Remains Unknown");
-  lines.push(...bulletOrNone(unknowns, "No unknowns were recorded."));
+  lines.push(...tenantScopedLines(facts, unknowns, "No unknowns were recorded."));
   lines.push("");
   lines.push("## Observability Inputs");
   lines.push(...observabilityLines(facts));
@@ -500,6 +595,10 @@ function toolSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
       redactedReferenceHash(result.result) ??
       stringValue(provenance.resultHash) ??
       existing?.resultHash;
+    const decisionHash =
+      stringValue(provenance.decisionHash) ??
+      stringValue(payload.decisionHash) ??
+      existing?.decisionHash;
     const eventIds = [...(existing?.eventIds ?? []), event.id];
 
     tools.set(key, {
@@ -519,6 +618,7 @@ function toolSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
         existing?.policyStatus,
       argsHash,
       resultHash,
+      decisionHash,
       durationMs: existing?.durationMs,
       eventIds
     });
@@ -542,6 +642,9 @@ function toolSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
       redactedReferenceHash(span.metadata.result) ??
       stringValue(span.metadata.resultHash) ??
       existing?.resultHash;
+    const decisionHash =
+      stringValue(span.metadata.decisionHash) ??
+      existing?.decisionHash;
 
     tools.set(key, {
       key,
@@ -556,6 +659,7 @@ function toolSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
         existing?.policyStatus,
       argsHash,
       resultHash,
+      decisionHash,
       durationMs: span.durationMs ?? existing?.durationMs,
       eventIds: uniqueStrings([...(existing?.eventIds ?? []), ...(span.eventIds ?? [])])
     });
@@ -568,6 +672,7 @@ function toolSummaries(events: readonly ReportEvent[], trace?: TraceFile) {
       tool.policyStatus === undefined ? undefined : `policy ${tool.policyStatus}`,
       tool.argsHash === undefined ? undefined : `args ${tool.argsHash}`,
       tool.resultHash === undefined ? undefined : `result ${tool.resultHash}`,
+      tool.decisionHash === undefined ? undefined : `decisionHash ${tool.decisionHash}`,
       tool.durationMs === undefined ? undefined : `${tool.durationMs}ms`
     ].filter((value): value is string => value !== undefined);
 
@@ -629,7 +734,10 @@ function artifactSummaries(
     artifactType: string;
     evidenceRefs: string[];
     uri?: unknown;
+    fileRefHash?: string | undefined;
     claimLevel?: string | undefined;
+    redactionPolicy?: unknown;
+    importantClaimLabels: string[];
   }>();
 
   for (const record of artifactRecords) {
@@ -661,17 +769,30 @@ function artifactSummaries(
         ...artifact.evidenceRefs
       ]),
       uri: existing?.uri ?? artifact.uri,
-      claimLevel: existing?.claimLevel ?? artifact.claimLevel
+      fileRefHash: existing?.fileRefHash ?? artifact.fileRefHash,
+      claimLevel: existing?.claimLevel ?? artifact.claimLevel,
+      redactionPolicy: existing?.redactionPolicy ?? artifact.redactionPolicy,
+      importantClaimLabels: uniqueStrings([
+        ...(existing?.importantClaimLabels ?? []),
+        ...artifact.importantClaimLabels
+      ])
     });
   }
 
   return [...artifacts.values()].map((artifact) => {
     const details = [
       formatEgressValue(artifact.uri),
+      artifact.fileRefHash === undefined ? undefined : `file hash ${artifact.fileRefHash}`,
       artifact.evidenceRefs.length === 0
         ? "no evidence refs"
         : `evidence ${artifact.evidenceRefs.join(", ")}`,
-      artifact.claimLevel === undefined ? undefined : `claim ${artifact.claimLevel}`
+      artifact.claimLevel === undefined ? undefined : `claim ${artifact.claimLevel}`,
+      artifact.redactionPolicy === undefined
+        ? undefined
+        : `redaction ${formatPolicyLabel(artifact.redactionPolicy)}`,
+      artifact.importantClaimLabels.length === 0
+        ? undefined
+        : `important claims ${artifact.importantClaimLabels.join("; ")}`
     ].filter((value): value is string => value !== undefined);
 
     return `- ${artifact.artifactId} (${artifact.artifactType}): ${details.join(", ")}`;
@@ -708,8 +829,15 @@ function evidenceSummaries(
     const sourceText =
       record.sourceRefs.length === 0
         ? "no source refs"
-        : `${record.sourceRefs.length} source ref(s)`;
-    return `- ${record.id}: ${record.class}/${record.confidence}/${record.authority} - ${formatEgressValue(record.claim) ?? "unknown"} (${sourceText})`;
+        : `${record.sourceRefs.length} source ref(s): ${record.sourceRefs.map(formatSourceRef).join("; ")}`;
+    const labels = [
+      record.redactionPolicy === undefined
+        ? undefined
+        : `redaction ${formatPolicyLabel(record.redactionPolicy)}`,
+      record.tenantId === undefined ? undefined : `tenant ${record.tenantId}`
+    ].filter((value): value is string => value !== undefined);
+
+    return `- ${record.id}: ${record.class}/${record.confidence}/${record.authority} - ${formatEgressValue(record.claim) ?? "unknown"} (${sourceText}${labels.length === 0 ? "" : `; ${labels.join("; ")}`})`;
   });
 }
 
@@ -789,7 +917,11 @@ function observabilityLines(facts: RunFacts) {
     `- artifacts: ${facts.artifacts.length} record(s)`,
     `- evidence: ${facts.evidence.length} record(s)`,
     `- evals: ${facts.evalFileVerdicts.length} file verdict(s)`,
-    `- redaction profile: ${facts.redactionProfileId}`
+    `- redaction profile: ${facts.redactionProfileId}`,
+    `- tenant scope: \`${facts.tenantScope}\``,
+    `- egress sink: ${facts.sink}`,
+    `- egress audit records: ${facts.egressAuditRecords.length}`,
+    `- egress restrictions: ${facts.egressRestrictions.length}`
   ];
 
   if (facts.missingInputs.length > 0) {
@@ -885,7 +1017,12 @@ function artifactRefFromEvent(event: ReportEvent) {
         artifactType: parsedRecord.data.artifactType,
         evidenceRefs: parsedRecord.data.evidenceRefs,
         uri: parsedRecord.data.fileRef?.uri,
-        claimLevel: parsedRecord.data.claimLevel
+        fileRefHash: parsedRecord.data.fileRef?.contentHash,
+        claimLevel: parsedRecord.data.claimLevel,
+        redactionPolicy: parsedRecord.data.redactionPolicy,
+        importantClaimLabels: importantClaimLabelsFromUnknown(
+          parsedRecord.data.importantClaims
+        )
       };
     }
 
@@ -936,7 +1073,13 @@ function artifactSummaryFromUnknown(value: unknown) {
     artifactType,
     evidenceRefs: stringArray(record.evidenceRefs),
     uri: record.uri ?? fileRef.uri,
-    claimLevel: stringValue(record.claimLevel)
+    fileRefHash:
+      stringValue(fileRef.contentHash) ??
+      redactedReferenceHash(fileRef.uri) ??
+      redactedReferenceHash(record.content),
+    claimLevel: stringValue(record.claimLevel),
+    redactionPolicy: record.redactionPolicy,
+    importantClaimLabels: importantClaimLabelsFromUnknown(record.importantClaims)
   };
 }
 
@@ -964,12 +1107,22 @@ function evidenceReportRecordFromUnknown(
     claim: record.claim,
     sourceRefs: Array.isArray(record.sourceRefs) ? record.sourceRefs : [],
     confidence,
-    authority
+    authority,
+    redactionPolicy: record.redactionPolicy,
+    tenantId: stringValue(record.tenantId)
   };
 }
 
 function bulletOrNone(lines: readonly string[], fallback: string) {
   return lines.length === 0 ? [`- ${fallback}`] : [...lines];
+}
+
+function tenantScopedLines(
+  facts: RunFacts,
+  lines: readonly string[],
+  fallback: string
+) {
+  return [`- tenant scope: \`${facts.tenantScope}\``, ...bulletOrNone(lines, fallback)];
 }
 
 function durationSuffix(span: TraceSpan) {
@@ -1005,7 +1158,9 @@ function formatEgressValue(value: unknown) {
   const hash = redactedReferenceHash(value);
 
   if (hash !== undefined) {
-    return hash;
+    const shape = redactedReferenceShape(value);
+
+    return shape === undefined ? hash : `${hash} ${shape}`;
   }
 
   if (typeof value === "string" && value.length > 0) {
@@ -1022,7 +1177,120 @@ function redactedReferenceHash(value: unknown) {
     return undefined;
   }
 
-  return stringValue(record.hash);
+  return stringValue(record.hash) ?? stringValue(record.contentHash);
+}
+
+function redactedReferenceShape(value: unknown) {
+  const record = recordFromUnknown(value);
+  const shape = recordFromUnknown(record.shape);
+  const type = stringValue(shape.type);
+
+  if (type === undefined) {
+    return undefined;
+  }
+
+  if (type === "array" && typeof shape.length === "number") {
+    return `(shape array length ${shape.length})`;
+  }
+
+  if (type === "object") {
+    const fields = stringArray(shape.fields);
+
+    return fields.length === 0
+      ? "(shape object)"
+      : `(shape object fields ${fields.join("|")})`;
+  }
+
+  if (type === "string" && typeof shape.length === "number") {
+    return `(shape string length ${shape.length})`;
+  }
+
+  return `(shape ${type})`;
+}
+
+function formatSourceRef(value: unknown) {
+  const direct = formatEgressValue(value);
+
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  const record = recordFromUnknown(value);
+  const labels = [
+    stringValue(record.id) === undefined ? undefined : `id ${record.id}`,
+    formatEgressValue(record.uri) === undefined
+      ? undefined
+      : `uri ${formatEgressValue(record.uri)}`,
+    formatEgressValue(record.path) === undefined
+      ? undefined
+      : `path ${formatEgressValue(record.path)}`,
+    formatEgressValue(record.locator) === undefined
+      ? undefined
+      : `locator ${formatEgressValue(record.locator)}`,
+    stringValue(record.contentHash) === undefined
+      ? redactedReferenceHash(record.path) === undefined
+        ? undefined
+        : `contentHash ${redactedReferenceHash(record.path)}`
+      : `contentHash ${record.contentHash}`,
+    stringValue(record.authority) === undefined
+      ? undefined
+      : `authority ${record.authority}`,
+    stringValue(record.redactionClass) === undefined
+      ? undefined
+      : `redactionClass ${record.redactionClass}`,
+    stringValue(record.externalTrustPolicy) === undefined
+      ? undefined
+      : `externalTrustPolicy ${record.externalTrustPolicy}`,
+    stringValue(record.captureToolCallId) === undefined
+      ? undefined
+      : `toolCallId ${record.captureToolCallId}`
+  ].filter((label): label is string => label !== undefined);
+
+  return labels.length === 0 ? "unlabeled source ref" : labels.join(", ");
+}
+
+function formatPolicyLabel(value: unknown): string {
+  if (typeof value === "string" && value.length > 0) {
+    return value;
+  }
+
+  if (isRecordLike(value)) {
+    return Object.keys(value)
+      .sort()
+      .map((key) => `${key}:${String(value[key])}`)
+      .join("|");
+  }
+
+  return "unknown";
+}
+
+function importantClaimLabelsFromUnknown(value: unknown) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((candidate) => {
+    const claim = recordFromUnknown(candidate);
+    const labels = [
+      stringValue(claim.claimLevel) === undefined
+        ? undefined
+        : `claim ${claim.claimLevel}`,
+      stringValue(claim.confidence) === undefined
+        ? undefined
+        : `confidence ${claim.confidence}`,
+      stringValue(claim.authority) === undefined
+        ? undefined
+        : `authority ${claim.authority}`,
+      Array.isArray(claim.evidenceRefs)
+        ? `evidence ${stringArray(claim.evidenceRefs).join(",")}`
+        : undefined,
+      claim.redactionPolicy === undefined
+        ? undefined
+        : `redaction ${formatPolicyLabel(claim.redactionPolicy)}`
+    ].filter((label): label is string => label !== undefined);
+
+    return labels.length === 0 ? [] : [labels.join("/")];
+  });
 }
 
 function traceFileFromUnknown(value: unknown, fallback: TraceFile): TraceFile {
@@ -1132,6 +1400,10 @@ function recordFromUnknown(value: unknown): Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
+}
+
+function isRecordLike(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function uniqueStrings(values: readonly string[]) {

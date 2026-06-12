@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { appendArtifact } from "@specwright/artifact-store";
-import { appendEvidence } from "@specwright/evidence-store";
+import { appendEvidence, listEvidence } from "@specwright/evidence-store";
 import {
   DEFAULT_REDACTION_PROFILE,
   appendEvent,
@@ -17,14 +17,19 @@ import type {
   EvalVerdict,
   EvidenceRecord,
   RunInput,
-  RuntimeEvent
+  RuntimeEvent,
+  SourceRef
 } from "@specwright/schemas";
 import { readTrace, recordTraceSpan, writeTrace } from "@specwright/trace-recorder";
 import {
+  EgressError,
+  decideRedaction,
+  enforceEgress,
   generateRunReport,
   readRunSummary,
   reconcileEventsAndTrace,
   reconcileRun,
+  stableEgressJson,
   writeRunReport
 } from "./index";
 
@@ -76,7 +81,8 @@ describe("run reports", () => {
 
     const report = await generateRunReport({
       rootDir,
-      runId: "run-success"
+      runId: "run-success",
+      tenantScope: "default"
     });
 
     expect(report.markdown).toContain("# Run Summary");
@@ -154,7 +160,8 @@ describe("run reports", () => {
 
     const report = await generateRunReport({
       rootDir,
-      runId: "run-rich"
+      runId: "run-rich",
+      tenantScope: "default"
     });
 
     expect(report.markdown).toContain("fs.read: success");
@@ -181,7 +188,8 @@ describe("run reports", () => {
 
     const report = await generateRunReport({
       rootDir,
-      runId: "run-missing"
+      runId: "run-missing",
+      tenantScope: "default"
     });
 
     expect(report.markdown).toContain("events.jsonl:");
@@ -298,6 +306,7 @@ describe("run reports", () => {
           },
           argsHash: "sha256:trace-args",
           resultHash: "sha256:trace-result",
+          decisionHash: "sha256:trace-decision",
           cacheStatus: "bypass",
           policyStatus: "allow"
         }
@@ -307,6 +316,7 @@ describe("run reports", () => {
     const report = await generateRunReport({
       rootDir,
       runId: "run-redacted-report",
+      tenantScope: "default",
       profile: redactionProfile
     });
 
@@ -324,6 +334,10 @@ describe("run reports", () => {
     );
     expect(report.markdown).toContain("sha256:trace-args");
     expect(report.markdown).toContain("sha256:trace-result");
+    expect(report.markdown).toContain(
+      "decisionHash sha256:report-redaction-decision"
+    );
+    expect(report.markdown).toContain("decisionHash sha256:trace-decision");
     expect(report.markdown).not.toContain(
       "sk_live_fixture_scope_02_packet_03"
     );
@@ -332,6 +346,334 @@ describe("run reports", () => {
     expect(report.markdown).not.toContain("TRACE_DATABASE_URL=");
     expect(report.markdown).toContain("source_fact/high/repo");
     expect(report.markdown).toContain("1 source ref(s)");
+    expect(report.markdown).toContain("shape string length");
+    expect(report.markdown).toContain("redaction restricted");
+    expect(report.tenantScope).toBe("default");
+    expect(report.egressRestrictions).toEqual([]);
+  });
+
+  test("fails closed for unscoped, invalid, and cross-tenant egress requests", async () => {
+    await createSuccessfulRun("run-egress-rejections");
+    const events = await readEvents({
+      rootDir,
+      runId: "run-egress-rejections"
+    });
+
+    const unscoped = enforceEgress(
+      { events },
+      {
+        sink: "report",
+        requestedAt: "2026-06-12T00:00:00.000Z",
+        runId: "run-egress-rejections"
+      }
+    );
+
+    expect(unscoped.ok).toBe(false);
+
+    if (!unscoped.ok) {
+      expect(unscoped.error).toBeInstanceOf(EgressError);
+      expect(unscoped.error.code).toBe("unscoped_egress");
+      expect(unscoped.auditRecords).toContainEqual(
+        expect.objectContaining({
+          action: "reject",
+          reasonCode: "unscoped_egress",
+          runId: "run-egress-rejections"
+        })
+      );
+      expect(JSON.stringify(unscoped.auditRecords)).not.toContain(
+        "Create a source-bound frontend contract"
+      );
+    }
+
+    const invalidSink = enforceEgress(
+      { events },
+      {
+        tenantScope: "default",
+        sink: "not-a-sink",
+        requestedAt: "2026-06-12T00:00:00.000Z",
+        runId: "run-egress-rejections"
+      }
+    );
+
+    expect(invalidSink.ok).toBe(false);
+
+    if (!invalidSink.ok) {
+      expect(invalidSink.error.code).toBe("invalid_egress_request");
+    }
+
+    await recordTraceSpan({
+      rootDir,
+      runId: "run-egress-rejections",
+      traceId: "trace-run-egress-rejections",
+      span: {
+        kind: "tool",
+        name: "tool.tenant.probe",
+        status: "success",
+        startedAt: "2026-06-12T00:00:01.000Z",
+        metadata: {
+          toolId: "tenant.probe",
+          tenantId: "tenant-b"
+        }
+      }
+    });
+
+    await expect(
+      generateRunReport({
+        rootDir,
+        runId: "run-egress-rejections",
+        tenantScope: "tenant-a",
+        requestedAt: "2026-06-12T00:00:00.000Z"
+      })
+    ).rejects.toMatchObject({
+      code: "cross_tenant_egress"
+    });
+  });
+
+  test("requires explicit tenantScope for public report and write egress", async () => {
+    await createSuccessfulRun("run-report-unscoped-public");
+
+    await expect(
+      generateRunReport({
+        rootDir,
+        runId: "run-report-unscoped-public"
+      })
+    ).rejects.toMatchObject({
+      code: "unscoped_egress"
+    });
+    await expect(
+      generateRunReport({
+        rootDir,
+        runId: "run-report-unscoped-public",
+        tenantScope: ""
+      })
+    ).rejects.toMatchObject({
+      code: "unscoped_egress"
+    });
+    await expect(
+      generateRunReport({
+        rootDir,
+        runId: "run-report-unscoped-public",
+        tenantScope: "   "
+      })
+    ).rejects.toMatchObject({
+      code: "unscoped_egress"
+    });
+    await expect(
+      writeRunReport({
+        rootDir,
+        runId: "run-report-unscoped-public",
+        tenantScope: ""
+      })
+    ).rejects.toMatchObject({
+      code: "unscoped_egress"
+    });
+  });
+
+  test("does not derive tenantScope from tenant-labeled traces for report egress", async () => {
+    await createSuccessfulRun("run-report-tenant-b-unscoped");
+    await recordTraceSpan({
+      rootDir,
+      runId: "run-report-tenant-b-unscoped",
+      traceId: "trace-run-report-tenant-b-unscoped",
+      span: {
+        kind: "tool",
+        name: "tool.tenant.probe",
+        status: "success",
+        startedAt: "2026-06-12T00:00:01.000Z",
+        metadata: {
+          toolId: "tenant.probe",
+          tenantId: "tenant-b"
+        }
+      }
+    });
+
+    await expect(
+      generateRunReport({
+        rootDir,
+        runId: "run-report-tenant-b-unscoped"
+      })
+    ).rejects.toMatchObject({
+      code: "unscoped_egress"
+    });
+  });
+
+  test("restricts unknown report payload fields without serializing raw values", async () => {
+    await createSuccessfulRun("run-report-mystery-payload");
+    await appendEvent({
+      rootDir,
+      runId: "run-report-mystery-payload",
+      type: "evidence.recorded",
+      payload: {
+        evidence: {
+          ...sourceFact("evidence:mystery-payload"),
+          metadata: {
+            mysteryPayload: "raw mystery report payload"
+          }
+        }
+      },
+      timestamp: "2026-06-12T00:00:00.000Z"
+    });
+
+    const report = await generateRunReport({
+      rootDir,
+      runId: "run-report-mystery-payload",
+      tenantScope: "default"
+    });
+
+    expect(report.markdown).not.toContain("raw mystery report payload");
+    expect(stableEgressJson(report.egressRestrictions)).toContain(
+      "mysteryPayload"
+    );
+    expect(report.egressRestrictions).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "unlabeled_restricted_field",
+        path: expect.stringContaining("mysteryPayload")
+      })
+    );
+    expect(report.egressAuditRecords).toContainEqual(
+      expect.objectContaining({
+        action: "restrict",
+        reasonCode: "unlabeled_restricted_field",
+        runId: "run-report-mystery-payload"
+      })
+    );
+    expect(stableEgressJson(report.egressAuditRecords)).not.toContain(
+      "raw mystery report payload"
+    );
+  });
+
+  test("serializes mcp-resource and metrics egress with labels, hashes, shape, and determinism", async () => {
+    await createSuccessfulRun("run-egress-serialized");
+    await appendEvidence({
+      rootDir,
+      runId: "run-egress-serialized",
+      record: restrictedEvidenceRecord()
+    });
+    const evidence = await listEvidence({
+      rootDir,
+      runId: "run-egress-serialized"
+    });
+    const first = enforceEgress(
+      {
+        runId: "run-egress-serialized",
+        evidence
+      },
+      {
+        tenantScope: "default",
+        sink: "mcp-resource",
+        requester: "auditor@example.invalid",
+        requestedAt: "2026-06-12T00:00:00.000Z",
+        runId: "run-egress-serialized"
+      },
+      { profile: redactionProfile }
+    );
+    const second = enforceEgress(
+      {
+        runId: "run-egress-serialized",
+        evidence
+      },
+      {
+        tenantScope: "default",
+        sink: "mcp-resource",
+        requester: "auditor@example.invalid",
+        requestedAt: "2026-06-12T00:00:00.000Z",
+        runId: "run-egress-serialized"
+      },
+      { profile: redactionProfile }
+    );
+
+    expect(first.ok).toBe(true);
+    expect(second.ok).toBe(true);
+
+    if (!first.ok || !second.ok) {
+      throw new Error("Expected mcp-resource egress to pass");
+    }
+
+    const serialized = stableEgressJson(first.value);
+
+    expect(serialized).toBe(stableEgressJson(second.value));
+    expect(serialized).toContain(
+      "sha256:restricted-source-ref-content"
+    );
+    expect(serialized).toContain("\"shape\"");
+    expect(serialized).toContain("\"authority\":\"repo\"");
+    expect(serialized).toContain("\"redactionClass\":\"restricted\"");
+    expect(serialized).toContain("\"confidence\":\"high\"");
+    expect(serialized).not.toContain("sk_live_mcp_resource_secret");
+    expect(first.auditRecords).toEqual([]);
+
+    const reconciliation = await reconcileRun({
+      rootDir,
+      runId: "run-egress-serialized",
+      tenantScope: "default"
+    });
+    const metrics = enforceEgress(reconciliation.integrityMetrics, {
+      tenantScope: "default",
+      sink: "metrics",
+      requestedAt: "2026-06-12T00:00:00.000Z",
+      runId: "run-egress-serialized"
+    });
+
+    expect(metrics.ok).toBe(true);
+
+    if (!metrics.ok) {
+      throw new Error("Expected metrics egress to pass");
+    }
+
+    expect(stableEgressJson(metrics.value)).toContain(
+      "trace-to-event-consistency-rate"
+    );
+  });
+
+  test("restricts unlabeled sensitive fields with hash-only audit records", async () => {
+    const decision = decideRedaction({
+      value: "sk_live_unlabeled_field",
+      sink: "report",
+      fieldPath: "metadata.sourceText"
+    });
+    const restricted = enforceEgress(
+      {
+        runId: "run-unlabeled-sensitive",
+        metadata: {
+          sourceText: "sk_live_unlabeled_field"
+        }
+      },
+      {
+        tenantScope: "default",
+        sink: "report",
+        actor: "operator@example.invalid",
+        requestedAt: "2026-06-12T00:00:00.000Z",
+        runId: "run-unlabeled-sensitive"
+      }
+    );
+
+    expect(decision).toEqual({
+      action: "restrict",
+      redactionClass: "restricted",
+      reasonCode: "unlabeled_restricted_field"
+    });
+    expect(restricted.ok).toBe(true);
+
+    if (!restricted.ok) {
+      throw new Error("Expected unlabeled sensitive field to be restricted");
+    }
+
+    expect(stableEgressJson(restricted.value)).toContain("\"redacted\":true");
+    expect(stableEgressJson(restricted.value)).toContain("\"shape\"");
+    expect(stableEgressJson(restricted.value)).not.toContain(
+      "sk_live_unlabeled_field"
+    );
+    expect(restricted.auditRecords).toContainEqual(
+      expect.objectContaining({
+        action: "restrict",
+        reasonCode: "unlabeled_restricted_field",
+        actor: "operator@example.invalid",
+        runId: "run-unlabeled-sensitive"
+      })
+    );
+    expect(stableEgressJson(restricted.auditRecords)).not.toContain(
+      "sk_live_unlabeled_field"
+    );
   });
 
   test("writes summary.md under the run package", async () => {
@@ -339,7 +681,8 @@ describe("run reports", () => {
 
     const report = await writeRunReport({
       rootDir,
-      runId: "run-write-summary"
+      runId: "run-write-summary",
+      tenantScope: "default"
     });
     const paths = getRunStorePaths(rootDir, "run-write-summary");
 
@@ -355,7 +698,8 @@ describe("run reports", () => {
 
     const result = await reconcileRun({
       rootDir,
-      runId: fixture.runId
+      runId: fixture.runId,
+      tenantScope: "default"
     });
 
     expect(result.verdict).toBe("consistent");
@@ -388,7 +732,8 @@ describe("run reports", () => {
 
     const result = await reconcileRun({
       rootDir,
-      runId: fixture.runId
+      runId: fixture.runId,
+      tenantScope: "default"
     });
 
     expect(result.verdict).toBe("gap");
@@ -425,7 +770,8 @@ describe("run reports", () => {
 
     const result = await reconcileRun({
       rootDir,
-      runId: fixture.runId
+      runId: fixture.runId,
+      tenantScope: "default"
     });
 
     expect(result.verdict).toBe("gap");
@@ -461,7 +807,8 @@ describe("run reports", () => {
 
     const result = await reconcileRun({
       rootDir,
-      runId: "run-reconciled-missing-coverage"
+      runId: "run-reconciled-missing-coverage",
+      tenantScope: "default"
     });
 
     expect(result.verdict).toBe("gap");
@@ -496,7 +843,8 @@ describe("run reports", () => {
 
     const result = await reconcileRun({
       rootDir,
-      runId: fixture.runId
+      runId: fixture.runId,
+      tenantScope: "default"
     });
 
     expect(result.verdict).toBe("mismatch");
@@ -540,7 +888,8 @@ describe("run reports", () => {
 
       const result = await reconcileRun({
         rootDir,
-        runId: fixture.runId
+        runId: fixture.runId,
+        tenantScope: "default"
       });
 
       expect(result.verdict).toBe("mismatch");
@@ -593,7 +942,8 @@ describe("run reports", () => {
 
     const report = await generateRunReport({
       rootDir,
-      runId: "run-reconciled-missing-inputs"
+      runId: "run-reconciled-missing-inputs",
+      tenantScope: "default"
     });
     const missingInputMetric = metric(report.reconciliation, "missing-input-rate");
 
@@ -617,7 +967,8 @@ describe("run reports", () => {
 
     const result = await reconcileRun({
       rootDir,
-      runId: fixture.runId
+      runId: fixture.runId,
+      tenantScope: "default"
     });
 
     expect(result.sourceEventRange).toEqual({
@@ -636,11 +987,13 @@ describe("run reports", () => {
 
     const first = await reconcileRun({
       rootDir,
-      runId: fixture.runId
+      runId: fixture.runId,
+      tenantScope: "default"
     });
     const second = await reconcileRun({
       rootDir,
-      runId: fixture.runId
+      runId: fixture.runId,
+      tenantScope: "default"
     });
 
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
@@ -806,6 +1159,31 @@ function sourceFact(id: string): EvidenceRecord {
       phase: "evidence",
       actionId: "read-package-json",
       toolCallId: "tool-call-1"
+    }
+  };
+}
+
+function restrictedEvidenceRecord(): EvidenceRecord {
+  const sourceRef = {
+    path: "secrets.env",
+    contentHash: "sha256:restricted-source-ref-content",
+    authority: "repo",
+    redactionClass: "restricted",
+    captureToolCallId: "tool-call-restricted"
+  } satisfies Exclude<SourceRef, string>;
+
+  return {
+    id: "evidence:restricted:mcp-resource",
+    class: "source_fact",
+    claim: "The restricted source includes sk_live_mcp_resource_secret.",
+    sourceRefs: [sourceRef],
+    confidence: "high",
+    authority: "repo",
+    redactionPolicy: "restricted",
+    createdBy: {
+      phase: "evidence",
+      actionId: "record-restricted-mcp-resource",
+      toolCallId: "tool-call-restricted"
     }
   };
 }
