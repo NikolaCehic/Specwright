@@ -2,6 +2,11 @@ export type MemoryErrorCode =
   | "unsafe_input"
   | "invalid_document"
   | "invalid_chunk"
+  | "invalid_analyzer_config"
+  | "invalid_lexical_index"
+  | "invalid_lexical_query"
+  | "lexical_version_mismatch"
+  | "index_corruption"
   | "strategy_unpinned"
   | "unsupported_strategy"
   | "hash_collision";
