@@ -12,10 +12,107 @@ import {
   ToolCallRequestSchema,
   ToolCallResultSchema,
   redactionClassAtLeast,
-  type RedactionClass
+  type RedactionClass,
+  type RuntimeEvent,
+  type ToolCallResult
 } from "@specwright/schemas";
 import { z, type ZodError, type ZodTypeAny } from "zod";
+import {
+  MCP_AUDIT_SCHEMA_VERSION,
+  type McpActionDispatched,
+  type McpAuditPrincipal,
+  type McpAuditRecord,
+  type McpExternalInvoked,
+  type McpRequestReceived,
+  type McpResourceRead
+} from "./audit/schemas";
+import {
+  createMcpAuditWriter,
+  type McpAuditWriter
+} from "./audit/writer";
+import {
+  createMcpCorrelationFactory,
+  hashMcpArgs,
+  sessionTraceRunId,
+  type McpClock,
+  type McpCorrelationFactory,
+  type McpIdFactory
+} from "./observability/correlation";
+import {
+  McpMetricsRegistry,
+  recordMcpApprovalRequiredMetric,
+  recordMcpDenialMetric,
+  recordMcpExternalMetric,
+  recordMcpRedactionMetric,
+  recordMcpRequestMetric,
+  recordMcpStaleStateMetric,
+  setMcpActiveSessionsMetric
+} from "./observability/metrics";
+import {
+  MCP_PROVENANCE_GAP_CODE,
+  createProvenanceGapError,
+  writeProvenanceGapMarker
+} from "./observability/provenance-gap";
+import {
+  createMcpSpanWriter,
+  mcpSpanStatusForOutcome,
+  type McpSpanWriter
+} from "./observability/spans";
 
+export {
+  MCP_AUDIT_SCHEMA_VERSION,
+  MCP_PROVENANCE_GAP_AUDIT_TYPE,
+  McpActionDeniedSchema,
+  McpActionDispatchedSchema,
+  McpAuditPrincipalSchema,
+  McpAuditRecordSchema,
+  McpAuditRecordTypeSchema,
+  McpAuditToolProvenanceSchema,
+  McpExternalInvokedSchema,
+  McpProvenanceGapSchema,
+  McpRequestReceivedSchema,
+  McpResourceReadSchema,
+  McpRunModeSchema,
+  McpSessionClosedSchema,
+  McpSessionOpenedSchema,
+  parseMcpAuditRecord,
+  safeParseMcpAuditRecord,
+  type McpActionDenied,
+  type McpAuditRecord,
+  type McpAuditRecordType,
+  type McpAuditToolProvenance,
+  type McpExternalInvoked,
+  type McpProvenanceGap,
+  type McpRequestReceived,
+  type McpResourceRead,
+  type McpSessionClosed,
+  type McpSessionOpened
+} from "./audit/schemas";
+export {
+  MCP_AUDIT_DIR,
+  MCP_AUDIT_FILE,
+  MCP_AUDIT_INDEX_FILE,
+  MCP_AUDIT_SESSIONS_DIR,
+  McpAuditWriteError,
+  appendMcpAuditRecord,
+  createMcpAuditWriter,
+  getMcpAuditIndexPath,
+  getMcpAuditRoot,
+  getMcpRunAuditPath,
+  getMcpSessionAuditPath,
+  readAllMcpAuditRecords,
+  readMcpAuditRecords,
+  type McpAuditWriter,
+  type McpAuditWriterOptions,
+  type McpAuditWriteErrorCode,
+  type ReadMcpAuditRecordsOptions
+} from "./audit/writer";
+export {
+  buildMcpAuditExport,
+  type BuildMcpAuditExportOptions,
+  type McpAuditExportBundle
+} from "./audit/export";
+export * from "./observability";
 export {
   EXTERNAL_MCP_CAPABILITY_ID_PREFIX,
   ExternalMcpManifestError,
@@ -441,6 +538,30 @@ export type McpProtocolResponse =
 export type McpValidationIssue = {
   path: string;
   message: string;
+};
+
+export type MaybePromise<T> = T | Promise<T>;
+
+export type McpObservabilitySessionOptions = {
+  sessionId?: string | undefined;
+  clientId: string;
+  subjectId: string;
+  tenantId: string;
+  grantedScopes: readonly string[];
+  runMode: McpClientRunMode;
+  transport: string;
+  protocolVersion: string;
+};
+
+export type McpObservabilityOptions = {
+  rootDir?: string | undefined;
+  session?: McpObservabilitySessionOptions | undefined;
+  auditWriter?: McpAuditWriter | undefined;
+  markerWriter?: McpAuditWriter | undefined;
+  spanWriter?: McpSpanWriter | undefined;
+  metrics?: McpMetricsRegistry | undefined;
+  clock?: McpClock | undefined;
+  idFactory?: Partial<McpIdFactory> | undefined;
 };
 
 export class McpCatalogError extends Error {
@@ -1044,17 +1165,22 @@ export const defaultMcpPromptCatalog = registerMcpPromptCatalog(
 
 export type McpAdapter = {
   tools: {
-    list(request?: McpTransportCredentialRequest): McpToolsListResponse;
+    list(request?: McpTransportCredentialRequest): MaybePromise<McpToolsListResponse>;
     call(request: McpToolsCallRequest): Promise<McpToolsCallResponse>;
   };
   resources: {
-    list(request?: McpResourcesListRequest): McpResourcesListResponse;
+    list(request?: McpResourcesListRequest): MaybePromise<McpResourcesListResponse>;
     read(request: McpResourcesReadRequest): Promise<McpResourcesReadResponse>;
   };
   prompts: {
-    list(request?: McpTransportCredentialRequest): McpPromptsListResponse;
-    get(request: McpPromptsGetRequest): McpPromptsGetResponse;
+    list(request?: McpTransportCredentialRequest): MaybePromise<McpPromptsListResponse>;
+    get(request: McpPromptsGetRequest): MaybePromise<McpPromptsGetResponse>;
   };
+  observability?: {
+    openSession(): Promise<void>;
+    closeSession(): Promise<void>;
+    metrics(): McpMetricsRegistry | undefined;
+  } | undefined;
   dispatch(request: McpProtocolRequest): Promise<McpProtocolResponse>;
 };
 
@@ -1066,6 +1192,7 @@ export function createMcpAdapter(
     promptCatalog?: McpPromptCatalog | readonly McpPromptBinding[] | undefined;
     applyEgressRedaction?: McpEgressRedaction | undefined;
     auth?: McpAuthOptions | undefined;
+    observability?: McpObservabilityOptions | undefined;
   } = {}
 ): McpAdapter {
   const catalog = normalizeCatalog(options.catalog);
@@ -1073,30 +1200,58 @@ export function createMcpAdapter(
   const promptCatalog = normalizePromptCatalog(options.promptCatalog);
   const redact = options.applyEgressRedaction ?? applyEgressRedaction;
   const security = normalizeMcpSecurity(options.auth);
+  const observability = normalizeMcpObservability(options.observability);
 
-  return {
+  const adapter: McpAdapter = {
     tools: {
       list(request = {}) {
-        return listMcpTools(catalog, request, security);
+        return listMcpTools(catalog, request, security, observability);
       },
       async call(request) {
-        return callMcpTool(runtime, catalog, request, redact, security);
+        return callMcpTool(
+          runtime,
+          catalog,
+          request,
+          redact,
+          security,
+          observability
+        );
       }
     },
     resources: {
       list(request = {}) {
-        return listMcpResources(resourceCatalog, request, security);
+        return listMcpResources(resourceCatalog, request, security, observability);
       },
       async read(request) {
-        return readMcpResource(runtime, resourceCatalog, request, redact, security);
+        return readMcpResource(
+          runtime,
+          resourceCatalog,
+          request,
+          redact,
+          security,
+          observability
+        );
       }
     },
     prompts: {
       list(request = {}) {
-        return listMcpPrompts(promptCatalog, catalog, request, security);
+        return listMcpPrompts(
+          promptCatalog,
+          catalog,
+          request,
+          security,
+          observability
+        );
       },
       get(request) {
-        return getMcpPrompt(promptCatalog, catalog, request, redact, security);
+        return getMcpPrompt(
+          promptCatalog,
+          catalog,
+          request,
+          redact,
+          security,
+          observability
+        );
       }
     },
     async dispatch(request) {
@@ -1107,10 +1262,27 @@ export function createMcpAdapter(
         promptCatalog,
         redact,
         security,
+        observability,
         request
       );
     }
   };
+
+  if (observability !== undefined) {
+    adapter.observability = {
+      openSession() {
+        return openMcpObservedSession(observability);
+      },
+      closeSession() {
+        return closeMcpObservedSession(observability);
+      },
+      metrics() {
+        return observability.metrics;
+      }
+    };
+  }
+
+  return adapter;
 }
 
 export const createMcpServer = createMcpAdapter;
@@ -1288,6 +1460,29 @@ type NormalizedMcpSecurity =
       tenantResolver?: McpTenantResolver | undefined;
     };
 
+type NormalizedMcpObservability = {
+  rootDir?: string | undefined;
+  session: {
+    sessionId: string;
+    clientId: string;
+    subjectId: string;
+    tenantId: string;
+    grantedScopes: readonly string[];
+    runMode: McpClientRunMode;
+    transport: string;
+    protocolVersion: string;
+  };
+  auditWriter: McpAuditWriter;
+  markerWriter: McpAuditWriter;
+  spanWriter: McpSpanWriter;
+  metrics?: McpMetricsRegistry | undefined;
+  correlation: McpCorrelationFactory;
+  opened: boolean;
+  requestCount: number;
+  denialCount: number;
+  openedAt?: string | undefined;
+};
+
 type AuthorizationResult =
   | {
       kind: "disabled";
@@ -1317,6 +1512,402 @@ function normalizeMcpSecurity(
     requireSubject: options.requireSubject ?? true,
     policyBundle: options.policyBundle,
     tenantResolver: options.tenantResolver
+  };
+}
+
+function normalizeMcpObservability(
+  options: McpObservabilityOptions | undefined
+): NormalizedMcpObservability | undefined {
+  if (options === undefined) {
+    return undefined;
+  }
+
+  const correlation = createMcpCorrelationFactory({
+    clock: options.clock,
+    idFactory: options.idFactory
+  });
+  const sessionId = options.session?.sessionId ?? correlation.sessionId();
+  const writer =
+    options.auditWriter ??
+    createMcpAuditWriter({
+      rootDir: options.rootDir
+    });
+
+  return {
+    rootDir: options.rootDir,
+    session: {
+      sessionId,
+      clientId: options.session?.clientId ?? "client.unspecified",
+      subjectId: options.session?.subjectId ?? "subject.unspecified",
+      tenantId: options.session?.tenantId ?? "tenant.unspecified",
+      grantedScopes: options.session?.grantedScopes ?? [],
+      runMode: options.session?.runMode ?? "assisted",
+      transport: options.session?.transport ?? "unknown",
+      protocolVersion: options.session?.protocolVersion ?? "unknown"
+    },
+    auditWriter: writer,
+    markerWriter: options.markerWriter ?? writer,
+    spanWriter:
+      options.spanWriter ??
+      createMcpSpanWriter({
+        rootDir: options.rootDir
+      }),
+    metrics: options.metrics,
+    correlation,
+    opened: false,
+    requestCount: 0,
+    denialCount: 0
+  };
+}
+
+async function openMcpObservedSession(observability: NormalizedMcpObservability) {
+  if (observability.opened) {
+    return;
+  }
+
+  const timestamp = observability.correlation.now();
+  observability.opened = true;
+  observability.openedAt = timestamp;
+  setMcpActiveSessionsMetric({
+    metrics: observability.metrics,
+    tenantId: observability.session.tenantId,
+    value: 1
+  });
+
+  await observability.auditWriter.write({
+    schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+    recordId: observability.correlation.recordId(),
+    type: "mcp.session.opened",
+    timestamp,
+    sessionId: observability.session.sessionId,
+    clientId: observability.session.clientId,
+    subjectId: observability.session.subjectId,
+    tenantId: observability.session.tenantId,
+    grantedScopes: [...observability.session.grantedScopes],
+    runMode: observability.session.runMode,
+    transport: observability.session.transport,
+    protocolVersion: observability.session.protocolVersion,
+    principal: principalForSession(observability)
+  });
+}
+
+async function closeMcpObservedSession(
+  observability: NormalizedMcpObservability
+) {
+  const timestamp = observability.correlation.now();
+  const openedAt = observability.openedAt ?? timestamp;
+  observability.opened = false;
+  setMcpActiveSessionsMetric({
+    metrics: observability.metrics,
+    tenantId: observability.session.tenantId,
+    value: 0
+  });
+
+  await observability.auditWriter.write({
+    schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+    recordId: observability.correlation.recordId(),
+    type: "mcp.session.closed",
+    timestamp,
+    sessionId: observability.session.sessionId,
+    clientId: observability.session.clientId,
+    subjectId: observability.session.subjectId,
+    tenantId: observability.session.tenantId,
+    durationMs: Math.max(0, Date.parse(timestamp) - Date.parse(openedAt)),
+    requestCount: observability.requestCount,
+    denialCount: observability.denialCount,
+    principal: principalForSession(observability)
+  });
+}
+
+type ObservedRequest = {
+  mcpRequestId: string;
+  spanId: string;
+  startedAt: string;
+  operation: string;
+  target: string;
+  argsHash: string;
+  principal: McpAuditPrincipal;
+};
+
+async function beginObservedRequest(input: {
+  observability: NormalizedMcpObservability;
+  operation: string;
+  target: string;
+  args: unknown;
+  principal?: McpAuditPrincipal | undefined;
+  runId?: string | undefined;
+  traceId?: string | undefined;
+  idempotencyKey?: string | undefined;
+  expectedLastEventId?: string | undefined;
+}): Promise<ObservedRequest> {
+  const observed = {
+    mcpRequestId: input.observability.correlation.mcpRequestId(),
+    spanId: input.observability.correlation.spanId(),
+    startedAt: input.observability.correlation.now(),
+    operation: input.operation,
+    target: input.target,
+    argsHash: hashMcpArgs(input.args),
+    principal: input.principal ?? principalForSession(input.observability)
+  };
+  const record: McpRequestReceived = {
+    schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+    recordId: input.observability.correlation.recordId(),
+    type: "mcp.request.received",
+    timestamp: observed.startedAt,
+    sessionId: input.observability.session.sessionId,
+    mcpRequestId: observed.mcpRequestId,
+    operation: input.operation,
+    target: input.target,
+    argsHash: observed.argsHash,
+    principal: observed.principal,
+    ...(input.idempotencyKey === undefined
+      ? {}
+      : { idempotencyKey: input.idempotencyKey }),
+    ...(input.expectedLastEventId === undefined
+      ? {}
+      : { expectedLastEventId: input.expectedLastEventId }),
+    ...(input.runId === undefined ? {} : { runId: input.runId }),
+    ...(input.traceId === undefined ? {} : { traceId: input.traceId })
+  };
+
+  await input.observability.auditWriter.write(record);
+  input.observability.requestCount += 1;
+
+  return observed;
+}
+
+async function observeReadOnlyOperation<TResponse extends McpProtocolResponse>(
+  input: {
+    observability: NormalizedMcpObservability;
+    operation: string;
+    target: string;
+    args: unknown;
+    runId?: string | undefined;
+    perform(): TResponse | Promise<TResponse>;
+    resourceAudit?:
+      | ((response: TResponse, observed: ObservedRequest) => McpResourceRead | undefined)
+      | undefined;
+  }
+): Promise<TResponse> {
+  let observed: ObservedRequest;
+  const failures: string[] = [];
+
+  try {
+    observed = await beginObservedRequest({
+      observability: input.observability,
+      operation: input.operation,
+      target: input.target,
+      args: input.args,
+      runId: input.runId
+    });
+  } catch (error) {
+    failures.push(`request_audit:${messageFromUnknown(error)}`);
+    observed = {
+      mcpRequestId: input.observability.correlation.mcpRequestId(),
+      spanId: input.observability.correlation.spanId(),
+      startedAt: input.observability.correlation.now(),
+      operation: input.operation,
+      target: input.target,
+      argsHash: hashMcpArgs(input.args),
+      principal: principalForSession(input.observability)
+    };
+  }
+
+  const response = await input.perform();
+  const endedAt = input.observability.correlation.now();
+  const responseError = isMcpErrorResponse(response)
+    ? response.error.code
+    : undefined;
+
+  if (responseError !== undefined) {
+    try {
+      await recordObservedDenial({
+        observability: input.observability,
+        observed,
+        code: responseError,
+        gate: "adapter",
+        target: input.target
+      });
+    } catch (error) {
+      failures.push(`denial_audit:${messageFromUnknown(error)}`);
+    }
+  }
+
+  const resourceRecord = input.resourceAudit?.(response, observed);
+
+  if (resourceRecord !== undefined) {
+    try {
+      await input.observability.auditWriter.write(resourceRecord);
+      recordMcpRedactionMetric({
+        metrics: input.observability.metrics,
+        redactionProfile: resourceRecord.redactionProfile,
+        resourceUri: resourceRecord.resourceUri,
+        count: resourceRecord.fieldsRedactedCount
+      });
+    } catch (error) {
+      failures.push(`resource_audit:${messageFromUnknown(error)}`);
+    }
+  }
+
+  try {
+    await input.observability.spanWriter.recordParentSpan({
+      rootDir: input.observability.rootDir,
+      runId: input.runId ?? sessionTraceRunId(input.observability.session.sessionId),
+      spanId: observed.spanId,
+      name: `mcp.${input.operation}`,
+      status: mcpSpanStatusForOutcome({
+        isError: responseError !== undefined,
+        code: responseError
+      }),
+      startedAt: observed.startedAt,
+      endedAt,
+      eventIds: [],
+      metadata: {
+        mcpRequestId: observed.mcpRequestId,
+        clientId: observed.principal.clientId,
+        subjectId: observed.principal.subjectId,
+        tenantId: observed.principal.tenantId,
+        runId: input.runId,
+        target: input.target
+      }
+    });
+  } catch (error) {
+    failures.push(`span:${messageFromUnknown(error)}`);
+  }
+
+  if (failures.length > 0) {
+    const marker = await markObservedProvenanceGap({
+      observability: input.observability,
+      observed,
+      runId: input.runId,
+      operation: input.operation,
+      stage: "read_observation",
+      reason: failures.join("; "),
+      partialWrites: failures
+    });
+
+    if (marker.status !== "written") {
+      return readOnlyProvenanceGapResponse(
+        input.operation,
+        createProvenanceGapError(messageFromUnknown(marker.error))
+      ) as TResponse;
+    }
+  }
+
+  recordMcpRequestMetric({
+    metrics: input.observability.metrics,
+    operation: input.operation,
+    clientId: observed.principal.clientId,
+    outcome: responseError ?? "success",
+    durationMs: Math.max(0, Date.parse(endedAt) - Date.parse(observed.startedAt))
+  });
+
+  return response;
+}
+
+async function recordObservedDenial(input: {
+  observability: NormalizedMcpObservability;
+  observed: ObservedRequest;
+  code: string;
+  gate: string;
+  target?: string | undefined;
+  runId?: string | undefined;
+  traceId?: string | undefined;
+  policyDecisionRef?: string | undefined;
+}) {
+  input.observability.denialCount += 1;
+  recordMcpDenialMetric({
+    metrics: input.observability.metrics,
+    denialCode: input.code,
+    gate: input.gate,
+    clientId: input.observed.principal.clientId
+  });
+
+  if (input.code === "approval_required") {
+    recordMcpApprovalRequiredMetric({
+      metrics: input.observability.metrics,
+      toolName: input.target,
+      clientId: input.observed.principal.clientId
+    });
+  }
+
+  if (input.code === "stale_state") {
+    recordMcpStaleStateMetric({
+      metrics: input.observability.metrics,
+      toolName: input.target
+    });
+  }
+
+  await input.observability.auditWriter.write({
+    schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+    recordId: input.observability.correlation.recordId(),
+    type: "mcp.action.denied",
+    timestamp: input.observability.correlation.now(),
+    sessionId: input.observability.session.sessionId,
+    mcpRequestId: input.observed.mcpRequestId,
+    denialCode: input.code,
+    gate: input.gate,
+    policyDecisionRef:
+      input.policyDecisionRef ?? policyDecisionRefForObservedDenial(input),
+    principal: input.observed.principal,
+    ...(input.target === undefined ? {} : { target: input.target }),
+    ...(input.runId === undefined ? {} : { runId: input.runId }),
+    ...(input.traceId === undefined ? {} : { traceId: input.traceId })
+  });
+}
+
+async function markObservedProvenanceGap(input: {
+  observability: NormalizedMcpObservability;
+  observed: ObservedRequest;
+  runId?: string | undefined;
+  traceId?: string | undefined;
+  eventIds?: readonly string[] | undefined;
+  operation: string;
+  stage: string;
+  reason: string;
+  partialWrites: readonly string[];
+}) {
+  return writeProvenanceGapMarker(input.observability.markerWriter, {
+    recordId: input.observability.correlation.recordId(),
+    gapId: input.observability.correlation.gapId(),
+    timestamp: input.observability.correlation.now(),
+    sessionId: input.observability.session.sessionId,
+    mcpRequestId: input.observed.mcpRequestId,
+    runId: input.runId,
+    traceId: input.traceId,
+    eventIds: input.eventIds,
+    operation: input.operation,
+    stage: input.stage,
+    reason: input.reason,
+    partialWrites: input.partialWrites,
+    principal: input.observed.principal
+  });
+}
+
+function principalForSession(
+  observability: NormalizedMcpObservability
+): McpAuditPrincipal {
+  return {
+    clientId: observability.session.clientId,
+    subjectId: observability.session.subjectId,
+    tenantId: observability.session.tenantId,
+    grantedScopes: [...observability.session.grantedScopes]
+  };
+}
+
+function principalForAuthorization(
+  observability: NormalizedMcpObservability,
+  authorization: AuthorizationResult
+): McpAuditPrincipal {
+  if (authorization.kind !== "authenticated") {
+    return principalForSession(observability);
+  }
+
+  return {
+    clientId: authorization.context.clientPrincipal.clientId,
+    subjectId: authorization.context.subject?.subjectId,
+    tenantId: authorization.context.clientPrincipal.tenantId,
+    grantedScopes: authorization.context.clientPrincipal.grantedScopes
   };
 }
 
@@ -1769,8 +2360,19 @@ function bindToolContext(
 function listMcpTools(
   catalog: McpCatalog,
   request: McpTransportCredentialRequest,
-  security: NormalizedMcpSecurity
-): McpToolsListResponse {
+  security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability | undefined
+): MaybePromise<McpToolsListResponse> {
+  if (observability !== undefined) {
+    return observeReadOnlyOperation({
+      observability,
+      operation: "tools/list",
+      target: "tools",
+      args: request,
+      perform: () => listMcpTools(catalog, request, security, undefined)
+    });
+  }
+
   const authorization = authorizeSync({
     security,
     request,
@@ -1800,8 +2402,19 @@ function listMcpTools(
 function listMcpResources(
   catalog: McpResourceCatalog,
   request: McpResourcesListRequest,
-  security: NormalizedMcpSecurity
-): McpResourcesListResponse {
+  security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability | undefined
+): MaybePromise<McpResourcesListResponse> {
+  if (observability !== undefined) {
+    return observeReadOnlyOperation({
+      observability,
+      operation: "resources/list",
+      target: "resources",
+      args: request,
+      perform: () => listMcpResources(catalog, request, security, undefined)
+    });
+  }
+
   const parsedRequest = resourcesListRequestSchema.safeParse(request);
 
   if (!parsedRequest.success) {
@@ -1840,8 +2453,50 @@ async function readMcpResource(
   catalog: McpResourceCatalog,
   request: McpResourcesReadRequest,
   redact: McpEgressRedaction,
-  security: NormalizedMcpSecurity
+  security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability | undefined
 ): Promise<McpResourcesReadResponse> {
+  if (observability !== undefined) {
+    const uri = isRecord(request) && typeof request.uri === "string"
+      ? request.uri
+      : "unknown";
+    const runId = runIdFromResourceUri(uri);
+
+    return observeReadOnlyOperation({
+      observability,
+      operation: "resources/read",
+      target: uri,
+      args: request,
+      runId,
+      perform: () =>
+        readMcpResource(runtime, catalog, request, redact, security, undefined),
+      resourceAudit(response, observed) {
+        if (response.isError) {
+          return undefined;
+        }
+
+        const redactionProfile = [
+          response.metadata.authorityClass,
+          response.metadata.payloadSchemaRef
+        ].join(":");
+        return {
+          schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+          recordId: observability.correlation.recordId(),
+          type: "mcp.resource.read",
+          timestamp: observability.correlation.now(),
+          sessionId: observability.session.sessionId,
+          mcpRequestId: observed.mcpRequestId,
+          resourceUri: response.uri,
+          redactionProfile,
+          fieldsRedactedCount: countHashReferences(response.contents[0].text),
+          bytesProjected: response.contents[0].text.length,
+          principal: observed.principal,
+          ...(runId === undefined ? {} : { runId })
+        };
+      }
+    });
+  }
+
   const parsedRequest = resourcesReadRequestSchema.safeParse(request);
 
   if (!parsedRequest.success) {
@@ -1944,8 +2599,20 @@ function listMcpPrompts(
   catalog: McpPromptCatalog,
   toolCatalog: McpCatalog,
   request: McpTransportCredentialRequest,
-  security: NormalizedMcpSecurity
-): McpPromptsListResponse {
+  security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability | undefined
+): MaybePromise<McpPromptsListResponse> {
+  if (observability !== undefined) {
+    return observeReadOnlyOperation({
+      observability,
+      operation: "prompts/list",
+      target: "prompts",
+      args: request,
+      perform: () =>
+        listMcpPrompts(catalog, toolCatalog, request, security, undefined)
+    });
+  }
+
   const authorization = authorizeSync({
     security,
     request,
@@ -1993,8 +2660,24 @@ function getMcpPrompt(
   toolCatalog: McpCatalog,
   request: McpPromptsGetRequest,
   redact: McpEgressRedaction,
-  security: NormalizedMcpSecurity
-): McpPromptsGetResponse {
+  security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability | undefined
+): MaybePromise<McpPromptsGetResponse> {
+  if (observability !== undefined) {
+    const target = isRecord(request) && typeof request.name === "string"
+      ? request.name
+      : "unknown";
+
+    return observeReadOnlyOperation({
+      observability,
+      operation: "prompts/get",
+      target,
+      args: request,
+      perform: () =>
+        getMcpPrompt(catalog, toolCatalog, request, redact, security, undefined)
+    });
+  }
+
   const parsedRequest = promptsGetRequestSchema.safeParse(request);
 
   if (!parsedRequest.success) {
@@ -2089,12 +2772,25 @@ async function dispatchMcpRequest(
   promptCatalog: McpPromptCatalog,
   redact: McpEgressRedaction,
   security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability | undefined,
   request: McpProtocolRequest
 ): Promise<McpProtocolResponse> {
   const parsedRequest = protocolRequestSchema.safeParse(request);
 
   if (!parsedRequest.success) {
-    return validationErrorResponse(parsedRequest.error);
+    const response = validationErrorResponse(parsedRequest.error);
+
+    if (observability === undefined) {
+      return response;
+    }
+
+    return observeReadOnlyOperation({
+      observability,
+      operation: "protocol/invalid",
+      target: "invalid",
+      args: request,
+      perform: () => response
+    });
   }
 
   switch (parsedRequest.data.method) {
@@ -2104,7 +2800,8 @@ async function dispatchMcpRequest(
         isRecord(parsedRequest.data.params)
           ? (parsedRequest.data.params as McpTransportCredentialRequest)
           : {},
-        security
+        security,
+        observability
       );
     case "tools/call":
       return callMcpTool(
@@ -2112,7 +2809,8 @@ async function dispatchMcpRequest(
         catalog,
         parsedRequest.data.params as McpToolsCallRequest,
         redact,
-        security
+        security,
+        observability
       );
     case "resources/list":
       return listMcpResources(
@@ -2120,7 +2818,8 @@ async function dispatchMcpRequest(
         isRecord(parsedRequest.data.params)
           ? (parsedRequest.data.params as McpResourcesListRequest)
           : {},
-        security
+        security,
+        observability
       );
     case "resources/read":
       return readMcpResource(
@@ -2128,7 +2827,8 @@ async function dispatchMcpRequest(
         resourceCatalog,
         parsedRequest.data.params as McpResourcesReadRequest,
         redact,
-        security
+        security,
+        observability
       );
     case "prompts/list":
       return listMcpPrompts(
@@ -2137,7 +2837,8 @@ async function dispatchMcpRequest(
         isRecord(parsedRequest.data.params)
           ? (parsedRequest.data.params as McpTransportCredentialRequest)
           : {},
-        security
+        security,
+        observability
       );
     case "prompts/get":
       return getMcpPrompt(
@@ -2145,13 +2846,26 @@ async function dispatchMcpRequest(
         catalog,
         parsedRequest.data.params as McpPromptsGetRequest,
         redact,
-        security
+        security,
+        observability
       );
     default:
-      return errorResponse({
+      const response = errorResponse({
         code: "method_not_found",
         message: `MCP method ${parsedRequest.data.method} is not registered.`,
         retryable: false
+      });
+
+      if (observability === undefined) {
+        return response;
+      }
+
+      return observeReadOnlyOperation({
+        observability,
+        operation: parsedRequest.data.method,
+        target: parsedRequest.data.method,
+        args: parsedRequest.data.params ?? {},
+        perform: () => response
       });
   }
 }
@@ -2161,8 +2875,20 @@ async function callMcpTool(
   catalog: McpCatalog,
   request: McpToolsCallRequest,
   redact: McpEgressRedaction,
-  security: NormalizedMcpSecurity
+  security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability | undefined
 ): Promise<McpToolsCallResponse> {
+  if (observability !== undefined) {
+    return callMcpToolObserved(
+      runtime,
+      catalog,
+      request,
+      redact,
+      security,
+      observability
+    );
+  }
+
   const parsedRequest = toolsCallRequestSchema.safeParse(request);
 
   if (!parsedRequest.success) {
@@ -2253,6 +2979,510 @@ async function callMcpTool(
   }
 }
 
+async function callMcpToolObserved(
+  runtime: RuntimeApi,
+  catalog: McpCatalog,
+  request: McpToolsCallRequest,
+  redact: McpEgressRedaction,
+  security: NormalizedMcpSecurity,
+  observability: NormalizedMcpObservability
+): Promise<McpToolsCallResponse> {
+  const parsedRequest = toolsCallRequestSchema.safeParse(request);
+  const target = isRecord(request) && typeof request.name === "string"
+    ? request.name
+    : "unknown";
+
+  if (!parsedRequest.success) {
+    return observeToolCallFailure({
+      observability,
+      operation: "tools/call",
+      target,
+      args: request,
+      response: validationErrorResponse(parsedRequest.error)
+    });
+  }
+
+  const binding = catalog.byName.get(parsedRequest.data.name);
+
+  if (binding === undefined) {
+    return observeToolCallFailure({
+      observability,
+      operation: "tools/call",
+      target: parsedRequest.data.name,
+      args: parsedRequest.data.arguments ?? {},
+      response: errorResponse({
+        code: "method_not_found",
+        message: `MCP tool ${parsedRequest.data.name} is not registered.`,
+        retryable: false
+      })
+    });
+  }
+
+  if (!binding.enabled) {
+    return observeToolCallFailure({
+      observability,
+      operation: "tools/call",
+      target: parsedRequest.data.name,
+      args: parsedRequest.data.arguments ?? {},
+      response: errorResponse({
+        code: "invalid_request",
+        message: `MCP tool ${parsedRequest.data.name} is disabled.`,
+        retryable: false
+      })
+    });
+  }
+
+  const parsed = binding.inputParser.safeParse(parsedRequest.data.arguments ?? {});
+
+  if (!parsed.success) {
+    return observeToolCallFailure({
+      observability,
+      operation: "tools/call",
+      target: binding.name,
+      args: parsedRequest.data.arguments ?? {},
+      response: validationErrorResponse(parsed.error),
+      mutates: binding.mutates
+    });
+  }
+
+  const authorization = await authorizeAsync({
+    security,
+    request: parsedRequest.data,
+    requestedScopes: [
+      ...(binding.requiredScopes ?? []),
+      ...(parsedRequest.data.requestedScopes ?? [])
+    ],
+    requireSubject: true,
+    tenantReference: tenantReferenceForRuntimeArgs(binding, parsed.data)
+  });
+  const principal = principalForAuthorization(observability, authorization);
+  const runId = runIdForRuntimeArgs(binding.runtimeOperation, parsed.data);
+  const rootDir = rootDirForRuntimeArgs(binding.runtimeOperation, parsed.data);
+
+  if (authorization.kind === "error") {
+    const response = await redactToolResponseIfNeeded(
+      authorization.response,
+      redact,
+      redactionContextForTool({
+        binding,
+        authorization,
+        errorCode: authorization.response.error.code
+      })
+    );
+
+    return observeToolCallFailure({
+      observability,
+      operation: "tools/call",
+      target: binding.name,
+      args: parsed.data,
+      response,
+      mutates: binding.mutates,
+      runId,
+      principal
+    });
+  }
+
+  let observed: ObservedRequest;
+
+  try {
+    observed = await beginObservedRequest({
+      observability,
+      operation: "tools/call",
+      target: binding.name,
+      args: parsed.data,
+      principal,
+      runId,
+      idempotencyKey: idempotencyKeyForRuntimeArgs(
+        binding.runtimeOperation,
+        parsed.data
+      ),
+      expectedLastEventId: expectedLastEventIdForRuntimeArgs(parsed.data)
+    });
+  } catch (error) {
+    if (binding.mutates) {
+      return provenanceGapResponse(
+        createProvenanceGapError(messageFromUnknown(error))
+      );
+    }
+
+    observed = {
+      mcpRequestId: observability.correlation.mcpRequestId(),
+      spanId: observability.correlation.spanId(),
+      startedAt: observability.correlation.now(),
+      operation: "tools/call",
+      target: binding.name,
+      argsHash: hashMcpArgs(parsed.data),
+      principal
+    };
+  }
+
+  const beforeEvents =
+    binding.mutates && runId !== undefined
+      ? await readEventsSafely(runtime, runId, rootDir)
+      : [];
+
+  let runtimeResult: unknown;
+
+  try {
+    runtimeResult = await invokeRuntime(
+      runtime,
+      binding.runtimeOperation,
+      parsed.data,
+      authorization.kind === "authenticated" ? authorization.context : undefined
+    );
+  } catch (error) {
+    const response = isZodError(error)
+      ? validationErrorResponse(error)
+      : await redactToolResponseIfNeeded(
+          errorResponse({
+            code: "invalid_request",
+            message:
+              error instanceof Error ? error.message : "Runtime call failed.",
+            retryable: false
+          }),
+          redact,
+          redactionContextForTool({
+            binding,
+            authorization,
+            errorCode: "invalid_request"
+          })
+        );
+
+    await completeObservedToolCall({
+      observability,
+      observed,
+      binding,
+      response,
+      runId,
+      rootDir,
+      eventIds: [],
+      traceId: undefined,
+      runtimeResult: undefined,
+      failClosed: false
+    });
+    return response;
+  }
+
+  const actualRunId = runIdForRuntimeResult(runtimeResult) ?? runId;
+  const actualRootDir = rootDirForRuntimeResult(runtimeResult) ?? rootDir;
+  const afterEventsResult =
+    actualRunId === undefined
+      ? eventReadSuccess([])
+      : await readEventsResult(runtime, actualRunId, actualRootDir);
+  const afterEvents =
+    afterEventsResult.status === "success" ? afterEventsResult.events : [];
+  const eventIds = eventIdsForRuntimeResult(
+    runtimeResult,
+    beforeEvents,
+    afterEvents
+  );
+  const traceId =
+    traceIdForRuntimeResult(runtimeResult) ??
+    traceIdForEventIds(afterEvents, eventIds);
+  const response = await redactToolResponseIfNeeded(
+    resultForRuntimeValue(runtimeResult),
+    redact,
+    redactionContextForTool({
+      binding,
+      authorization
+    })
+  );
+
+  const completed = await completeObservedToolCall({
+    observability,
+    observed,
+    binding,
+    response,
+    runId: actualRunId,
+    rootDir: actualRootDir,
+    eventIds,
+    traceId,
+    runtimeResult,
+    eventCorrelationFailure:
+      afterEventsResult.status === "failed"
+        ? `event_read:${messageFromUnknown(afterEventsResult.error)}`
+        : undefined,
+    failClosed: binding.mutates
+  });
+
+  return completed ?? response;
+}
+
+async function observeToolCallFailure(input: {
+  observability: NormalizedMcpObservability;
+  operation: string;
+  target: string;
+  args: unknown;
+  response: McpToolsCallResponse;
+  mutates?: boolean | undefined;
+  runId?: string | undefined;
+  principal?: McpAuditPrincipal | undefined;
+}) {
+  const failures: string[] = [];
+  let observed: ObservedRequest;
+
+  try {
+    observed = await beginObservedRequest({
+      observability: input.observability,
+      operation: input.operation,
+      target: input.target,
+      args: input.args,
+      principal: input.principal,
+      runId: input.runId
+    });
+  } catch (error) {
+    if (input.mutates) {
+      return provenanceGapResponse(
+        createProvenanceGapError(messageFromUnknown(error))
+      );
+    }
+
+    failures.push(`request_audit:${messageFromUnknown(error)}`);
+    observed = {
+      mcpRequestId: input.observability.correlation.mcpRequestId(),
+      spanId: input.observability.correlation.spanId(),
+      startedAt: input.observability.correlation.now(),
+      operation: input.operation,
+      target: input.target,
+      argsHash: hashMcpArgs(input.args),
+      principal: input.principal ?? principalForSession(input.observability)
+    };
+  }
+
+  const code = input.response.isError ? input.response.error.code : "success";
+
+  if (input.response.isError) {
+    try {
+      await recordObservedDenial({
+        observability: input.observability,
+        observed,
+        code,
+        gate: "adapter",
+        target: input.target,
+        runId: input.runId
+      });
+    } catch (error) {
+      failures.push(`denial_audit:${messageFromUnknown(error)}`);
+    }
+  }
+
+  try {
+    await input.observability.spanWriter.recordParentSpan({
+      rootDir: input.observability.rootDir,
+      runId: input.runId ?? sessionTraceRunId(input.observability.session.sessionId),
+      spanId: observed.spanId,
+      name: `mcp.${input.operation}.${input.target}`,
+      status: mcpSpanStatusForOutcome({
+        isError: input.response.isError,
+        code
+      }),
+      startedAt: observed.startedAt,
+      endedAt: input.observability.correlation.now(),
+      eventIds: [],
+      metadata: {
+        mcpRequestId: observed.mcpRequestId,
+        clientId: observed.principal.clientId,
+        subjectId: observed.principal.subjectId,
+        tenantId: observed.principal.tenantId,
+        runId: input.runId,
+        toolName: input.target
+      }
+    });
+  } catch (error) {
+    failures.push(`span:${messageFromUnknown(error)}`);
+  }
+
+  if (failures.length > 0) {
+    await markObservedProvenanceGap({
+      observability: input.observability,
+      observed,
+      runId: input.runId,
+      operation: input.operation,
+      stage: "tool_denial_observation",
+      reason: failures.join("; "),
+      partialWrites: failures
+    });
+  }
+
+  recordMcpRequestMetric({
+    metrics: input.observability.metrics,
+    operation: input.operation,
+    toolName: input.target,
+    clientId: observed.principal.clientId,
+    outcome: code,
+    durationMs: Math.max(
+      0,
+      Date.parse(input.observability.correlation.now()) -
+        Date.parse(observed.startedAt)
+    )
+  });
+
+  return input.response;
+}
+
+async function completeObservedToolCall(input: {
+  observability: NormalizedMcpObservability;
+  observed: ObservedRequest;
+  binding: EnabledMcpToolBinding;
+  response: McpToolsCallResponse;
+  runId?: string | undefined;
+  rootDir?: string | undefined;
+  eventIds: readonly string[];
+  traceId?: string | undefined;
+  runtimeResult: unknown;
+  eventCorrelationFailure?: string | undefined;
+  failClosed: boolean;
+}): Promise<McpToolsCallResponse | undefined> {
+  const failures: string[] = [];
+  const endedAt = input.observability.correlation.now();
+  const code = input.response.isError ? input.response.error.code : "success";
+  const toolResult = parseToolCallResult(input.runtimeResult);
+  const actionEventIds = nonEmptyArray(input.eventIds);
+  const mutationEventCorrelationFailure =
+    input.failClosed && !input.response.isError && actionEventIds === undefined
+      ? input.eventCorrelationFailure ??
+        "event_correlation:missing_runtime_event_ids"
+      : input.eventCorrelationFailure;
+  if (mutationEventCorrelationFailure !== undefined) {
+    failures.push(mutationEventCorrelationFailure);
+  }
+  const actionRecord =
+    mutationEventCorrelationFailure !== undefined ||
+    input.runId === undefined ||
+    input.traceId === undefined ||
+    actionEventIds === undefined
+      ? undefined
+      : actionDispatchedRecordFor({
+          observability: input.observability,
+          observed: input.observed,
+          binding: input.binding,
+          runId: input.runId,
+          eventIds: actionEventIds,
+          traceId: input.traceId,
+          toolResult
+        });
+
+  if (actionRecord !== undefined) {
+    try {
+      await input.observability.auditWriter.write(actionRecord);
+    } catch (error) {
+      failures.push(`action_audit:${messageFromUnknown(error)}`);
+    }
+  } else if (input.failClosed) {
+    failures.push("action_audit:missing_run_or_trace_correlation");
+  }
+
+  if (input.response.isError) {
+    try {
+      await recordObservedDenial({
+        observability: input.observability,
+        observed: input.observed,
+        code,
+        gate: runtimeDenialGateForCode(code),
+        target: input.binding.name,
+        runId: input.runId,
+        traceId: input.traceId,
+        policyDecisionRef: toolResult?.provenance.decisionHash
+      });
+    } catch (error) {
+      failures.push(`denial_audit:${messageFromUnknown(error)}`);
+    }
+  }
+
+  const externalRecord = externalInvokedRecordFor({
+    observability: input.observability,
+    observed: input.observed,
+    runId: input.runId,
+    toolResult,
+    runtimeResult: input.runtimeResult
+  });
+
+  if (externalRecord !== undefined) {
+    try {
+      await input.observability.auditWriter.write(externalRecord);
+      recordMcpExternalMetric({
+        metrics: input.observability.metrics,
+        serverId: externalRecord.serverId,
+        version: externalRecord.pinnedVersion,
+        outcome: input.response.isError ? code : "success",
+        errorCode: input.response.isError ? code : undefined
+      });
+    } catch (error) {
+      failures.push(`external_audit:${messageFromUnknown(error)}`);
+    }
+  }
+
+  try {
+    await input.observability.spanWriter.recordParentSpan({
+      rootDir: input.rootDir ?? input.observability.rootDir,
+      runId: input.runId ?? sessionTraceRunId(input.observability.session.sessionId),
+      traceId: input.traceId,
+      spanId: input.observed.spanId,
+      name: `mcp.tools/call.${input.binding.name}`,
+      status: mcpSpanStatusForOutcome({
+        isError: input.response.isError,
+        code
+      }),
+      startedAt: input.observed.startedAt,
+      endedAt,
+      eventIds: input.eventIds,
+      metadata: {
+        mcpRequestId: input.observed.mcpRequestId,
+        clientId: input.observed.principal.clientId,
+        subjectId: input.observed.principal.subjectId,
+        tenantId: input.observed.principal.tenantId,
+        runId: input.runId,
+        toolName: input.binding.name,
+        runtimeOperation: input.binding.runtimeOperation,
+        traceId: input.traceId,
+        toolProvenance: toolResult?.provenance
+      }
+    });
+
+    if (input.runId !== undefined && input.eventIds.length > 0) {
+      await input.observability.spanWriter.linkChildSpans({
+        rootDir: input.rootDir ?? input.observability.rootDir,
+        runId: input.runId,
+        parentSpanId: input.observed.spanId,
+        eventIds: input.eventIds
+      });
+    }
+  } catch (error) {
+    failures.push(`span:${messageFromUnknown(error)}`);
+  }
+
+  if (failures.length > 0) {
+    await markObservedProvenanceGap({
+      observability: input.observability,
+      observed: input.observed,
+      runId: input.runId,
+      traceId: input.traceId,
+      eventIds: input.eventIds,
+      operation: "tools/call",
+      stage: "runtime_dispatch_observation",
+      reason: failures.join("; "),
+      partialWrites: failures
+    });
+
+    if (input.failClosed) {
+      return provenanceGapResponse(
+        createProvenanceGapError(failures.join("; "))
+      );
+    }
+  }
+
+  recordMcpRequestMetric({
+    metrics: input.observability.metrics,
+    operation: "tools/call",
+    toolName: input.binding.name,
+    clientId: input.observed.principal.clientId,
+    outcome: code,
+    durationMs: Math.max(0, Date.parse(endedAt) - Date.parse(input.observed.startedAt))
+  });
+
+  return undefined;
+}
+
 async function invokeRuntime(
   runtime: RuntimeApi,
   operation: RuntimeOperationName,
@@ -2321,6 +3551,348 @@ async function invokeRuntime(
     default:
       assertNever(operation as never);
   }
+}
+
+function runIdForRuntimeArgs(
+  operation: RuntimeOperationName,
+  args: unknown
+): string | undefined {
+  if (operation === "startRun") {
+    return undefined;
+  }
+
+  return readStringProperty(args, "runId");
+}
+
+function rootDirForRuntimeArgs(
+  operation: RuntimeOperationName,
+  args: unknown
+): string | undefined {
+  if (operation === "startRun") {
+    return readStringProperty(args, "cwd");
+  }
+
+  const options = recordValue(readProperty(args, "options"));
+  return readStringProperty(options, "rootDir");
+}
+
+function idempotencyKeyForRuntimeArgs(
+  operation: RuntimeOperationName,
+  args: unknown
+) {
+  if (operation !== "callTool") {
+    return undefined;
+  }
+
+  return readStringProperty(recordValue(readProperty(args, "request")), "idempotencyKey");
+}
+
+function expectedLastEventIdForRuntimeArgs(args: unknown) {
+  return readStringProperty(args, "expectedLastEventId");
+}
+
+function runIdForRuntimeResult(result: unknown) {
+  const direct = readStringProperty(result, "runId");
+
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  return readStringProperty(recordValue(readProperty(result, "state")), "runId");
+}
+
+function rootDirForRuntimeResult(result: unknown) {
+  const paths = recordValue(readProperty(result, "paths"));
+  return readStringProperty(paths, "rootDir");
+}
+
+async function readEventsSafely(
+  runtime: RuntimeApi,
+  runId: string,
+  rootDir?: string | undefined
+): Promise<RuntimeEvent[]> {
+  const result = await readEventsResult(runtime, runId, rootDir);
+
+  return result.status === "success" ? result.events : [];
+}
+
+function eventReadSuccess(events: RuntimeEvent[]): EventReadResult {
+  return {
+    status: "success",
+    events
+  };
+}
+
+type EventReadResult =
+  | {
+      status: "success";
+      events: RuntimeEvent[];
+    }
+  | {
+      status: "failed";
+      error: unknown;
+    };
+
+async function readEventsResult(
+  runtime: RuntimeApi,
+  runId: string,
+  rootDir?: string | undefined
+): Promise<EventReadResult> {
+  try {
+    return eventReadSuccess(
+      await runtime.getEvents(
+        runId,
+        rootDir === undefined ? undefined : { rootDir }
+      )
+    );
+  } catch (error) {
+    return {
+      status: "failed",
+      error
+    };
+  }
+}
+
+function eventIdsForRuntimeResult(
+  result: unknown,
+  beforeEvents: readonly RuntimeEvent[],
+  afterEvents: readonly RuntimeEvent[]
+) {
+  const toolResult = parseToolCallResult(result);
+  const fromProvenance = toolResult?.provenance.eventIds;
+
+  if (fromProvenance !== undefined) {
+    return fromProvenance;
+  }
+
+  if (isRecord(result) && Array.isArray(result.events)) {
+    return result.events
+      .map((event) => RuntimeEventSchema.safeParse(event))
+      .filter((parsed) => parsed.success)
+      .map((parsed) => parsed.data.id);
+  }
+
+  const beforeIds = new Set(beforeEvents.map((event) => event.id));
+  const delta = afterEvents.filter((event) => !beforeIds.has(event.id));
+
+  return delta.map((event) => event.id);
+}
+
+function traceIdForRuntimeResult(result: unknown) {
+  return parseToolCallResult(result)?.provenance.traceId;
+}
+
+function traceIdForEventIds(
+  events: readonly RuntimeEvent[],
+  eventIds: readonly string[]
+) {
+  const eventIdSet = new Set(eventIds);
+
+  return events.find((event) => eventIdSet.has(event.id))?.traceId;
+}
+
+function parseToolCallResult(result: unknown): ToolCallResult | undefined {
+  const parsed = ToolCallResultSchema.safeParse(result);
+  return parsed.success ? parsed.data : undefined;
+}
+
+function actionDispatchedRecordFor(input: {
+  observability: NormalizedMcpObservability;
+  observed: ObservedRequest;
+  binding: EnabledMcpToolBinding;
+  runId: string;
+  eventIds: readonly [string, ...string[]];
+  traceId: string;
+  toolResult: ToolCallResult | undefined;
+}): McpActionDispatched {
+  return {
+    schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+    recordId: input.observability.correlation.recordId(),
+    type: "mcp.action.dispatched",
+    timestamp: input.observability.correlation.now(),
+    sessionId: input.observability.session.sessionId,
+    mcpRequestId: input.observed.mcpRequestId,
+    runId: input.runId,
+    runtimeOperation: String(input.binding.runtimeOperation),
+    eventIds: [...input.eventIds],
+    traceId: input.traceId,
+    toolName: input.binding.name,
+    principal: input.observed.principal,
+    ...(input.toolResult === undefined
+      ? {}
+      : { toolProvenance: input.toolResult.provenance })
+  };
+}
+
+function nonEmptyArray<T>(values: readonly T[]): [T, ...T[]] | undefined {
+  const [first, ...rest] = values;
+
+  return first === undefined ? undefined : [first, ...rest];
+}
+
+function externalInvokedRecordFor(input: {
+  observability: NormalizedMcpObservability;
+  observed: ObservedRequest;
+  runId?: string | undefined;
+  toolResult: ToolCallResult | undefined;
+  runtimeResult: unknown;
+}): McpExternalInvoked | undefined {
+  const observation = externalObservationFromRuntimeResult(input.runtimeResult);
+
+  if (observation === undefined || input.toolResult === undefined) {
+    return undefined;
+  }
+
+  return {
+    schemaVersion: MCP_AUDIT_SCHEMA_VERSION,
+    recordId: input.observability.correlation.recordId(),
+    type: "mcp.external.invoked",
+    timestamp: input.observability.correlation.now(),
+    sessionId: input.observability.session.sessionId,
+    mcpRequestId: input.observed.mcpRequestId,
+    serverId: observation.serverId,
+    pinnedVersion: observation.pinnedVersion,
+    toolName: observation.toolName,
+    argsHash: observation.argsHash,
+    resultHash: observation.resultHash,
+    traceId: input.toolResult.provenance.traceId,
+    trustClass: "external_observation",
+    principal: input.observed.principal,
+    ...(input.runId === undefined ? {} : { runId: input.runId })
+  };
+}
+
+function externalObservationFromRuntimeResult(result: unknown) {
+  const direct = recordValue(readProperty(result, "externalObservation"));
+
+  if (
+    direct.class === "external_observation" &&
+    typeof direct.serverId === "string" &&
+    typeof direct.pinnedVersion === "string" &&
+    typeof direct.toolName === "string" &&
+    typeof direct.argsHash === "string" &&
+    typeof direct.resultHash === "string"
+  ) {
+    return {
+      serverId: direct.serverId,
+      pinnedVersion: direct.pinnedVersion,
+      toolName: direct.toolName,
+      argsHash: direct.argsHash,
+      resultHash: direct.resultHash
+    };
+  }
+
+  const output = recordValue(readProperty(result, "output"));
+  const nested = recordValue(output.externalObservation);
+
+  if (
+    nested.class === "external_observation" &&
+    typeof nested.serverId === "string" &&
+    typeof nested.pinnedVersion === "string" &&
+    typeof nested.toolName === "string" &&
+    typeof nested.argsHash === "string" &&
+    typeof nested.resultHash === "string"
+  ) {
+    return {
+      serverId: nested.serverId,
+      pinnedVersion: nested.pinnedVersion,
+      toolName: nested.toolName,
+      argsHash: nested.argsHash,
+      resultHash: nested.resultHash
+    };
+  }
+
+  return undefined;
+}
+
+function runtimeDenialGateForCode(code: string) {
+  if (code === "policy_denied" || code === "policy_error") {
+    return "PolicyVerdict";
+  }
+
+  if (code === "approval_required") {
+    return "approval";
+  }
+
+  return "runtime";
+}
+
+function provenanceGapResponse(error: ReturnType<typeof createProvenanceGapError>) {
+  return errorResponse({
+    code: error.code,
+    message: error.message,
+    retryable: error.retryable,
+    operatorAction: error.operatorAction
+  });
+}
+
+function readOnlyProvenanceGapResponse(
+  operation: string,
+  error: ReturnType<typeof createProvenanceGapError>
+): McpProtocolResponse {
+  const response = provenanceGapResponse(error);
+
+  switch (operation) {
+    case "tools/list":
+      return {
+        ...response,
+        tools: []
+      };
+    case "resources/list":
+      return {
+        ...response,
+        resources: []
+      };
+    case "prompts/list":
+      return {
+        ...response,
+        prompts: []
+      };
+    default:
+      return response;
+  }
+}
+
+function policyDecisionRefForObservedDenial(input: {
+  observed: ObservedRequest;
+  code: string;
+  gate: string;
+  target?: string | undefined;
+  runId?: string | undefined;
+  traceId?: string | undefined;
+}) {
+  return `sha256:mcp-denial:${createHash("sha256")
+    .update(
+      canonicalJsonText({
+        mcpRequestId: input.observed.mcpRequestId,
+        argsHash: input.observed.argsHash,
+        operation: input.observed.operation,
+        code: input.code,
+        gate: input.gate,
+        target: input.target,
+        runId: input.runId,
+        traceId: input.traceId,
+        principal: input.observed.principal
+      })
+    )
+    .digest("hex")}`;
+}
+
+function runIdFromResourceUri(uri: string) {
+  const match = /^specwright:\/\/runs\/([^/]+)\//.exec(uri);
+  return match?.[1];
+}
+
+function countHashReferences(value: string) {
+  return value.match(/sha256:/g)?.length ?? 0;
+}
+
+function readProperty(value: unknown, key: string): unknown {
+  return isRecord(value) ? value[key] : undefined;
+}
+
+function messageFromUnknown(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function resultForRuntimeValue(result: unknown): McpToolsCallResponse {
