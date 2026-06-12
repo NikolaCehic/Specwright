@@ -13,11 +13,13 @@ import type { RunInput, RuntimeEvent, ToolCallRequest } from "@specwright/schema
 import {
   MANDATORY_COVERAGE_RULES,
   TraceRecorder,
+  TraceEgressError,
   TraceRecorderError,
   assertTraceAttributed,
   getCoverageVerdict,
   readTrace,
   readTraceForAudit,
+  redactTraceForEgress,
   recordTraceSpan,
   writeTrace
 } from "./index";
@@ -341,6 +343,234 @@ describe("trace recorder", () => {
       kind: "tool",
       parentSpanId: "span-mcp-tools-call"
     });
+  });
+
+  test("redacts trace export metadata while preserving attribution, hashes, and event links", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-trace-egress",
+      traceId: "trace-egress",
+      input: runInput,
+      harness
+    });
+    const requested = await appendEvent({
+      rootDir,
+      runId: "run-trace-egress",
+      type: "tool.requested",
+      payload: {
+        request: coverageToolRequest
+      },
+      timestamp: "2026-06-12T00:00:00.000Z"
+    });
+    const completed = await appendEvent({
+      rootDir,
+      runId: "run-trace-egress",
+      type: "tool.completed",
+      payload: {
+        request: coverageToolRequest,
+        result: {
+          toolCallId: "tool-call-egress",
+          status: "success",
+          output: {
+            contents: "TRACE_DATABASE_URL=postgres://trace-egress-secret"
+          },
+          provenance: {
+            toolId: "fs.read",
+            toolVersion: "0.1.0",
+            adapterVersion: "0.1.0",
+            argsHash: "sha256:event-args",
+            resultHash: "sha256:event-result",
+            cacheStatus: "bypass",
+            traceId: "trace-egress",
+            decisionHash: "sha256:event-decision"
+          }
+        }
+      },
+      causationId: requested.event.id,
+      timestamp: "2026-06-12T00:00:01.000Z"
+    });
+
+    await recordTraceSpan({
+      rootDir,
+      runId: "run-trace-egress",
+      traceId: "trace-egress",
+      runtimeVersion: "0.1.0",
+      harnessSpecHash: harness.specHash,
+      hostAdapter: "cli",
+      span: {
+        spanId: "span-trace-egress-tool",
+        kind: "tool",
+        name: "tool.fs.read",
+        status: "success",
+        startedAt: "2026-06-12T00:00:00.000Z",
+        endedAt: "2026-06-12T00:00:01.000Z",
+        eventIds: [requested.event.id, completed.event.id],
+        metadata: {
+          phaseId: "evidence",
+          toolId: "fs.read",
+          toolVersion: "0.1.0",
+          toolCallId: "tool-call-egress",
+          toolStatus: "success",
+          cacheStatus: "bypass",
+          policyStatus: "allow",
+          tenantId: "tenant-a",
+          args: {
+            token: "sk_live_trace_export_args"
+          },
+          output: {
+            contents: "TRACE_DATABASE_URL=postgres://trace-egress-secret"
+          },
+          mysteryPayload: "raw mystery trace payload",
+          sourceText: "sk_live_unlabeled_trace_source",
+          argsHash: "sha256:trace-egress-args",
+          resultHash: "sha256:trace-egress-result"
+        }
+      }
+    });
+
+    const trace = await readTrace({
+      rootDir,
+      runId: "run-trace-egress"
+    });
+    const paths = getRunStorePaths(rootDir, "run-trace-egress");
+    const rawTraceJson = await readFile(paths.tracePath, "utf8");
+    const first = redactTraceForEgress(trace, {
+      tenantScope: "tenant-a",
+      sink: "trace-export",
+      requester: "auditor@example.invalid",
+      requestedAt: "2026-06-12T00:00:02.000Z"
+    });
+    const second = redactTraceForEgress(trace, {
+      tenantScope: "tenant-a",
+      sink: "trace-export",
+      requester: "auditor@example.invalid",
+      requestedAt: "2026-06-12T00:00:02.000Z"
+    });
+    const serialized = JSON.stringify(first.trace);
+
+    expect(JSON.stringify(second.trace)).toBe(serialized);
+    expect(first.trace).toMatchObject({
+      runId: "run-trace-egress",
+      traceId: "trace-egress",
+      runtimeVersion: "0.1.0",
+      harnessSpecHash: "sha256:test",
+      hostAdapter: "cli",
+      metadata: {
+        tenantId: "tenant-a",
+        egress: {
+          tenantScope: "tenant-a",
+          sink: "trace-export",
+          runId: "run-trace-egress",
+          traceId: "trace-egress"
+        }
+      }
+    });
+    expect(first.trace.spans[0]?.eventIds).toEqual([
+      requested.event.id,
+      completed.event.id
+    ]);
+    expect(serialized).toContain("sha256:trace-egress-args");
+    expect(serialized).toContain("sha256:trace-egress-result");
+    expect(serialized).toContain("\"shape\"");
+    expect(serialized).not.toContain("sk_live_trace_export_args");
+    expect(serialized).not.toContain("TRACE_DATABASE_URL=");
+    expect(serialized).not.toContain("raw mystery trace payload");
+    expect(serialized).not.toContain("sk_live_unlabeled_trace_source");
+    expect(first.restrictions).toContainEqual(
+      expect.objectContaining({
+        reasonCode: "unlabeled_restricted_field",
+        path: expect.stringContaining("mysteryPayload")
+      })
+    );
+    expect(first.auditRecords).toContainEqual(
+      expect.objectContaining({
+        action: "restrict",
+        reasonCode: "unlabeled_restricted_field",
+        runId: "run-trace-egress",
+        traceId: "trace-egress"
+      })
+    );
+    expect(JSON.stringify(first.auditRecords)).not.toContain(
+      "sk_live_unlabeled_trace_source"
+    );
+    expect(JSON.stringify(first.auditRecords)).not.toContain(
+      "raw mystery trace payload"
+    );
+    expect(await readFile(paths.tracePath, "utf8")).toBe(rawTraceJson);
+    expect(rawTraceJson).toContain("sk_live_trace_export_args");
+  });
+
+  test("fails closed for unscoped, invalid, and cross-tenant trace export requests", async () => {
+    await createRun({
+      rootDir,
+      runId: "run-trace-egress-rejections",
+      traceId: "trace-egress-rejections",
+      input: runInput,
+      harness
+    });
+    await recordTraceSpan({
+      rootDir,
+      runId: "run-trace-egress-rejections",
+      traceId: "trace-egress-rejections",
+      span: {
+        spanId: "span-tenant-b",
+        kind: "phase",
+        name: "phase.tenant",
+        status: "success",
+        startedAt: "2026-06-12T00:00:00.000Z",
+        metadata: {
+          phaseId: "tenant",
+          tenantId: "tenant-b"
+        }
+      }
+    });
+    const trace = await readTrace({
+      rootDir,
+      runId: "run-trace-egress-rejections"
+    });
+
+    expect(() =>
+      redactTraceForEgress(trace, {
+        sink: "trace-export",
+        requestedAt: "2026-06-12T00:00:00.000Z"
+      })
+    ).toThrow(TraceEgressError);
+    expect(() =>
+      redactTraceForEgress(trace, {
+        tenantScope: "",
+        sink: "trace-export",
+        requestedAt: "2026-06-12T00:00:00.000Z"
+      })
+    ).toThrow(TraceEgressError);
+    expect(() =>
+      redactTraceForEgress(trace, {
+        tenantScope: "tenant-b",
+        sink: "not-a-sink",
+        requestedAt: "2026-06-12T00:00:00.000Z"
+      })
+    ).toThrow(TraceEgressError);
+
+    try {
+      redactTraceForEgress(trace, {
+        tenantScope: "tenant-a",
+        sink: "trace-export",
+        requestedAt: "2026-06-12T00:00:00.000Z"
+      });
+      throw new Error("Expected cross-tenant trace egress to fail");
+    } catch (error) {
+      expect(error).toBeInstanceOf(TraceEgressError);
+      expect(error).toMatchObject({
+        code: "cross_tenant_egress",
+        auditRecords: [
+          expect.objectContaining({
+            action: "reject",
+            reasonCode: "cross_tenant_egress",
+            runId: "run-trace-egress-rejections",
+            traceId: "trace-egress-rejections"
+          })
+        ]
+      });
+    }
   });
 
   test("rejects unknown span kinds", async () => {

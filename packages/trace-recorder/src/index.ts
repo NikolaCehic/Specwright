@@ -9,6 +9,19 @@ import type {
   ToolCallStatus
 } from "@specwright/schemas";
 
+export {
+  redactTraceForEgress,
+  TraceEgressError,
+  type TraceEgressAuditRecord,
+  type TraceEgressErrorCode,
+  type TraceEgressRequest,
+  type TraceEgressRestriction,
+  type TraceEgressResult,
+  type TraceEgressSink,
+  type TraceRedactedShape,
+  type TraceRedactedValue
+} from "./egress";
+
 export const TRACE_RECORDER_VERSION = "0.1.0";
 
 export type TraceSpanKind =
