@@ -21,7 +21,7 @@ export interface FusionOutput {
 }
 
 export function fuseCandidates(input: FuseCandidatesInput): FusionOutput {
-  const weights = actualWeights(input.retrievers, input.method, input.weights);
+  const weights = actualWeights(input.retrievers, input.weights);
   const hits = input.candidates
     .map((candidate) => {
       const fusedScore =
@@ -30,7 +30,6 @@ export function fuseCandidates(input: FuseCandidatesInput): FusionOutput {
           : reciprocalRankFusionScore(
               candidate,
               input.retrievers,
-              input.method,
               weights,
               input.rrfK
             );
@@ -62,7 +61,6 @@ export function compareFusedCandidates(
 function reciprocalRankFusionScore(
   candidate: NormalizedCandidate,
   retrievers: readonly RetrieverName[],
-  method: FusionMethod,
   weights: RetrieverWeightMap,
   rrfK: number
 ): number {
@@ -74,7 +72,7 @@ function reciprocalRankFusionScore(
       continue;
     }
 
-    const weight = method === "rrf" ? 1 : weights[retriever] ?? 1;
+    const weight = weights[retriever] ?? 1;
     score += weight * (1 / (rrfK + rank));
   }
 
@@ -102,12 +100,11 @@ function weightedLinearScore(
 
 function actualWeights(
   retrievers: readonly RetrieverName[],
-  method: FusionMethod,
   weights: RetrieverWeightMap | undefined
 ): RetrieverWeightMap {
   const actual: Partial<Record<RetrieverName, number>> = {};
   for (const retriever of retrievers) {
-    actual[retriever] = method === "rrf" ? 1 : weights?.[retriever] ?? 1;
+    actual[retriever] = weights?.[retriever] ?? 1;
   }
 
   return actual as RetrieverWeightMap;

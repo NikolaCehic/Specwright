@@ -75,6 +75,53 @@ describe("hybrid ranking fusion", () => {
     expect(first.hits[0]?.cacheStatus).toBe("miss");
   });
 
+  test("RRF applies caller-supplied weights and rrf_weighted matches the same vector", async () => {
+    const fixture = readRankingFixture("hybrid-candidates.json");
+    const weightedRrfQuery = baseQuery(fixture.query, {
+      k: 4,
+      fusion: {
+        method: "rrf",
+        rrfK: 60,
+        weights: { bm25: 0, proximity: 0, dense: 10 }
+      },
+      diversify: { method: "none" }
+    });
+    const explicitWeightedRrfQuery = baseQuery(fixture.query, {
+      k: 4,
+      fusion: {
+        method: "rrf_weighted",
+        rrfK: 60,
+        weights: { bm25: 0, proximity: 0, dense: 10 }
+      },
+      diversify: { method: "none" }
+    });
+    const weightedRrf = await rankHybridCandidates({
+      query: weightedRrfQuery,
+      lexical: fixture.lexical,
+      dense: fixture.dense
+    });
+    const explicitWeightedRrf = await rankHybridCandidates({
+      query: explicitWeightedRrfQuery,
+      lexical: fixture.lexical,
+      dense: fixture.dense
+    });
+
+    expect(weightedRrf.hits.map((hit) => hit.chunkId)).toEqual([
+      "chunk-beta",
+      "chunk-epsilon",
+      "chunk-alpha",
+      "chunk-zeta"
+    ]);
+    expect(weightedRrf.provenance.fusion.weights).toEqual({
+      bm25: 0,
+      proximity: 0,
+      dense: 10
+    });
+    expect(explicitWeightedRrf.hits.map((hit) => hit.chunkId)).toEqual(
+      weightedRrf.hits.map((hit) => hit.chunkId)
+    );
+  });
+
   test("weighted fusion is deterministic with min-max and z-score normalization", async () => {
     const fixture = readRankingFixture("hybrid-candidates.json");
     const query = baseQuery(fixture.query, {
