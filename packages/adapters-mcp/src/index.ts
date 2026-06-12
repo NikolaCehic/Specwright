@@ -16,6 +16,64 @@ import {
 } from "@specwright/schemas";
 import { z, type ZodError, type ZodTypeAny } from "zod";
 
+export {
+  EXTERNAL_MCP_CAPABILITY_ID_PREFIX,
+  ExternalMcpManifestError,
+  ExternalMcpServerManifestSchema,
+  ExternalMcpTenantManifestSchema,
+  ExternalMcpToolManifestSchema,
+  assertExternalMcpEndpointAllowlisted,
+  assertExternalMcpPhaseAllowed,
+  externalMcpCapabilityId,
+  findAllowedExternalMcpTool,
+  findExternalMcpServer,
+  isEndpointAllowlisted,
+  parseExternalMcpManifest,
+  type ExternalMcpManifestErrorCode,
+  type ExternalMcpServerManifest,
+  type ExternalMcpTenantManifest,
+  type ExternalMcpToolManifest
+} from "./external-manifest";
+export {
+  type CreateExternalMcpCapabilityAdapterOptions,
+  type ExternalMcpTransport,
+  type ExternalMcpTransportRequest,
+  type ExternalMcpTransportResult
+} from "./external-capability-adapter";
+export {
+  createExternalMcpCapabilityDefinitions,
+  type CreateExternalMcpCapabilityDefinitionsOptions
+} from "./external-capability";
+export {
+  EXTERNAL_MCP_OBSERVATION_CLASS,
+  EXTERNAL_MCP_OBSERVATION_EVIDENCE_CLASS,
+  EXTERNAL_MCP_OBSERVATION_SOURCE_AUTHORITY,
+  ExternalMcpObservationSchema,
+  classifyExternalMcpObservation,
+  classifyExternalMcpToolResult,
+  externalMcpAdapterResultFromOutput,
+  externalMcpObservedOutputSchema,
+  type ExternalMcpObservation,
+  type ExternalMcpObservedOutput
+} from "./external-observation";
+export {
+  ExternalMcpQuarantineState,
+  createExternalMcpQuarantineState,
+  externalMcpQuarantineKey,
+  type ExternalMcpQuarantineKey,
+  type ExternalMcpQuarantineRecord,
+  type ExternalMcpQuarantineStateOptions,
+  type ExternalMcpQuarantineTrigger
+} from "./external-quarantine";
+export {
+  createExternalMcpBrokerFactory,
+  registerExternalMcpCapabilities,
+  withExternalMcpBrokerCapabilities,
+  type CreateExternalMcpBrokerFactoryOptions,
+  type RegisterExternalMcpCapabilitiesOptions
+} from "./register-external-capabilities";
+export { mcpPacket04OpenContractItems } from "./external-open-contracts";
+
 export type RuntimeOperationName = keyof RuntimeApi;
 
 export type McpToolStability = "stable" | "experimental";
