@@ -85,6 +85,14 @@
         "zod": "^3.22.4",
       },
     },
+    "packages/memory": {
+      "name": "@specwright/memory",
+      "version": "0.0.0",
+      "dependencies": {
+        "@specwright/schemas": "workspace:*",
+        "zod": "^3.22.4",
+      },
+    },
     "packages/operations": {
       "name": "@specwright/operations",
       "version": "0.0.0",
@@ -179,6 +187,8 @@
     "@specwright/gate-engine": ["@specwright/gate-engine@workspace:packages/gate-engine"],
 
     "@specwright/harness-loader": ["@specwright/harness-loader@workspace:packages/harness-loader"],
+
+    "@specwright/memory": ["@specwright/memory@workspace:packages/memory"],
 
     "@specwright/operations": ["@specwright/operations@workspace:packages/operations"],
 
