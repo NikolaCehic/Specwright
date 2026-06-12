@@ -1,0 +1,161 @@
+{
+  "hits": [
+    {
+      "authority": "repo",
+      "cacheStatus": "miss",
+      "candidateSetSizes": {
+        "bm25": 3,
+        "dense": 4,
+        "proximity": 3
+      },
+      "chunkId": "chunk-alpha",
+      "documentId": "doc-alpha",
+      "fusedScore": 0.04839549075403121,
+      "injectionFlag": false,
+      "normalized": {
+        "bm25": 1,
+        "dense": 0.3333333333333333,
+        "proximity": 0.5
+      },
+      "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+      "rank": 1,
+      "scores": {
+        "bm25": 12,
+        "dense": 0.82,
+        "proximity": 4
+      },
+      "sourceHash": "sha256:7e84c4e04817c9f55ebb2845f2fce3f49695f3c2dfd5ae3985fb64ddaff03781",
+      "sourceRef": "docs/runtime.md#alpha",
+      "trustLabel": "repo"
+    },
+    {
+      "authority": "design",
+      "cacheStatus": "miss",
+      "candidateSetSizes": {
+        "bm25": 3,
+        "dense": 4,
+        "proximity": 3
+      },
+      "chunkId": "chunk-beta",
+      "documentId": "doc-beta",
+      "fusedScore": 0.03252247488101534,
+      "injectionFlag": false,
+      "normalized": {
+        "bm25": 0.5,
+        "dense": 1
+      },
+      "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+      "rank": 2,
+      "scores": {
+        "bm25": 10,
+        "dense": 0.91
+      },
+      "sourceHash": "sha256:81a118f1d478f286959d4d9f69e47fdf0503d33097b8b0e887fb0a5a2ee06ae8",
+      "sourceRef": "docs/runtime.md#beta",
+      "trustLabel": "design"
+    },
+    {
+      "authority": "external",
+      "cacheStatus": "miss",
+      "candidateSetSizes": {
+        "bm25": 3,
+        "dense": 4,
+        "proximity": 3
+      },
+      "chunkId": "chunk-delta",
+      "documentId": "doc-delta",
+      "fusedScore": 0.031746031746031744,
+      "injectionFlag": false,
+      "normalized": {
+        "bm25": 0.3333333333333333,
+        "proximity": 0.3333333333333333
+      },
+      "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+      "rank": 3,
+      "scores": {
+        "bm25": 7,
+        "proximity": 2
+      },
+      "sourceHash": "sha256:43942a8a9285e2eb9473034c26523046fb660714693d26c52b4e7937ea76e531",
+      "sourceRef": "docs/retrieval.md#delta",
+      "trustLabel": "external"
+    },
+    {
+      "authority": "repo",
+      "cacheStatus": "miss",
+      "candidateSetSizes": {
+        "bm25": 3,
+        "dense": 4,
+        "proximity": 3
+      },
+      "chunkId": "chunk-gamma",
+      "documentId": "doc-gamma",
+      "fusedScore": 0.01639344262295082,
+      "injectionFlag": false,
+      "normalized": {
+        "proximity": 1
+      },
+      "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+      "rank": 4,
+      "scores": {
+        "proximity": 8
+      },
+      "sourceHash": "sha256:822c282fe0fd28cba87d568e7f4381fab3f881aae4d95f07430afd1f95e7a564",
+      "sourceRef": "docs/retrieval.md#gamma",
+      "trustLabel": "repo"
+    }
+  ],
+  "provenance": {
+    "annParams": {
+      "efConstruction": 24,
+      "efSearch": 24,
+      "kind": "hnsw",
+      "levelSeed": "ranking-fixture",
+      "m": 4,
+      "maxLevel": 3
+    },
+    "cacheStatus": "miss",
+    "candidateSetSizes": {
+      "bm25": 3,
+      "dense": 4,
+      "proximity": 3
+    },
+    "chunkingStrategy": "hybrid",
+    "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+    "corpusIds": [
+      "semantic.test"
+    ],
+    "degraded": [],
+    "distanceMetric": "cosine",
+    "embeddingDims": 16,
+    "embeddingModel": "hashed-token-projection",
+    "embeddingModelVersion": "1.0.0",
+    "embeddingProvider": "specwright-local",
+    "emptyResult": false,
+    "fusion": {
+      "method": "rrf",
+      "rrfK": 60,
+      "weights": {
+        "bm25": 1,
+        "dense": 1,
+        "proximity": 1
+      }
+    },
+    "indexId": "hybrid:lexical.test+dense.test",
+    "indexVersion": "sha256:dac7e43860e0e2e0f7c2d80557c8396a3f55903e8b6ecccae93c066cb2f86bdf",
+    "mmrLambda": 0.7,
+    "mmrSimilarityMetric": "disabled",
+    "normalizationMode": "rank_based",
+    "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+    "redactionProfileVersion": "ranking-test-redaction-v1",
+    "redactionSafe": true,
+    "rerankSkipped": false,
+    "rerankTopN": 0,
+    "retrievers": [
+      "bm25",
+      "proximity",
+      "dense"
+    ]
+  },
+  "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b"
+}

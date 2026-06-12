@@ -1,0 +1,77 @@
+{
+  "query": "near duplicate retrieval",
+  "lexical": {
+    "queryHash": "sha256:98d818c93f337d133a27818db9d44cd7b440b6e716f97fad95c8a6c054f98ee4",
+    "hits": [
+      {
+        "chunkId": "chunk-near-a1",
+        "documentId": "doc-near-a",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/near.md#a1",
+        "sourceHash": "sha256:15c6fe833afc929346bbdb7acc1cd6992d1cfb8cf016165458736bc3a71ee9a3",
+        "authority": "repo",
+        "trustLabel": "repo",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 1,
+        "scores": { "bm25": 12, "proximity": 6 },
+        "retrieverRanks": { "bm25": 1, "proximity": 1 },
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-near-a2",
+        "documentId": "doc-near-a",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/near.md#a2",
+        "sourceHash": "sha256:15c6fe833afc929346bbdb7acc1cd6992d1cfb8cf016165458736bc3a71ee9a3",
+        "authority": "repo",
+        "trustLabel": "repo",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 2,
+        "scores": { "bm25": 11, "proximity": 5 },
+        "retrieverRanks": { "bm25": 2, "proximity": 2 },
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-near-c",
+        "documentId": "doc-near-c",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/near.md#c",
+        "sourceHash": "sha256:fa9ebe095eefaf6361441bea40340cc29f0399400aaccfb893d9b69b5c059c81",
+        "authority": "repo",
+        "trustLabel": "repo",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 3,
+        "scores": { "bm25": 10, "proximity": 4 },
+        "retrieverRanks": { "bm25": 3, "proximity": 3 },
+        "injectionFlag": false
+      }
+    ],
+    "provenance": {
+      "corpusIds": ["semantic.test"],
+      "indexId": "lexical.test",
+      "indexVersion": "sha256:1db1fbf737f3b704bb14a0597df4010292614e5c4c06f630c4f178a4e9502946",
+      "indexFormatVersion": "lexical-inverted-index-v1",
+      "analyzer": {
+        "id": "specwright-prose",
+        "version": "1.0.0",
+        "lowercase": true,
+        "stopwords": true,
+        "stemming": true,
+        "asciiFold": true,
+        "preserveCase": false,
+        "preserveIdentifiers": false
+      },
+      "bm25": { "k1": 1.2, "b": 0.75 },
+      "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+      "chunkingStrategyVersions": ["sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4"],
+      "retrievers": ["bm25", "proximity"],
+      "candidateSetSizes": { "bm25": 3, "proximity": 3 },
+      "queryHash": "sha256:98d818c93f337d133a27818db9d44cd7b440b6e716f97fad95c8a6c054f98ee4",
+      "cacheStatus": "miss",
+      "redactionSafe": true
+    }
+  }
+}

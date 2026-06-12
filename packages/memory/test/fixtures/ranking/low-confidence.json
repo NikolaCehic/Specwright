@@ -1,0 +1,62 @@
+{
+  "query": "low confidence query",
+  "lexical": {
+    "queryHash": "sha256:514bb7af96357e85b9082547d6e730e4342715abeb7dde48e6bf31d84184ceb9",
+    "hits": [
+      {
+        "chunkId": "chunk-low-a",
+        "documentId": "doc-low-a",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/low.md#a",
+        "sourceHash": "sha256:ce354e51094ac01eff1c218e34d98c8ebbe296794b0e82f86e072ae0b68e816b",
+        "authority": "external",
+        "trustLabel": "external",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 1,
+        "scores": { "bm25": 0.01 },
+        "retrieverRanks": { "bm25": 1 },
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-low-b",
+        "documentId": "doc-low-b",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/low.md#b",
+        "sourceHash": "sha256:e0ce27fdcaaafa9d6fa450b65bd458b8cfd8f0125ed72d5a80ca79c0d12dae8f",
+        "authority": "external",
+        "trustLabel": "external",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 2,
+        "scores": { "bm25": 0.005 },
+        "retrieverRanks": { "bm25": 2 },
+        "injectionFlag": false
+      }
+    ],
+    "provenance": {
+      "corpusIds": ["semantic.test"],
+      "indexId": "lexical.test",
+      "indexVersion": "sha256:1db1fbf737f3b704bb14a0597df4010292614e5c4c06f630c4f178a4e9502946",
+      "indexFormatVersion": "lexical-inverted-index-v1",
+      "analyzer": {
+        "id": "specwright-prose",
+        "version": "1.0.0",
+        "lowercase": true,
+        "stopwords": true,
+        "stemming": true,
+        "asciiFold": true,
+        "preserveCase": false,
+        "preserveIdentifiers": false
+      },
+      "bm25": { "k1": 1.2, "b": 0.75 },
+      "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+      "chunkingStrategyVersions": ["sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4"],
+      "retrievers": ["bm25", "proximity"],
+      "candidateSetSizes": { "bm25": 2, "proximity": 0 },
+      "queryHash": "sha256:514bb7af96357e85b9082547d6e730e4342715abeb7dde48e6bf31d84184ceb9",
+      "cacheStatus": "miss",
+      "redactionSafe": true
+    }
+  }
+}

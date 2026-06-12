@@ -1,0 +1,182 @@
+{
+  "query": "runtime kernel retrieval",
+  "lexical": {
+    "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+    "hits": [
+      {
+        "chunkId": "chunk-alpha",
+        "documentId": "doc-alpha",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/runtime.md#alpha",
+        "sourceHash": "sha256:7e84c4e04817c9f55ebb2845f2fce3f49695f3c2dfd5ae3985fb64ddaff03781",
+        "authority": "repo",
+        "trustLabel": "repo",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 1,
+        "scores": { "bm25": 12, "proximity": 4 },
+        "retrieverRanks": { "bm25": 1, "proximity": 2 },
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-beta",
+        "documentId": "doc-beta",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/runtime.md#beta",
+        "sourceHash": "sha256:81a118f1d478f286959d4d9f69e47fdf0503d33097b8b0e887fb0a5a2ee06ae8",
+        "authority": "design",
+        "trustLabel": "design",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 2,
+        "scores": { "bm25": 10 },
+        "retrieverRanks": { "bm25": 2 },
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-gamma",
+        "documentId": "doc-gamma",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/retrieval.md#gamma",
+        "sourceHash": "sha256:822c282fe0fd28cba87d568e7f4381fab3f881aae4d95f07430afd1f95e7a564",
+        "authority": "repo",
+        "trustLabel": "repo",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 3,
+        "scores": { "proximity": 8 },
+        "retrieverRanks": { "proximity": 1 },
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-delta",
+        "documentId": "doc-delta",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/retrieval.md#delta",
+        "sourceHash": "sha256:43942a8a9285e2eb9473034c26523046fb660714693d26c52b4e7937ea76e531",
+        "authority": "external",
+        "trustLabel": "external",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "rank": 4,
+        "scores": { "bm25": 7, "proximity": 2 },
+        "retrieverRanks": { "bm25": 3, "proximity": 3 },
+        "injectionFlag": false
+      }
+    ],
+    "provenance": {
+      "corpusIds": ["semantic.test"],
+      "indexId": "lexical.test",
+      "indexVersion": "sha256:1db1fbf737f3b704bb14a0597df4010292614e5c4c06f630c4f178a4e9502946",
+      "indexFormatVersion": "lexical-inverted-index-v1",
+      "analyzer": {
+        "id": "specwright-prose",
+        "version": "1.0.0",
+        "lowercase": true,
+        "stopwords": true,
+        "stemming": true,
+        "asciiFold": true,
+        "preserveCase": false,
+        "preserveIdentifiers": false
+      },
+      "bm25": { "k1": 1.2, "b": 0.75 },
+      "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+      "chunkingStrategyVersions": ["sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4"],
+      "retrievers": ["bm25", "proximity"],
+      "candidateSetSizes": { "bm25": 3, "proximity": 3 },
+      "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+      "cacheStatus": "miss",
+      "redactionSafe": true
+    }
+  },
+  "dense": {
+    "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+    "hits": [
+      {
+        "chunkId": "chunk-beta",
+        "documentId": "doc-beta",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/runtime.md#beta",
+        "sourceHash": "sha256:81a118f1d478f286959d4d9f69e47fdf0503d33097b8b0e887fb0a5a2ee06ae8",
+        "authority": "design",
+        "trustLabel": "design",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "denseScore": 0.91,
+        "rank": 1,
+        "distanceMetric": "cosine",
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-epsilon",
+        "documentId": "doc-epsilon",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/memory.md#epsilon",
+        "sourceHash": "sha256:cb85de833619513afe133ffb8d02c3b700d9942914d9e0a8aa37040c0516e768",
+        "authority": "repo",
+        "trustLabel": "repo",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "denseScore": 0.87,
+        "rank": 2,
+        "distanceMetric": "cosine",
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-alpha",
+        "documentId": "doc-alpha",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/runtime.md#alpha",
+        "sourceHash": "sha256:7e84c4e04817c9f55ebb2845f2fce3f49695f3c2dfd5ae3985fb64ddaff03781",
+        "authority": "repo",
+        "trustLabel": "repo",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "denseScore": 0.82,
+        "rank": 3,
+        "distanceMetric": "cosine",
+        "injectionFlag": false
+      },
+      {
+        "chunkId": "chunk-zeta",
+        "documentId": "doc-zeta",
+        "corpusId": "semantic.test",
+        "tenantId": "tenant-test",
+        "sourceRef": "docs/memory.md#zeta",
+        "sourceHash": "sha256:2791b74bfc1c71e5c207ccc3675784a48e4dc9dad8c230a784656f8ba29739e5",
+        "authority": "generated",
+        "trustLabel": "generated",
+        "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+        "denseScore": 0.75,
+        "rank": 4,
+        "distanceMetric": "cosine",
+        "injectionFlag": false
+      }
+    ],
+    "provenance": {
+      "corpusIds": ["semantic.test"],
+      "indexId": "dense.test",
+      "indexVersion": "sha256:44c02a66e9bed2fbfca69854feace63737c461673692a447bf28bf0f97ba8eb9",
+      "indexFormatVersion": "dense-vector-index-v1",
+      "embeddingProvider": "specwright-local",
+      "embeddingModel": "hashed-token-projection",
+      "embeddingModelVersion": "1.0.0",
+      "embeddingDims": 16,
+      "distanceMetric": "cosine",
+      "annParams": {
+        "kind": "hnsw",
+        "m": 4,
+        "efConstruction": 24,
+        "efSearch": 24,
+        "levelSeed": "ranking-fixture",
+        "maxLevel": 3
+      },
+      "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4",
+      "chunkingStrategyVersions": ["sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4"],
+      "candidateSetSize": 4,
+      "cacheStatus": "miss",
+      "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+      "redactionSafe": true
+    }
+  }
+}
