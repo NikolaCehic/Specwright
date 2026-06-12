@@ -1,13 +1,19 @@
 import { describe, expect, test } from "bun:test";
 import { executeCli, type CliRuntime } from "@specwright/adapters-cli";
 import type { RuntimeApi } from "@specwright/runtime";
+import { projectRunState } from "@specwright/run-store";
 import {
   createMcpAdapter,
   defaultMcpCatalog,
+  defaultMcpPromptCatalog,
+  defaultMcpResourceCatalog,
   McpCatalogError,
+  mcpPromptBindings,
+  mcpResourceBindings,
   mcpToolBindings,
   registerMcpCatalog,
   registerMcpTool,
+  RuntimeActionDescriptorSchema,
   type McpToolBinding
 } from "./index";
 
@@ -485,6 +491,380 @@ describe("specwright mcp adapter", () => {
       ])
     ).toThrow(McpCatalogError);
   });
+
+  test("resources/list and prompts/list return deterministic closed catalogs without runtime calls", () => {
+    const { runtime, calls } = countedRuntime();
+    const adapter = createMcpAdapter(runtime);
+    const firstResources = adapter.resources.list();
+    const secondResources = adapter.resources.list();
+    const firstPrompts = adapter.prompts.list();
+    const secondPrompts = adapter.prompts.list();
+
+    expect(firstResources).toEqual(secondResources);
+    expect(JSON.stringify(firstResources)).toBe(JSON.stringify(secondResources));
+    expect(firstResources.resources.map((resource) => resource.uriTemplate)).toEqual(
+      mcpResourceBindings.map((binding) => binding.uriTemplate)
+    );
+    expect(
+      firstResources.resources.every(
+        (resource) =>
+          resource.mimeType === "application/json" &&
+          resource.metadata.authorityClass.length > 0 &&
+          resource.metadata.projection.length > 0
+      )
+    ).toBe(true);
+    expect(firstPrompts).toEqual(secondPrompts);
+    expect(JSON.stringify(firstPrompts)).toBe(JSON.stringify(secondPrompts));
+    expect(firstPrompts.prompts.map((prompt) => prompt.name)).toEqual(
+      mcpPromptBindings.map((binding) => binding.name)
+    );
+    expect(defaultMcpResourceCatalog.bindings).toHaveLength(8);
+    expect(defaultMcpPromptCatalog.bindings).toHaveLength(3);
+    expect(calls).toEqual([]);
+  });
+
+  test("resources/read state equals projectRunState and repeated canonical reads are byte-identical", async () => {
+    const runId = "run-resource-state";
+    const events = packet02Events(runId);
+    const expectedState = projectRunState(events);
+    const calls: unknown[] = [];
+    const adapter = createMcpAdapter(
+      fakeRuntime({
+        async getRun(readRunId, options) {
+          calls.push(["getRun", readRunId, options]);
+          return expectedState;
+        }
+      })
+    );
+
+    const first = await adapter.resources.read({
+      uri: `specwright://runs/${runId}/state`,
+      options: {
+        rootDir: "/runs-root"
+      }
+    });
+    const second = await adapter.resources.read({
+      uri: `specwright://runs/${runId}/state`,
+      options: {
+        rootDir: "/runs-root"
+      }
+    });
+
+    expect(first.isError).toBe(false);
+    expect(second.isError).toBe(false);
+
+    if (!first.isError && !second.isError) {
+      expect(first.payload).toEqual(expectedState);
+      expect(first.contents[0].text).toBe(canonicalJson(expectedState));
+      expect(first.contents[0].text).toBe(second.contents[0].text);
+      expect(first.metadata.lastEventId).toBe("event-4");
+      expect(first.metadata.authorityClass).toBe("derived projection");
+      expect(first.metadata.runtimeRead).toBe("getRun");
+    }
+
+    expect(calls).toEqual([
+      ["getRun", runId, { rootDir: "/runs-root" }],
+      ["getRun", runId, { rootDir: "/runs-root" }]
+    ]);
+  });
+
+  test("resources/write is unregistered and performs zero runtime calls", async () => {
+    const { runtime, calls } = countedRuntime();
+    const response = await createMcpAdapter(runtime).dispatch({
+      method: "resources/write",
+      params: {
+        uri: "specwright://runs/run-1/state",
+        payload: {
+          status: "completed"
+        }
+      }
+    });
+
+    expect(response).toMatchObject({
+      isError: true,
+      error: {
+        code: "method_not_found"
+      }
+    });
+    expect(calls).toEqual([]);
+  });
+
+  test("every prompts/get output validates as a runtime action descriptor with zero runtime calls", () => {
+    const { runtime, calls } = countedRuntime();
+    const adapter = createMcpAdapter(runtime);
+    const enabledToolNames = new Set(
+      defaultMcpCatalog.enabledBindings.map((binding) => binding.name)
+    );
+    const magicNames = [
+      "generate_entire_app",
+      "make_design_better",
+      "fix_everything",
+      "create_contract_magically"
+    ];
+
+    for (const prompt of mcpPromptBindings) {
+      const response = adapter.prompts.get({
+        name: prompt.name
+      });
+
+      expect(response.isError).toBe(false);
+
+      if (!response.isError) {
+        const descriptor = RuntimeActionDescriptorSchema.parse(response.action);
+
+        expect(enabledToolNames.has(descriptor.tool)).toBe(true);
+        expect(magicNames).not.toContain(descriptor.tool);
+        expect(JSON.stringify(descriptor)).not.toContain("capabilityExecution");
+        expect(containsInlineExecutionKey(descriptor.arguments)).toBe(false);
+      }
+    }
+
+    const unknown = adapter.prompts.get({
+      name: "specwright_fix_everything"
+    });
+
+    expect(unknown).toMatchObject({
+      isError: true,
+      error: {
+        code: "method_not_found"
+      }
+    });
+    expect(calls).toEqual([]);
+  });
+
+  test("trust labels survive evidence, eval, and artifact resource serialization", async () => {
+    const runId = "run-trust-labels";
+    const events = packet02Events(runId);
+    const adapter = createMcpAdapter(
+      fakeRuntime({
+        async getEvents() {
+          return events;
+        },
+        async replay() {
+          return {
+            state: projectRunState(events),
+            events
+          };
+        }
+      })
+    );
+
+    const evidence = await adapter.resources.read({
+      uri: `specwright://runs/${runId}/evidence`
+    });
+    const evals = await adapter.resources.read({
+      uri: `specwright://runs/${runId}/evals`
+    });
+    const artifact = await adapter.resources.read({
+      uri: `specwright://runs/${runId}/artifacts/artifact-1`
+    });
+
+    expect(evidence.isError).toBe(false);
+    expect(evals.isError).toBe(false);
+    expect(artifact.isError).toBe(false);
+
+    if (!evidence.isError && !evals.isError && !artifact.isError) {
+      expect(evidence.payload).toMatchObject([
+        {
+          class: "source_fact",
+          confidence: "high",
+          authority: "repo"
+        }
+      ]);
+      expect(evidence.contents[0].text).toContain('"class":"source_fact"');
+      expect(evidence.contents[0].text).toContain('"authority":"repo"');
+
+      expect(evals.payload).toMatchObject([
+        {
+          findings: [
+            {
+              metadata: {
+                claimLevel: "inference",
+                confidence: "medium",
+                sourceAuthority: "model"
+              }
+            }
+          ]
+        }
+      ]);
+      expect(evals.contents[0].text).toContain('"claimLevel":"inference"');
+      expect(evals.contents[0].text).toContain('"sourceAuthority":"model"');
+
+      expect(artifact.payload).toMatchObject({
+        claimLevel: "inference",
+        importantClaims: [
+          {
+            claimLevel: "inference",
+            confidence: "medium",
+            authority: "model",
+            metadata: {
+              sourceAuthority: "model"
+            }
+          }
+        ]
+      });
+      expect(artifact.contents[0].text).toContain('"importantClaims"');
+      expect(artifact.contents[0].text).toContain('"authority":"model"');
+    }
+  });
+
+  test("each successful resource read performs exactly one read operation and no mutation", async () => {
+    const runId = "run-one-read";
+    const events = packet02Events(runId);
+    const cases = [
+      [`specwright://runs/${runId}/state`, "getRun"],
+      [`specwright://runs/${runId}/events`, "getEvents"],
+      [`specwright://runs/${runId}/artifacts/artifact-1`, "getEvents"],
+      [`specwright://runs/${runId}/evidence`, "getEvents"],
+      [`specwright://runs/${runId}/evals`, "replay"],
+      [`specwright://runs/${runId}/trace`, "getEvents"],
+      [`specwright://runs/${runId}/report`, "generateReport"]
+    ] as const;
+
+    for (const [uri, expectedOperation] of cases) {
+      const { runtime, calls } = countedRuntime({
+        async getRun() {
+          return projectRunState(events);
+        },
+        async getEvents() {
+          return events;
+        },
+        async replay() {
+          return {
+            state: projectRunState(events),
+            events
+          };
+        },
+        async generateReport() {
+          return fakeReport(runId);
+        }
+      });
+      const response = await createMcpAdapter(runtime).resources.read({ uri });
+
+      expect(response.isError, uri).toBe(false);
+      expect(calls, uri).toEqual([expectedOperation]);
+
+      if (!response.isError && ["state", "events", "evals", "trace"].some((leaf) => uri.endsWith(`/${leaf}`))) {
+        expect(response.metadata.lastEventId, uri).toBe("event-4");
+      }
+
+      if (!response.isError && ["events", "evals", "trace"].some((leaf) => uri.endsWith(`/${leaf}`))) {
+        expect(response.metadata.lastEventSequence, uri).toBe(3);
+      }
+    }
+
+    const { runtime, calls } = countedRuntime();
+    const harness = await createMcpAdapter(runtime).resources.read({
+      uri: "specwright://harnesses/frontend-contract/spec"
+    });
+
+    expect(harness).toMatchObject({
+      isError: true,
+      error: {
+        code: "invalid_request"
+      }
+    });
+    expect(calls).toEqual([]);
+  });
+
+  test("malformed or unknown resource URIs and invalid payloads fail closed", async () => {
+    const { runtime, calls } = countedRuntime();
+    const adapter = createMcpAdapter(runtime);
+    const badUris = [
+      "http://runs/run-1/state",
+      "specwright://",
+      "specwright://runs//state",
+      "specwright://runs/run-1/state/extra",
+      "specwright://runs/run-1/not-a-resource",
+      "specwright://runs/run-1/state?write=true"
+    ];
+
+    for (const uri of badUris) {
+      const response = await adapter.resources.read({ uri });
+
+      expect(response).toMatchObject({
+        isError: true
+      });
+    }
+
+    expect(calls).toEqual([]);
+
+    const invalidCalls: string[] = [];
+    const invalidPayload = await createMcpAdapter(
+      fakeRuntime({
+        async getRun() {
+          invalidCalls.push("getRun");
+          return {
+            invalid: true
+          } as Awaited<ReturnType<RuntimeApi["getRun"]>>;
+        }
+      })
+    ).resources.read({
+      uri: "specwright://runs/run-invalid/state"
+    });
+
+    expect(invalidPayload).toMatchObject({
+      isError: true,
+      error: {
+        code: "invalid_request"
+      }
+    });
+    expect(invalidCalls).toEqual(["getRun"]);
+  });
+
+  test("redaction seam is invoked once for every successful resource read", async () => {
+    const runId = "run-redaction-seam";
+    const events = packet02Events(runId);
+    const invocations: unknown[] = [];
+    const adapter = createMcpAdapter(
+      fakeRuntime({
+        async getRun() {
+          return projectRunState(events);
+        },
+        async getEvents() {
+          return events;
+        },
+        async replay() {
+          return {
+            state: projectRunState(events),
+            events
+          };
+        },
+        async generateReport() {
+          return fakeReport(runId);
+        }
+      }),
+      {
+        applyEgressRedaction(payload, context) {
+          invocations.push({
+            uri: context.uri,
+            template: context.resource.uriTemplate,
+            classes: context.classes,
+            payload
+          });
+          return payload;
+        }
+      }
+    );
+    const uris = [
+      `specwright://runs/${runId}/state`,
+      `specwright://runs/${runId}/events`,
+      `specwright://runs/${runId}/artifacts/artifact-1`,
+      `specwright://runs/${runId}/evidence`,
+      `specwright://runs/${runId}/evals`,
+      `specwright://runs/${runId}/trace`,
+      `specwright://runs/${runId}/report`
+    ];
+
+    for (const uri of uris) {
+      const response = await adapter.resources.read({ uri });
+
+      expect(response.isError, uri).toBe(false);
+    }
+
+    expect(invocations).toHaveLength(uris.length);
+    expect(invocations.map((item) => (item as { uri: string }).uri)).toEqual(uris);
+  });
 });
 
 function validRunInput() {
@@ -829,4 +1209,302 @@ function stripHost(value: unknown) {
   delete parsed.host;
   delete parsed.metadata;
   return parsed;
+}
+
+function countedRuntime(overrides: Partial<RuntimeApi> = {}) {
+  const calls: string[] = [];
+  const base = fakeRuntime();
+
+  return {
+    calls,
+    runtime: {
+      async startRun(...args: Parameters<RuntimeApi["startRun"]>) {
+        calls.push("startRun");
+        return (overrides.startRun ?? base.startRun)(...args);
+      },
+      async getRun(...args: Parameters<RuntimeApi["getRun"]>) {
+        calls.push("getRun");
+        return (overrides.getRun ?? base.getRun)(...args);
+      },
+      async getEvents(...args: Parameters<RuntimeApi["getEvents"]>) {
+        calls.push("getEvents");
+        return (overrides.getEvents ?? base.getEvents)(...args);
+      },
+      async replay(...args: Parameters<RuntimeApi["replay"]>) {
+        calls.push("replay");
+        return (overrides.replay ?? base.replay)(...args);
+      },
+      async callTool(...args: Parameters<RuntimeApi["callTool"]>) {
+        calls.push("callTool");
+        return (overrides.callTool ?? base.callTool)(...args);
+      },
+      async runEval(...args: Parameters<RuntimeApi["runEval"]>) {
+        calls.push("runEval");
+        return (overrides.runEval ?? base.runEval)(...args);
+      },
+      async recordEvidence(...args: Parameters<RuntimeApi["recordEvidence"]>) {
+        calls.push("recordEvidence");
+        return (overrides.recordEvidence ?? base.recordEvidence)(...args);
+      },
+      async recordArtifact(...args: Parameters<RuntimeApi["recordArtifact"]>) {
+        calls.push("recordArtifact");
+        return (overrides.recordArtifact ?? base.recordArtifact)(...args);
+      },
+      async evaluateGate(...args: Parameters<RuntimeApi["evaluateGate"]>) {
+        calls.push("evaluateGate");
+        return (overrides.evaluateGate ?? base.evaluateGate)(...args);
+      },
+      async generateReport(...args: Parameters<RuntimeApi["generateReport"]>) {
+        calls.push("generateReport");
+        return (overrides.generateReport ?? base.generateReport)(...args);
+      },
+      async writeRunReport(...args: Parameters<RuntimeApi["writeRunReport"]>) {
+        calls.push("writeRunReport");
+        return (overrides.writeRunReport ?? base.writeRunReport)(...args);
+      }
+    } satisfies RuntimeApi
+  };
+}
+
+function packet02Events(
+  runId: string
+): Awaited<ReturnType<RuntimeApi["getEvents"]>> {
+  return [
+    fakeEvent({
+      runId,
+      id: "event-1",
+      sequence: 0
+    }),
+    {
+      id: "event-2",
+      runId,
+      type: "evidence.recorded",
+      timestamp: "2026-05-29T00:00:01.000Z",
+      sequence: 1,
+      traceId: "trace-1",
+      payload: {
+        evidence: packet02Evidence()
+      }
+    },
+    {
+      id: "event-3",
+      runId,
+      type: "eval.completed",
+      timestamp: "2026-05-29T00:00:02.000Z",
+      sequence: 2,
+      traceId: "trace-1",
+      payload: {
+        evalId: "eval-1",
+        verdict: packet02EvalVerdict()
+      }
+    },
+    {
+      id: "event-4",
+      runId,
+      type: "tool.completed",
+      timestamp: "2026-05-29T00:00:03.000Z",
+      sequence: 3,
+      traceId: "trace-1",
+      payload: {
+        request: {
+          toolId: "artifact.emit",
+          args: {
+            artifactId: "artifact-1"
+          },
+          reason: "Emit artifact for resource projection.",
+          idempotencyKey: "artifact-1",
+          requestedBy: {
+            phase: "implementation"
+          }
+        },
+        result: {
+          toolCallId: "tool-call-artifact",
+          status: "success",
+          output: {
+            artifact: packet02Artifact()
+          },
+          provenance: {
+            toolId: "artifact.emit",
+            toolVersion: "0.1.0",
+            argsHash: "sha256:artifact-args",
+            resultHash: "sha256:artifact-result",
+            cacheStatus: "miss",
+            traceId: "trace-1",
+            adapterVersion: "0.1.0",
+            decisionHash: "sha256:artifact-decision"
+          }
+        }
+      }
+    }
+  ];
+}
+
+function packet02Evidence() {
+  return {
+    id: "evidence-1",
+    class: "source_fact" as const,
+    claim: "The contract source includes Packet 02 resource requirements.",
+    sourceRefs: [
+      {
+        uri: "file://packet-02.md",
+        authority: "repo" as const,
+        redactionClass: "operator" as const
+      }
+    ],
+    confidence: "high" as const,
+    authority: "repo" as const,
+    createdBy: {
+      phase: "implementation",
+      actionId: "packet-02-fixture"
+    },
+    redactionPolicy: "operator" as const,
+    metadata: {
+      sourceAuthority: "repo",
+      claimLevel: "source_fact"
+    }
+  };
+}
+
+function packet02EvalVerdict() {
+  return {
+    evalId: "eval-1",
+    targetRef: "artifact:artifact-1",
+    status: "fail" as const,
+    severity: "advisory" as const,
+    findings: [
+      {
+        id: "finding-1",
+        message: "Artifact requires follow-up review.",
+        severity: "advisory" as const,
+        metadata: {
+          claimLevel: "inference",
+          confidence: "medium",
+          sourceAuthority: "model"
+        }
+      }
+    ],
+    evidenceRefs: ["evidence-1"],
+    producedBy: {
+      kind: "deterministic" as const,
+      ref: "packet-02-eval"
+    },
+    provenance: {
+      runId: "run-trust-labels",
+      phase: "implementation",
+      evaluatedAt: "2026-05-29T00:00:02.000Z",
+      decisionHash: "sha256:eval-decision",
+      traceId: "trace-1"
+    }
+  };
+}
+
+function packet02Artifact() {
+  return {
+    artifactId: "artifact-1",
+    artifactType: "plan" as const,
+    content: {
+      summary: "Packet 02 artifact projection."
+    },
+    evidenceRefs: ["evidence-1"],
+    claimLevel: "inference" as const,
+    importantClaims: [
+      {
+        claim: "The artifact is a projected runtime-owned record.",
+        claimLevel: "inference" as const,
+        evidenceRefs: ["evidence-1"],
+        confidence: "medium" as const,
+        authority: "model" as const,
+        owningArtifactId: "artifact-1",
+        fieldPath: "content.summary",
+        verificationStatus: "unverified" as const,
+        redactionPolicy: "operator" as const,
+        metadata: {
+          sourceAuthority: "model"
+        }
+      }
+    ],
+    producedBy: {
+      phase: "implementation",
+      actionId: "tool-call-artifact"
+    },
+    redactionPolicy: "operator" as const,
+    metadata: {
+      sourceAuthority: "model"
+    }
+  };
+}
+
+function fakeReport(
+  runId: string
+): Awaited<ReturnType<RuntimeApi["generateReport"]>> {
+  return {
+    runId,
+    summaryPath: `/tmp/${runId}/summary.md`,
+    markdown: `# ${runId}\n`,
+    missingInputs: []
+  };
+}
+
+function canonicalJson(value: unknown) {
+  const text = JSON.stringify(canonicalJsonValue(value));
+
+  if (text === undefined) {
+    throw new Error("Value is not JSON serializable.");
+  }
+
+  return text;
+}
+
+function canonicalJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(canonicalJsonValue);
+  }
+
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    value instanceof Date
+  ) {
+    return value;
+  }
+
+  const record = value as Record<string, unknown>;
+  const output: Record<string, unknown> = {};
+
+  for (const key of Object.keys(record).sort()) {
+    const child = record[key];
+
+    if (child !== undefined) {
+      output[key] = canonicalJsonValue(child);
+    }
+  }
+
+  return output;
+}
+
+function containsInlineExecutionKey(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some(containsInlineExecutionKey);
+  }
+
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  for (const [key, child] of Object.entries(value)) {
+    if (
+      key === "execute" ||
+      key === "executor" ||
+      key === "runtimeOperation" ||
+      key === "capabilityExecution"
+    ) {
+      return true;
+    }
+
+    if (containsInlineExecutionKey(child)) {
+      return true;
+    }
+  }
+
+  return false;
 }
