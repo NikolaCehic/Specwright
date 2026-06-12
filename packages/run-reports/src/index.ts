@@ -74,6 +74,32 @@ export {
   type RedactionDecision,
   type RedactionDecisionAction
 } from "./egress";
+export {
+  AUDIT_BUNDLE_CHUNKS_DIR,
+  AUDIT_BUNDLE_FORMAT_VERSION,
+  AUDIT_BUNDLE_MANIFEST_FILE,
+  AuditBundleError,
+  assembleAuditBundle,
+  auditBundleManifestBody,
+  hashAuditBundleCanonical,
+  parseAuditBundleChunk,
+  parseBundleManifest,
+  stableAuditBundleJson,
+  type AuditBundleChunk,
+  type AuditBundleErrorCode,
+  type AuditBundleOperationAuditRecord,
+  type AuditBundleRequest,
+  type AuditBundleResult,
+  type BundleAttestation,
+  type BundleEventRange,
+  type BundleManifest,
+  type ChunkDescriptor
+} from "./audit-bundle";
+export {
+  verifyAuditBundle,
+  type BundleVerificationFailure,
+  type BundleVerificationResult
+} from "./audit-bundle-verify";
 
 export const RUN_REPORTS_VERSION = "0.1.0";
 

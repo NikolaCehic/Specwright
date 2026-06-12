@@ -35,6 +35,10 @@ declare module "node:fs/promises" {
   ): Promise<Dirent[]>;
   export function readFile(path: string, encoding: "utf8"): Promise<string>;
   export function rename(oldPath: string, newPath: string): Promise<void>;
+  export function rm(
+    path: string,
+    options?: { recursive?: boolean; force?: boolean }
+  ): Promise<void>;
   export function writeFile(
     path: string,
     data: string,
