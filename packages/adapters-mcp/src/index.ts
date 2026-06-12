@@ -1,14 +1,18 @@
-import type { RuntimeApi } from "@specwright/runtime";
+import { createHash } from "node:crypto";
+import type { RuntimeApi, RuntimeToolCallOptions } from "@specwright/runtime";
 import {
   ArtifactRecordSchema,
   EvalVerdictSchema,
   EvidenceRecordSchema,
   HarnessSnapshotSchema,
+  RedactionClassSchema,
   RunInputSchema,
   RunStateSchema,
   RuntimeEventSchema,
   ToolCallRequestSchema,
-  ToolCallResultSchema
+  ToolCallResultSchema,
+  redactionClassAtLeast,
+  type RedactionClass
 } from "@specwright/schemas";
 import { z, type ZodError, type ZodTypeAny } from "zod";
 
@@ -64,11 +68,14 @@ export type McpToolDescriptor = {
 
 export type McpToolsListResponse = {
   tools: McpToolDescriptor[];
-};
+} | (McpErrorResponse & { tools: [] });
 
 export type McpToolsCallRequest = {
   name: string;
   arguments?: unknown;
+  credential?: unknown;
+  subject?: unknown;
+  requestedScopes?: readonly string[] | undefined;
 };
 
 export type McpContentBlock = {
@@ -77,11 +84,20 @@ export type McpContentBlock = {
 };
 
 export type McpToolError = {
+  contractId: "specwright.mcp.error.v1";
   code: string;
   message: string;
   retryable: boolean;
+  operatorAction: string;
   issues?: McpValidationIssue[] | undefined;
   approvalId?: string | undefined;
+};
+
+type McpToolErrorInput = Omit<
+  McpToolError,
+  "contractId" | "operatorAction"
+> & {
+  operatorAction?: string | undefined;
 };
 
 export type McpErrorResponse = {
@@ -106,6 +122,73 @@ export type McpClientPrincipal = {
   tenantId?: string | undefined;
   [key: string]: unknown;
 };
+
+export type McpClientRunMode = "autonomous" | "assisted" | "read_only";
+
+export type ClientPrincipal = z.infer<typeof ClientPrincipalSchema>;
+
+export type SubjectClaim = z.infer<typeof SubjectClaimSchema>;
+
+export type SubjectEntitlements = z.infer<typeof SubjectEntitlementsSchema>;
+
+export type AuthorizationContext = z.infer<typeof AuthorizationContextSchema>;
+
+export type McpTransportCredentialRequest = {
+  credential?: unknown;
+  subject?: unknown;
+  requestedScopes?: readonly string[] | undefined;
+};
+
+export type ClientCredentialVerifier = (
+  credential: unknown
+) => ClientPrincipal | unknown;
+
+export type SubjectVerifier = (
+  claim: SubjectClaim,
+  principal: ClientPrincipal
+) =>
+  | SubjectEntitlements
+  | null
+  | false
+  | Promise<SubjectEntitlements | null | false>;
+
+export type McpTenantReference =
+  | {
+      kind: "run";
+      runId: string;
+    }
+  | {
+      kind: "resource";
+      uri: string;
+      runId?: string | undefined;
+    }
+  | {
+      kind: "tool";
+      name: string;
+      runId?: string | undefined;
+    };
+
+export type McpTenantResolver = (
+  reference: McpTenantReference,
+  principal: ClientPrincipal
+) => string | undefined | Promise<string | undefined>;
+
+export type McpSecureAuthOptions = {
+  mode: "authenticated";
+  credentialVerifier?: ClientCredentialVerifier | undefined;
+  subjectVerifier?: SubjectVerifier | undefined;
+  requireSubject?: boolean | undefined;
+  policyBundle?: unknown;
+  tenantResolver?: McpTenantResolver | undefined;
+};
+
+export type McpDisabledAuthOptions = {
+  mode?: "disabled" | undefined;
+};
+
+export type McpAuthOptions =
+  | McpSecureAuthOptions
+  | McpDisabledAuthOptions;
 
 export type McpResourceAuthorityClass =
   | "derived projection"
@@ -161,15 +244,21 @@ export type McpResourceCatalog = {
 
 export type McpResourcesListRequest = {
   principal?: McpClientPrincipal | undefined;
+  credential?: unknown;
+  subject?: unknown;
+  requestedScopes?: readonly string[] | undefined;
 };
 
 export type McpResourcesListResponse = {
   resources: McpResourceDescriptor[];
-};
+} | (McpErrorResponse & { resources: [] });
 
 export type McpResourcesReadRequest = {
   uri: string;
   options?: z.infer<typeof lookupOptionsSchema> | undefined;
+  credential?: unknown;
+  subject?: unknown;
+  requestedScopes?: readonly string[] | undefined;
 };
 
 export type McpResourceFreshnessMetadata = {
@@ -202,11 +291,17 @@ export type McpResourcesReadResponse =
   | McpErrorResponse;
 
 export type McpEgressRedactionContext = {
+  surface: "tool_result" | "resource" | "prompt" | "error";
   principal?: McpClientPrincipal | undefined;
-  resource: McpResourceDescriptor;
-  uri: string;
+  clientPrincipal?: ClientPrincipal | undefined;
+  subject?: SubjectEntitlements | undefined;
+  resource?: McpResourceDescriptor | undefined;
+  uri?: string | undefined;
+  toolName?: string | undefined;
+  promptName?: string | undefined;
+  errorCode?: string | undefined;
   classes: readonly string[];
-  metadata: McpResourceFreshnessMetadata;
+  metadata?: McpResourceFreshnessMetadata | undefined;
 };
 
 export type McpEgressRedaction = (
@@ -243,10 +338,13 @@ export type McpPromptCatalog = {
 
 export type McpPromptsListResponse = {
   prompts: McpPromptDescriptor[];
-};
+} | (McpErrorResponse & { prompts: [] });
 
 export type McpPromptsGetRequest = {
   name: string;
+  credential?: unknown;
+  subject?: unknown;
+  requestedScopes?: readonly string[] | undefined;
 };
 
 export type McpPromptMessage = {
@@ -305,6 +403,66 @@ export type McpCatalog = {
 };
 
 const nonEmptyString = z.string().min(1);
+const scopeNameSchema = nonEmptyString;
+const runModeSchema = z.enum(["autonomous", "assisted", "read_only"]);
+
+export const ClientPrincipalSchema = z
+  .object({
+    clientId: nonEmptyString,
+    tenantId: nonEmptyString,
+    grantedScopes: z.array(scopeNameSchema),
+    runMode: runModeSchema
+  })
+  .strict();
+
+export const SubjectClaimSchema = z
+  .object({
+    subjectId: nonEmptyString,
+    tenantId: nonEmptyString.optional(),
+    claimRef: nonEmptyString.optional(),
+    issuedBy: nonEmptyString.optional()
+  })
+  .strict();
+
+export const SubjectEntitlementsSchema = z
+  .object({
+    subjectId: nonEmptyString,
+    tenantId: nonEmptyString,
+    scopes: z.array(scopeNameSchema),
+    sourceTrust: z.record(z.string(), z.unknown()).optional()
+  })
+  .strict();
+
+export const RedactionClassBoundarySchema = RedactionClassSchema;
+
+export const AuthorizationContextSchema = z
+  .object({
+    clientPrincipal: ClientPrincipalSchema,
+    subject: SubjectEntitlementsSchema.optional(),
+    requestedScopes: z.array(scopeNameSchema),
+    effectiveScopes: z.array(scopeNameSchema),
+    toolContext: z
+      .object({
+        runMode: runModeSchema,
+        policyBundle: z.unknown().optional(),
+        snapshots: z
+          .object({
+            sourceTrust: z.record(z.string(), z.unknown()).optional()
+          })
+          .strict()
+          .optional()
+      })
+      .strict()
+  })
+  .strict();
+
+const credentialRequestSchema = z
+  .object({
+    credential: z.unknown().optional(),
+    subject: z.unknown().optional(),
+    requestedScopes: z.array(scopeNameSchema).optional()
+  })
+  .strict();
 
 const runtimeOperationNames = [
   "startRun",
@@ -362,6 +520,16 @@ const callToolArgumentsSchema = z
       })
       .strict()
       .optional()
+  })
+  .strict();
+
+const toolsCallRequestSchema = z
+  .object({
+    name: nonEmptyString,
+    arguments: z.unknown().optional(),
+    credential: z.unknown().optional(),
+    subject: z.unknown().optional(),
+    requestedScopes: z.array(scopeNameSchema).optional()
   })
   .strict();
 
@@ -438,7 +606,26 @@ const traceProjectionSchema = z
 const resourcesReadRequestSchema = z
   .object({
     uri: nonEmptyString,
-    options: lookupOptionsSchema.optional()
+    options: lookupOptionsSchema.optional(),
+    credential: z.unknown().optional(),
+    subject: z.unknown().optional(),
+    requestedScopes: z.array(scopeNameSchema).optional()
+  })
+  .strict();
+const resourcesListRequestSchema = z
+  .object({
+    principal: z.record(z.string(), z.unknown()).optional(),
+    credential: z.unknown().optional(),
+    subject: z.unknown().optional(),
+    requestedScopes: z.array(scopeNameSchema).optional()
+  })
+  .strict();
+const promptsGetRequestSchema = z
+  .object({
+    name: nonEmptyString,
+    credential: z.unknown().optional(),
+    subject: z.unknown().optional(),
+    requestedScopes: z.array(scopeNameSchema).optional()
   })
   .strict();
 const protocolRequestSchema = z
@@ -560,6 +747,10 @@ export const defaultMcpResourceCatalog = registerMcpResourceCatalog(
   mcpResourceBindings
 );
 
+export const mcpPacket03OpenContractItems = [
+  "RuntimeApi does not expose a tenant ownership read for run/resource references; authenticated MCP mode can enforce a configured tenantResolver but otherwise cannot prove cross-tenant ownership without inventing runtime behavior."
+] as const;
+
 export const mcpToolBindings = [
   enabledBinding({
     name: "specwright_start_run",
@@ -568,7 +759,8 @@ export const mcpToolBindings = [
     mutates: true,
     inputParser: RunInputSchema,
     inputSchemaRef: "RunInputSchema",
-    outputSchemaRef: "RuntimeApi.RunHandle"
+    outputSchemaRef: "RuntimeApi.RunHandle",
+    requiredScopes: ["run:start"]
   }),
   enabledBinding({
     name: "specwright_get_run",
@@ -577,7 +769,8 @@ export const mcpToolBindings = [
     mutates: false,
     inputParser: getRunArgumentsSchema,
     inputSchemaRef: "RuntimeApi.getRun.arguments",
-    outputSchemaRef: "RunStateSchema"
+    outputSchemaRef: "RunStateSchema",
+    requiredScopes: ["run:read"]
   }),
   enabledBinding({
     name: "specwright_get_events",
@@ -586,7 +779,8 @@ export const mcpToolBindings = [
     mutates: false,
     inputParser: getEventsArgumentsSchema,
     inputSchemaRef: "RuntimeApi.getEvents.arguments",
-    outputSchemaRef: "RuntimeEventSchema[]"
+    outputSchemaRef: "RuntimeEventSchema[]",
+    requiredScopes: ["run:read"]
   }),
   enabledBinding({
     name: "specwright_replay",
@@ -595,7 +789,8 @@ export const mcpToolBindings = [
     mutates: false,
     inputParser: replayArgumentsSchema,
     inputSchemaRef: "RuntimeApi.replay.arguments",
-    outputSchemaRef: "RuntimeApi.ReplayResult"
+    outputSchemaRef: "RuntimeApi.ReplayResult",
+    requiredScopes: ["run:read"]
   }),
   enabledBinding({
     name: "specwright_call_tool",
@@ -604,7 +799,8 @@ export const mcpToolBindings = [
     mutates: true,
     inputParser: callToolArgumentsSchema,
     inputSchemaRef: "RuntimeApi.callTool.arguments",
-    outputSchemaRef: "ToolCallResultSchema"
+    outputSchemaRef: "ToolCallResultSchema",
+    requiredScopes: ["tool:call"]
   }),
   enabledBinding({
     name: "specwright_run_eval",
@@ -613,7 +809,8 @@ export const mcpToolBindings = [
     mutates: true,
     inputParser: runEvalArgumentsSchema,
     inputSchemaRef: "RuntimeApi.runEval.arguments",
-    outputSchemaRef: "EvalVerdictSchema"
+    outputSchemaRef: "EvalVerdictSchema",
+    requiredScopes: ["eval:run"]
   }),
   enabledBinding({
     name: "specwright_record_evidence",
@@ -622,7 +819,8 @@ export const mcpToolBindings = [
     mutates: true,
     inputParser: recordEvidenceArgumentsSchema,
     inputSchemaRef: "RuntimeApi.recordEvidence.arguments",
-    outputSchemaRef: "EvidenceRecordSchema"
+    outputSchemaRef: "EvidenceRecordSchema",
+    requiredScopes: ["evidence:write"]
   }),
   enabledBinding({
     name: "specwright_record_artifact",
@@ -631,7 +829,8 @@ export const mcpToolBindings = [
     mutates: true,
     inputParser: recordArtifactArgumentsSchema,
     inputSchemaRef: "RuntimeApi.recordArtifact.arguments.ArtifactRecordInput",
-    outputSchemaRef: "ArtifactRecordSchema"
+    outputSchemaRef: "ArtifactRecordSchema",
+    requiredScopes: ["artifact:write"]
   }),
   enabledBinding({
     name: "specwright_evaluate_gate",
@@ -640,7 +839,8 @@ export const mcpToolBindings = [
     mutates: true,
     inputParser: evaluateGateArgumentsSchema,
     inputSchemaRef: "RuntimeApi.evaluateGate.arguments",
-    outputSchemaRef: "GateEvaluationResult"
+    outputSchemaRef: "GateEvaluationResult",
+    requiredScopes: ["gate:evaluate"]
   }),
   enabledBinding({
     name: "specwright_generate_report",
@@ -649,7 +849,8 @@ export const mcpToolBindings = [
     mutates: false,
     inputParser: generateReportArgumentsSchema,
     inputSchemaRef: "RuntimeApi.generateReport.arguments",
-    outputSchemaRef: "RunReport"
+    outputSchemaRef: "RunReport",
+    requiredScopes: ["report:read"]
   }),
   enabledBinding({
     name: "specwright_write_report",
@@ -658,7 +859,8 @@ export const mcpToolBindings = [
     mutates: true,
     inputParser: writeReportArgumentsSchema,
     inputSchemaRef: "RuntimeApi.writeRunReport.arguments",
-    outputSchemaRef: "RunReport"
+    outputSchemaRef: "RunReport",
+    requiredScopes: ["report:write"]
   }),
   disabledBinding({
     name: "specwright_get_next_action",
@@ -784,7 +986,7 @@ export const defaultMcpPromptCatalog = registerMcpPromptCatalog(
 
 export type McpAdapter = {
   tools: {
-    list(): McpToolsListResponse;
+    list(request?: McpTransportCredentialRequest): McpToolsListResponse;
     call(request: McpToolsCallRequest): Promise<McpToolsCallResponse>;
   };
   resources: {
@@ -792,7 +994,7 @@ export type McpAdapter = {
     read(request: McpResourcesReadRequest): Promise<McpResourcesReadResponse>;
   };
   prompts: {
-    list(): McpPromptsListResponse;
+    list(request?: McpTransportCredentialRequest): McpPromptsListResponse;
     get(request: McpPromptsGetRequest): McpPromptsGetResponse;
   };
   dispatch(request: McpProtocolRequest): Promise<McpProtocolResponse>;
@@ -805,42 +1007,50 @@ export function createMcpAdapter(
     resourceCatalog?: McpResourceCatalog | readonly McpResourceBinding[] | undefined;
     promptCatalog?: McpPromptCatalog | readonly McpPromptBinding[] | undefined;
     applyEgressRedaction?: McpEgressRedaction | undefined;
+    auth?: McpAuthOptions | undefined;
   } = {}
 ): McpAdapter {
   const catalog = normalizeCatalog(options.catalog);
   const resourceCatalog = normalizeResourceCatalog(options.resourceCatalog);
   const promptCatalog = normalizePromptCatalog(options.promptCatalog);
   const redact = options.applyEgressRedaction ?? applyEgressRedaction;
+  const security = normalizeMcpSecurity(options.auth);
 
   return {
     tools: {
-      list() {
-        return {
-          tools: catalog.enabledBindings.map(descriptorForBinding)
-        };
+      list(request = {}) {
+        return listMcpTools(catalog, request, security);
       },
       async call(request) {
-        return callMcpTool(runtime, catalog, request);
+        return callMcpTool(runtime, catalog, request, redact, security);
       }
     },
     resources: {
       list(request = {}) {
-        return listMcpResources(resourceCatalog, request);
+        return listMcpResources(resourceCatalog, request, security);
       },
       async read(request) {
-        return readMcpResource(runtime, resourceCatalog, request, redact);
+        return readMcpResource(runtime, resourceCatalog, request, redact, security);
       }
     },
     prompts: {
-      list() {
-        return listMcpPrompts(promptCatalog);
+      list(request = {}) {
+        return listMcpPrompts(promptCatalog, catalog, request, security);
       },
       get(request) {
-        return getMcpPrompt(promptCatalog, catalog, request);
+        return getMcpPrompt(promptCatalog, catalog, request, redact, security);
       }
     },
     async dispatch(request) {
-      return dispatchMcpRequest(runtime, catalog, resourceCatalog, promptCatalog, redact, request);
+      return dispatchMcpRequest(
+        runtime,
+        catalog,
+        resourceCatalog,
+        promptCatalog,
+        redact,
+        security,
+        request
+      );
     }
   };
 }
@@ -887,19 +1097,19 @@ export function registerMcpCatalog(
 
     if (
       binding.enabled &&
-      gatedRuntimeOperationNames.has(binding.runtimeOperation)
+      gatedRuntimeOperationNames.has(String(binding.runtimeOperation))
     ) {
       throw new McpCatalogError(
         "gated_runtime_operation_enabled",
-        `Runtime operation ${binding.runtimeOperation} is gated and cannot be enabled.`
+        `Runtime operation ${String(binding.runtimeOperation)} is gated and cannot be enabled.`
       );
     }
 
     if (binding.enabled) {
-      if (!runtimeOperationNameSet.has(binding.runtimeOperation)) {
+      if (!runtimeOperationNameSet.has(String(binding.runtimeOperation))) {
         throw new McpCatalogError(
           "unknown_runtime_operation",
-          `Runtime operation ${binding.runtimeOperation} is not exported by RuntimeApi.`
+          `Runtime operation ${String(binding.runtimeOperation)} is not exported by RuntimeApi.`
         );
       }
 
@@ -995,20 +1205,570 @@ export function filterResourcesForPrincipal(
   return bindings;
 }
 
-export async function applyEgressRedaction(
+export function applyEgressRedaction(
   payload: unknown,
   context: McpEgressRedactionContext
-): Promise<unknown> {
-  void context;
-  return payload;
+): unknown {
+  return redactEgressValue(payload, {
+    surface: context.surface,
+    path: [],
+    inheritedClass: undefined,
+    egressClasses: context.classes
+  }).value;
+}
+
+type NormalizedMcpSecurity =
+  | {
+      mode: "disabled";
+    }
+  | {
+      mode: "authenticated";
+      credentialVerifier?: ClientCredentialVerifier | undefined;
+      subjectVerifier?: SubjectVerifier | undefined;
+      requireSubject: boolean;
+      policyBundle?: unknown;
+      tenantResolver?: McpTenantResolver | undefined;
+    };
+
+type AuthorizationResult =
+  | {
+      kind: "disabled";
+    }
+  | {
+      kind: "authenticated";
+      context: AuthorizationContext;
+    }
+  | {
+      kind: "error";
+      response: McpErrorResponse;
+    };
+
+function normalizeMcpSecurity(
+  options: McpAuthOptions | undefined
+): NormalizedMcpSecurity {
+  if (options?.mode !== "authenticated") {
+    return {
+      mode: "disabled"
+    };
+  }
+
+  return {
+    mode: "authenticated",
+    credentialVerifier: options.credentialVerifier,
+    subjectVerifier: options.subjectVerifier,
+    requireSubject: options.requireSubject ?? true,
+    policyBundle: options.policyBundle,
+    tenantResolver: options.tenantResolver
+  };
+}
+
+function authorizeSync(input: {
+  security: NormalizedMcpSecurity;
+  request: McpTransportCredentialRequest;
+  requestedScopes: readonly string[];
+  requireSubject: false;
+}): AuthorizationResult {
+  if (input.security.mode === "disabled") {
+    return {
+      kind: "disabled"
+    };
+  }
+
+  const principal = authenticateClient(input.security, input.request);
+
+  if (principal.kind === "error") {
+    return principal;
+  }
+
+  const context = composeAuthorizationContext({
+    security: input.security,
+    principal: principal.principal,
+    subject: undefined,
+    requestedScopes: input.request.requestedScopes === undefined
+      ? input.requestedScopes
+      : [...input.requestedScopes, ...input.request.requestedScopes]
+  });
+
+  if (context.kind === "error") {
+    return context;
+  }
+
+  return {
+    kind: "authenticated",
+    context: context.context
+  };
+}
+
+async function authorizeAsync(input: {
+  security: NormalizedMcpSecurity;
+  request: McpTransportCredentialRequest;
+  requestedScopes: readonly string[];
+  requireSubject: boolean;
+  tenantReference?: McpTenantReference | undefined;
+}): Promise<AuthorizationResult> {
+  if (input.security.mode === "disabled") {
+    return {
+      kind: "disabled"
+    };
+  }
+
+  const principal = authenticateClient(input.security, input.request);
+
+  if (principal.kind === "error") {
+    return principal;
+  }
+
+  const tenant = await assertTenantScope(
+    input.security,
+    input.tenantReference,
+    principal.principal
+  );
+
+  if (tenant.kind === "error") {
+    return tenant;
+  }
+
+  const subject =
+    input.requireSubject || input.security.requireSubject
+      ? await verifySubject(input.security, input.request, principal.principal)
+      : {
+          kind: "optional_absent" as const
+        };
+
+  if (subject.kind === "error") {
+    return subject;
+  }
+
+  const context = composeAuthorizationContext({
+    security: input.security,
+    principal: principal.principal,
+    subject:
+      subject.kind === "verified" ? subject.subjectEntitlements : undefined,
+    requestedScopes: input.request.requestedScopes === undefined
+      ? input.requestedScopes
+      : [...input.requestedScopes, ...input.request.requestedScopes]
+  });
+
+  if (context.kind === "error") {
+    return context;
+  }
+
+  return {
+    kind: "authenticated",
+    context: context.context
+  };
+}
+
+function authenticateClient(
+  security: Extract<NormalizedMcpSecurity, { mode: "authenticated" }>,
+  request: McpTransportCredentialRequest
+):
+  | {
+      kind: "authenticated";
+      principal: ClientPrincipal;
+    }
+  | {
+      kind: "error";
+      response: McpErrorResponse;
+    } {
+  const envelope = credentialRequestSchema.safeParse({
+    credential: request.credential,
+    subject: request.subject,
+    requestedScopes: request.requestedScopes
+  });
+
+  if (!envelope.success) {
+    return {
+      kind: "error",
+      response: validationErrorResponse(envelope.error)
+    };
+  }
+
+  if (security.credentialVerifier === undefined) {
+    return authError(
+      "incomplete_authorization_context",
+      "Authenticated MCP mode requires a configured credential verifier."
+    );
+  }
+
+  if (envelope.data.credential === undefined) {
+    return authError(
+      "unauthenticated",
+      "Missing MCP transport credential."
+    );
+  }
+
+  let verified: unknown;
+
+  try {
+    verified = security.credentialVerifier(envelope.data.credential);
+  } catch {
+    return authError("unauthenticated", "MCP transport credential is invalid.");
+  }
+
+  if (isPromiseLike(verified)) {
+    return authError(
+      "incomplete_authorization_context",
+      "MCP credential verification must complete before synchronous catalog authorization."
+    );
+  }
+
+  const parsed = ClientPrincipalSchema.safeParse(verified);
+
+  if (!parsed.success) {
+    return authError("unauthenticated", "MCP transport credential is invalid.");
+  }
+
+  return {
+    kind: "authenticated",
+    principal: parsed.data
+  };
+}
+
+async function verifySubject(
+  security: Extract<NormalizedMcpSecurity, { mode: "authenticated" }>,
+  request: McpTransportCredentialRequest,
+  principal: ClientPrincipal
+): Promise<
+  | {
+      kind: "verified";
+      subjectEntitlements: SubjectEntitlements;
+    }
+  | {
+      kind: "error";
+      response: McpErrorResponse;
+    }
+> {
+  if (security.subjectVerifier === undefined) {
+    return authError(
+      "incomplete_authorization_context",
+      "Authenticated MCP actions require a configured subject verifier."
+    );
+  }
+
+  if (request.subject === undefined) {
+    return authError(
+      "subject_unverifiable",
+      "Missing propagated subject claim."
+    );
+  }
+
+  const claim = SubjectClaimSchema.safeParse(request.subject);
+
+  if (!claim.success) {
+    return authError(
+      "subject_unverifiable",
+      "Propagated subject claim is malformed."
+    );
+  }
+
+  if (
+    claim.data.tenantId !== undefined &&
+    claim.data.tenantId !== principal.tenantId
+  ) {
+    return authError(
+      "subject_unverifiable",
+      "Propagated subject claim is not valid for this tenant."
+    );
+  }
+
+  let verified: SubjectEntitlements | null | false;
+
+  try {
+    verified = await security.subjectVerifier(claim.data, principal);
+  } catch {
+    return authError(
+      "subject_unverifiable",
+      "Propagated subject claim could not be verified."
+    );
+  }
+
+  if (verified === null || verified === false) {
+    return authError(
+      "subject_unverifiable",
+      "Propagated subject claim could not be verified."
+    );
+  }
+
+  const entitlements = SubjectEntitlementsSchema.safeParse(verified);
+
+  if (!entitlements.success) {
+    return authError(
+      "subject_unverifiable",
+      "Propagated subject entitlements are malformed."
+    );
+  }
+
+  if (
+    entitlements.data.subjectId !== claim.data.subjectId ||
+    entitlements.data.tenantId !== principal.tenantId
+  ) {
+    return authError(
+      "subject_unverifiable",
+      "Propagated subject entitlements do not match the verified principal."
+    );
+  }
+
+  return {
+    kind: "verified",
+    subjectEntitlements: entitlements.data
+  };
+}
+
+async function assertTenantScope(
+  security: Extract<NormalizedMcpSecurity, { mode: "authenticated" }>,
+  reference: McpTenantReference | undefined,
+  principal: ClientPrincipal
+): Promise<
+  | {
+      kind: "ok";
+    }
+  | {
+      kind: "error";
+      response: McpErrorResponse;
+    }
+> {
+  if (reference === undefined || security.tenantResolver === undefined) {
+    return {
+      kind: "ok"
+    };
+  }
+
+  let ownerTenantId: string | undefined;
+
+  try {
+    ownerTenantId = await security.tenantResolver(reference, principal);
+  } catch {
+    return authError(
+      "tenant_mismatch",
+      "Requested reference is not available to the authenticated principal."
+    );
+  }
+
+  if (ownerTenantId !== undefined && ownerTenantId !== principal.tenantId) {
+    return authError(
+      "tenant_mismatch",
+      "Requested reference is not available to the authenticated principal."
+    );
+  }
+
+  return {
+    kind: "ok"
+  };
+}
+
+function composeAuthorizationContext(input: {
+  security: Extract<NormalizedMcpSecurity, { mode: "authenticated" }>;
+  principal: ClientPrincipal;
+  subject: SubjectEntitlements | undefined;
+  requestedScopes: readonly string[];
+}):
+  | {
+      kind: "ok";
+      context: AuthorizationContext;
+    }
+  | {
+      kind: "error";
+      response: McpErrorResponse;
+    } {
+  const requestedScopes = uniqueSortedScopes(input.requestedScopes);
+  const subjectScopes = input.subject?.scopes ?? input.principal.grantedScopes;
+  const effectiveScopes = intersectScopes(
+    input.principal.grantedScopes,
+    subjectScopes
+  );
+
+  if (!scopesAreSubset(requestedScopes, effectiveScopes)) {
+    return authError(
+      "scope_exceeded",
+      "Requested scopes exceed the authenticated client and subject intersection."
+    );
+  }
+
+  const sourceTrust = {
+    ...(input.subject?.sourceTrust ?? {}),
+    mcp: {
+      clientId: input.principal.clientId,
+      tenantId: input.principal.tenantId,
+      grantedScopes: uniqueSortedScopes(input.principal.grantedScopes),
+      subjectId: input.subject?.subjectId,
+      subjectScopes: input.subject?.scopes,
+      requestedScopes,
+      effectiveScopes
+    }
+  };
+  const contextLike = {
+    clientPrincipal: input.principal,
+    ...(input.subject === undefined ? {} : { subject: input.subject }),
+    requestedScopes,
+    effectiveScopes,
+    toolContext: {
+      runMode: input.principal.runMode,
+      ...(input.security.policyBundle === undefined
+        ? {}
+        : { policyBundle: input.security.policyBundle }),
+      snapshots: {
+        sourceTrust
+      }
+    }
+  };
+  const parsed = AuthorizationContextSchema.safeParse(contextLike);
+
+  if (!parsed.success) {
+    return authError(
+      "incomplete_authorization_context",
+      "MCP authorization context could not be constructed."
+    );
+  }
+
+  return {
+    kind: "ok",
+    context: parsed.data
+  };
+}
+
+function intersectScopes(
+  clientScopes: readonly string[],
+  subjectScopes: readonly string[]
+) {
+  const subjectScopeSet = new Set(subjectScopes);
+  return uniqueSortedScopes(clientScopes.filter((scope) => subjectScopeSet.has(scope)));
+}
+
+function uniqueSortedScopes(scopes: readonly string[]) {
+  return [...new Set(scopes)].sort();
+}
+
+function scopesAreSubset(
+  requestedScopes: readonly string[],
+  effectiveScopes: readonly string[]
+) {
+  const effectiveScopeSet = new Set(effectiveScopes);
+  return requestedScopes.every((scope) => effectiveScopeSet.has(scope));
+}
+
+function authError(code: string, message: string): {
+  kind: "error";
+  response: McpErrorResponse;
+} {
+  return {
+    kind: "error",
+    response: errorResponse({
+      code,
+      message,
+      retryable: false,
+      operatorAction: operatorActionForCode(code)
+    })
+  };
+}
+
+function requiredScopesForResource(
+  binding: McpResourceBinding
+): readonly string[] {
+  return binding.id === "harness-spec" ? ["harness:read"] : ["run:read"];
+}
+
+function tenantReferenceForRuntimeArgs(
+  binding: EnabledMcpToolBinding,
+  args: unknown
+): McpTenantReference | undefined {
+  const runId = readStringProperty(args, "runId");
+
+  if (runId === undefined) {
+    return undefined;
+  }
+
+  return {
+    kind: "tool",
+    name: binding.name,
+    runId
+  };
+}
+
+type ParsedCallToolOptions = {
+  rootDir?: string | undefined;
+  cwd?: string | undefined;
+  traceId?: string | undefined;
+  toolContext?: Record<string, unknown> | undefined;
+} | undefined;
+
+function bindToolContext(
+  options: ParsedCallToolOptions,
+  authorization: AuthorizationContext | undefined
+): RuntimeToolCallOptions | undefined {
+  if (authorization === undefined) {
+    return options;
+  }
+
+  return {
+    ...(options?.rootDir === undefined ? {} : { rootDir: options.rootDir }),
+    ...(options?.cwd === undefined ? {} : { cwd: options.cwd }),
+    ...(options?.traceId === undefined ? {} : { traceId: options.traceId }),
+    toolContext: authorization.toolContext as RuntimeToolCallOptions["toolContext"]
+  };
+}
+
+function listMcpTools(
+  catalog: McpCatalog,
+  request: McpTransportCredentialRequest,
+  security: NormalizedMcpSecurity
+): McpToolsListResponse {
+  const authorization = authorizeSync({
+    security,
+    request,
+    requestedScopes: [],
+    requireSubject: false
+  });
+
+  if (authorization.kind === "error") {
+    return {
+      ...authorization.response,
+      tools: []
+    };
+  }
+
+  const bindings =
+    authorization.kind === "disabled"
+      ? catalog.enabledBindings
+      : catalog.enabledBindings.filter((binding) =>
+          scopesAreSubset(binding.requiredScopes ?? [], authorization.context.effectiveScopes)
+        );
+
+  return {
+    tools: bindings.map(descriptorForBinding)
+  };
 }
 
 function listMcpResources(
   catalog: McpResourceCatalog,
-  request: McpResourcesListRequest
+  request: McpResourcesListRequest,
+  security: NormalizedMcpSecurity
 ): McpResourcesListResponse {
+  const parsedRequest = resourcesListRequestSchema.safeParse(request);
+
+  if (!parsedRequest.success) {
+    return {
+      ...validationErrorResponse(parsedRequest.error),
+      resources: []
+    };
+  }
+
+  const authorization = authorizeSync({
+    security,
+    request: parsedRequest.data,
+    requestedScopes: [],
+    requireSubject: false
+  });
+
+  if (authorization.kind === "error") {
+    return {
+      ...authorization.response,
+      resources: []
+    };
+  }
+
   const bindings = filterResourcesForPrincipal(
-    request.principal,
+    parsedRequest.data.principal as McpClientPrincipal | undefined,
     catalog.bindings
   );
 
@@ -1021,7 +1781,8 @@ async function readMcpResource(
   runtime: RuntimeApi,
   catalog: McpResourceCatalog,
   request: McpResourcesReadRequest,
-  redact: McpEgressRedaction
+  redact: McpEgressRedaction,
+  security: NormalizedMcpSecurity
 ): Promise<McpResourcesReadResponse> {
   const parsedRequest = resourcesReadRequestSchema.safeParse(request);
 
@@ -1033,6 +1794,25 @@ async function readMcpResource(
 
   if (isMcpErrorResponse(matched)) {
     return matched;
+  }
+
+  const authorization = await authorizeAsync({
+    security,
+    request: parsedRequest.data,
+    requestedScopes: requiredScopesForResource(matched.binding),
+    requireSubject: true,
+    tenantReference:
+      matched.runId === undefined
+        ? undefined
+        : {
+            kind: "resource",
+            uri: parsedRequest.data.uri,
+            runId: matched.runId
+          }
+  });
+
+  if (authorization.kind === "error") {
+    return authorization.response;
   }
 
   try {
@@ -1050,8 +1830,17 @@ async function readMcpResource(
     const metadata = resourceFreshnessMetadata(matched.binding, read.metadata);
     const resource = descriptorForResource(matched.binding);
     const redacted = await redact(parsedPayload.data, {
+      surface: "resource",
       resource,
       uri: parsedRequest.data.uri,
+      clientPrincipal:
+        authorization.kind === "authenticated"
+          ? authorization.context.clientPrincipal
+          : undefined,
+      subject:
+        authorization.kind === "authenticated"
+          ? authorization.context.subject
+          : undefined,
       classes: redactionClassesForResource(matched.binding),
       metadata
     });
@@ -1093,9 +1882,44 @@ async function readMcpResource(
   }
 }
 
-function listMcpPrompts(catalog: McpPromptCatalog): McpPromptsListResponse {
+function listMcpPrompts(
+  catalog: McpPromptCatalog,
+  toolCatalog: McpCatalog,
+  request: McpTransportCredentialRequest,
+  security: NormalizedMcpSecurity
+): McpPromptsListResponse {
+  const authorization = authorizeSync({
+    security,
+    request,
+    requestedScopes: [],
+    requireSubject: false
+  });
+
+  if (authorization.kind === "error") {
+    return {
+      ...authorization.response,
+      prompts: []
+    };
+  }
+
+  const bindings =
+    authorization.kind === "authenticated"
+      ? catalog.bindings.filter((binding) => {
+          const tool = toolCatalog.byName.get(binding.toolName);
+
+          return (
+            tool !== undefined &&
+            (!tool.enabled ||
+              scopesAreSubset(
+                tool.requiredScopes ?? [],
+                authorization.context.effectiveScopes
+              ))
+          );
+        })
+      : catalog.bindings;
+
   return {
-    prompts: catalog.bindings.map((binding) => ({
+    prompts: bindings.map((binding) => ({
       name: binding.name,
       title: binding.title,
       description: binding.description,
@@ -1109,14 +1933,11 @@ function listMcpPrompts(catalog: McpPromptCatalog): McpPromptsListResponse {
 function getMcpPrompt(
   catalog: McpPromptCatalog,
   toolCatalog: McpCatalog,
-  request: McpPromptsGetRequest
+  request: McpPromptsGetRequest,
+  redact: McpEgressRedaction,
+  security: NormalizedMcpSecurity
 ): McpPromptsGetResponse {
-  const parsedRequest = z
-    .object({
-      name: nonEmptyString
-    })
-    .strict()
-    .safeParse(request);
+  const parsedRequest = promptsGetRequestSchema.safeParse(request);
 
   if (!parsedRequest.success) {
     return validationErrorResponse(parsedRequest.error);
@@ -1142,6 +1963,20 @@ function getMcpPrompt(
     });
   }
 
+  const authorization = authorizeSync({
+    security,
+    request: parsedRequest.data,
+    requestedScopes: [
+      ...(tool.requiredScopes ?? []),
+      ...(parsedRequest.data.requestedScopes ?? [])
+    ],
+    requireSubject: false
+  });
+
+  if (authorization.kind === "error") {
+    return authorization.response;
+  }
+
   const action = RuntimeActionDescriptorSchema.parse({
     tool: binding.toolName,
     arguments: binding.argumentTemplate,
@@ -1157,8 +1992,7 @@ function getMcpPrompt(
       }
     }
   ];
-
-  return {
+  const response: McpPromptsGetResponse = {
     isError: false,
     name: binding.name,
     description: binding.description,
@@ -1174,6 +2008,20 @@ function getMcpPrompt(
       }
     ]
   };
+
+  return redactPromptResponseSync(response, redact, {
+    surface: "prompt",
+    promptName: binding.name,
+    clientPrincipal:
+      authorization.kind === "authenticated"
+        ? authorization.context.clientPrincipal
+        : undefined,
+    subject:
+      authorization.kind === "authenticated"
+        ? authorization.context.subject
+        : undefined,
+    classes: ["prompt", binding.name]
+  });
 }
 
 async function dispatchMcpRequest(
@@ -1182,6 +2030,7 @@ async function dispatchMcpRequest(
   resourceCatalog: McpResourceCatalog,
   promptCatalog: McpPromptCatalog,
   redact: McpEgressRedaction,
+  security: NormalizedMcpSecurity,
   request: McpProtocolRequest
 ): Promise<McpProtocolResponse> {
   const parsedRequest = protocolRequestSchema.safeParse(request);
@@ -1192,36 +2041,53 @@ async function dispatchMcpRequest(
 
   switch (parsedRequest.data.method) {
     case "tools/list":
-      return {
-        tools: catalog.enabledBindings.map(descriptorForBinding)
-      };
+      return listMcpTools(
+        catalog,
+        isRecord(parsedRequest.data.params)
+          ? (parsedRequest.data.params as McpTransportCredentialRequest)
+          : {},
+        security
+      );
     case "tools/call":
       return callMcpTool(
         runtime,
         catalog,
-        parsedRequest.data.params as McpToolsCallRequest
+        parsedRequest.data.params as McpToolsCallRequest,
+        redact,
+        security
       );
     case "resources/list":
       return listMcpResources(
         resourceCatalog,
         isRecord(parsedRequest.data.params)
           ? (parsedRequest.data.params as McpResourcesListRequest)
-          : {}
+          : {},
+        security
       );
     case "resources/read":
       return readMcpResource(
         runtime,
         resourceCatalog,
         parsedRequest.data.params as McpResourcesReadRequest,
-        redact
+        redact,
+        security
       );
     case "prompts/list":
-      return listMcpPrompts(promptCatalog);
+      return listMcpPrompts(
+        promptCatalog,
+        catalog,
+        isRecord(parsedRequest.data.params)
+          ? (parsedRequest.data.params as McpTransportCredentialRequest)
+          : {},
+        security
+      );
     case "prompts/get":
       return getMcpPrompt(
         promptCatalog,
         catalog,
-        parsedRequest.data.params as McpPromptsGetRequest
+        parsedRequest.data.params as McpPromptsGetRequest,
+        redact,
+        security
       );
     default:
       return errorResponse({
@@ -1235,14 +2101,22 @@ async function dispatchMcpRequest(
 async function callMcpTool(
   runtime: RuntimeApi,
   catalog: McpCatalog,
-  request: McpToolsCallRequest
+  request: McpToolsCallRequest,
+  redact: McpEgressRedaction,
+  security: NormalizedMcpSecurity
 ): Promise<McpToolsCallResponse> {
-  const binding = catalog.byName.get(request.name);
+  const parsedRequest = toolsCallRequestSchema.safeParse(request);
+
+  if (!parsedRequest.success) {
+    return validationErrorResponse(parsedRequest.error);
+  }
+
+  const binding = catalog.byName.get(parsedRequest.data.name);
 
   if (binding === undefined) {
     return errorResponse({
       code: "method_not_found",
-      message: `MCP tool ${request.name} is not registered.`,
+      message: `MCP tool ${parsedRequest.data.name} is not registered.`,
       retryable: false
     });
   }
@@ -1250,38 +2124,82 @@ async function callMcpTool(
   if (!binding.enabled) {
     return errorResponse({
       code: "invalid_request",
-      message: `MCP tool ${request.name} is disabled.`,
+      message: `MCP tool ${parsedRequest.data.name} is disabled.`,
       retryable: false
     });
   }
 
-  const parsed = binding.inputParser.safeParse(request.arguments ?? {});
+  const parsed = binding.inputParser.safeParse(parsedRequest.data.arguments ?? {});
 
   if (!parsed.success) {
     return validationErrorResponse(parsed.error);
   }
 
-  try {
-    const result = await invokeRuntime(runtime, binding.runtimeOperation, parsed.data);
+  const authorization = await authorizeAsync({
+    security,
+    request: parsedRequest.data,
+    requestedScopes: [
+      ...(binding.requiredScopes ?? []),
+      ...(parsedRequest.data.requestedScopes ?? [])
+    ],
+    requireSubject: true,
+    tenantReference: tenantReferenceForRuntimeArgs(binding, parsed.data)
+  });
 
-    return resultForRuntimeValue(result);
+  if (authorization.kind === "error") {
+    return redactToolResponseIfNeeded(
+      authorization.response,
+      redact,
+      redactionContextForTool({
+        binding,
+        authorization,
+        errorCode: authorization.response.error.code
+      })
+    );
+  }
+
+  try {
+    const result = await invokeRuntime(
+      runtime,
+      binding.runtimeOperation,
+      parsed.data,
+      authorization.kind === "authenticated" ? authorization.context : undefined
+    );
+
+    return await redactToolResponseIfNeeded(
+      resultForRuntimeValue(result),
+      redact,
+      redactionContextForTool({
+        binding,
+        authorization
+      })
+    );
   } catch (error) {
     if (isZodError(error)) {
       return validationErrorResponse(error);
     }
 
-    return errorResponse({
-      code: "invalid_request",
-      message: error instanceof Error ? error.message : "Runtime call failed.",
-      retryable: false
-    });
+    return redactToolResponseIfNeeded(
+      errorResponse({
+        code: "invalid_request",
+        message: error instanceof Error ? error.message : "Runtime call failed.",
+        retryable: false
+      }),
+      redact,
+      redactionContextForTool({
+        binding,
+        authorization,
+        errorCode: "invalid_request"
+      })
+    );
   }
 }
 
 async function invokeRuntime(
   runtime: RuntimeApi,
   operation: RuntimeOperationName,
-  args: unknown
+  args: unknown,
+  authorization?: AuthorizationContext | undefined
 ): Promise<unknown> {
   switch (operation) {
     case "startRun":
@@ -1300,7 +2218,11 @@ async function invokeRuntime(
     }
     case "callTool": {
       const parsed = callToolArgumentsSchema.parse(args);
-      return runtime.callTool(parsed.runId, parsed.request, parsed.options);
+      return runtime.callTool(
+        parsed.runId,
+        parsed.request,
+        bindToolContext(parsed.options as ParsedCallToolOptions, authorization)
+      );
     }
     case "runEval": {
       const parsed = runEvalArgumentsSchema.parse(args);
@@ -1339,7 +2261,7 @@ async function invokeRuntime(
       return runtime.writeRunReport(parsed.runId, parsed.options);
     }
     default:
-      assertNever(operation);
+      assertNever(operation as never);
   }
 }
 
@@ -1363,7 +2285,7 @@ function resultForToolCallResult(
     case "denied":
       return errorResponse(
         {
-          code: "policy_denied",
+          code: result.error?.code ?? "policy_denied",
           message: result.error?.message ?? "Policy denied tool call.",
           retryable: result.error?.retryable ?? false
         },
@@ -1372,7 +2294,7 @@ function resultForToolCallResult(
     case "approval_required":
       return errorResponse(
         {
-          code: "approval_required",
+          code: result.error?.code ?? "approval_required",
           message: result.error?.message ?? "Approval is required before execution.",
           retryable: result.error?.retryable ?? false,
           approvalId: result.provenance.approvalId
@@ -1389,7 +2311,7 @@ function resultForToolCallResult(
         payload
       );
     default:
-      assertNever(result.status);
+      assertNever(result.status as never);
   }
 }
 
@@ -1664,10 +2586,11 @@ async function projectResourcePayload(
       const replayed = replayResultSchema.parse(
         await runtime.replay(requireRunId(matched), options)
       );
+      const events = runtimeEventArraySchema.parse(replayed.events);
 
       return {
-        payload: evalVerdictsFromEvents(replayed.events),
-        metadata: eventFreshness(replayed.events)
+        payload: evalVerdictsFromEvents(events),
+        metadata: eventFreshness(events)
       };
     }
     case "run-trace": {
@@ -1949,19 +2872,519 @@ function successResponse(result: unknown): McpToolsCallResponse {
 }
 
 function errorResponse(
-  error: McpToolError,
-  payload: unknown = { error }
+  error: McpToolErrorInput,
+  payload?: unknown
 ): McpErrorResponse {
+  const safeError = safeMcpError(error);
+
   return {
     isError: true,
-    error,
+    error: safeError,
     content: [
       {
         type: "json",
-        json: payload
+        json: payload === undefined ? { error: safeError } : payload
       }
     ]
   };
+}
+
+function safeMcpError(error: McpToolErrorInput): McpToolError {
+  return {
+    contractId: "specwright.mcp.error.v1",
+    code: sanitizeErrorCode(error.code),
+    message: sanitizeErrorMessage(error.message),
+    retryable: error.retryable,
+    operatorAction: sanitizeErrorMessage(
+      error.operatorAction ?? operatorActionForCode(error.code)
+    ),
+    ...(error.issues === undefined
+      ? {}
+      : {
+          issues: error.issues.map((issue) => ({
+            path: sanitizeErrorMessage(issue.path),
+            message: sanitizeErrorMessage(issue.message)
+          }))
+        }),
+    ...(error.approvalId === undefined ? {} : { approvalId: error.approvalId })
+  };
+}
+
+function sanitizeErrorCode(code: string) {
+  return /^[a-z0-9_.:-]+$/i.test(code) ? code : "invalid_request";
+}
+
+function sanitizeErrorMessage(message: string) {
+  const withoutStack = message
+    .split("\n")
+    .filter((line) => !/^\s*at\s+/.test(line))
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const withoutSecrets = withoutStack
+    .replace(
+      /\b(?:sk|pk|sess|tok|key|secret|password|credential|authorization)[-_a-z0-9]*[:=][^\s"'`]+/gi,
+      (value) => hashReference(value)
+    )
+    .replace(/\bsk-[A-Za-z0-9_-]{8,}\b/g, (value) => hashReference(value))
+    .replace(
+      /(^|[\s(["'])\/(?:Users|private|var|tmp|Volumes|workspace|runs-root|[^/\s"'`]+)(?:\/[^\s"'`)<>,;]+)+/g,
+      (value, prefix: string) => `${prefix}${hashReference(value.trim())}`
+    );
+
+  return withoutSecrets.length === 0 ? "Request failed safely." : withoutSecrets;
+}
+
+function operatorActionForCode(code: string) {
+  switch (code) {
+    case "unauthenticated":
+      return "Provide a valid MCP transport credential.";
+    case "subject_unverifiable":
+      return "Re-authenticate the propagated subject and retry.";
+    case "scope_exceeded":
+      return "Request only scopes granted to both the client and subject.";
+    case "tenant_mismatch":
+      return "Use a reference that belongs to the authenticated tenant.";
+    case "approval_required":
+      return "Obtain the required runtime approval before retrying.";
+    case "policy_denied":
+      return "Change the request or policy input; the runtime denied it.";
+    case "incomplete_authorization_context":
+      return "Configure the MCP adapter authentication context before retrying.";
+    default:
+      return "Inspect the request contract and retry with valid inputs.";
+  }
+}
+
+async function redactToolResponseIfNeeded(
+  response: McpToolsCallResponse,
+  redact: McpEgressRedaction,
+  context: McpEgressRedactionContext
+): Promise<McpToolsCallResponse> {
+  const redacted = await redact(response, context);
+
+  return redacted as McpToolsCallResponse;
+}
+
+function redactPromptResponseSync(
+  response: McpPromptsGetResponse,
+  redact: McpEgressRedaction,
+  context: McpEgressRedactionContext
+): McpPromptsGetResponse {
+  const redacted = redact(response, context);
+
+  if (isPromiseLike(redacted)) {
+    return errorResponse({
+      code: "incomplete_authorization_context",
+      message: "Prompt redaction must be synchronous for the prompts/get surface.",
+      retryable: false
+    });
+  }
+
+  return redacted as McpPromptsGetResponse;
+}
+
+function redactionContextForTool(input: {
+  binding: EnabledMcpToolBinding;
+  authorization: AuthorizationResult;
+  errorCode?: string | undefined;
+}): McpEgressRedactionContext {
+  return {
+    surface: input.errorCode === undefined ? "tool_result" : "error",
+    toolName: input.binding.name,
+    clientPrincipal:
+      input.authorization.kind === "authenticated"
+        ? input.authorization.context.clientPrincipal
+        : undefined,
+    subject:
+      input.authorization.kind === "authenticated"
+        ? input.authorization.context.subject
+        : undefined,
+    errorCode: input.errorCode,
+    classes: [
+      input.binding.outputSchemaRef,
+      ...(input.binding.requiredScopes ?? [])
+    ]
+  };
+}
+
+type RedactionWalkContext = {
+  surface: McpEgressRedactionContext["surface"];
+  path: readonly string[];
+  inheritedClass: RedactionClass | undefined;
+  egressClasses: readonly string[];
+};
+
+type RedactionWalkResult = {
+  value: unknown;
+  changed: boolean;
+};
+
+const trustLabelKeys = new Set([
+  "authority",
+  "cacheStatus",
+  "claimLevel",
+  "class",
+  "confidence",
+  "createdBy",
+  "decisionHash",
+  "evidenceRefs",
+  "externalOrigin",
+  "externalTrustPolicy",
+  "generated",
+  "generatedStatus",
+  "importantClaims",
+  "metadata",
+  "producedBy",
+  "provenance",
+  "redactionClass",
+  "redactionPolicy",
+  "sourceAuthority",
+  "sourceRefs"
+]);
+
+const dataBearingKeys = new Set([
+  "args",
+  "arguments",
+  "claim",
+  "content",
+  "locator",
+  "markdown",
+  "message",
+  "output",
+  "path",
+  "raw",
+  "summaryPath",
+  "text",
+  "uri",
+  "value"
+]);
+
+const sensitiveKeyPattern =
+  /(?:api[-_]?key|authorization|credential|password|private[-_]?key|secret|token)/i;
+
+const mcpRestrictedEgressPathPatterns = [
+  ["payload", "request", "args"],
+  ["payload", "result", "output"],
+  ["request", "args"],
+  ["result", "output"],
+  ["output"],
+  ["content", "*", "json", "output"],
+  ["content", "*", "json", "payload", "request", "args"],
+  ["content", "*", "json", "payload", "result", "output"],
+  ["content", "*", "json", "request", "args"],
+  ["content", "*", "json", "result", "output"],
+  ["content", "*", "json", "error", "message"],
+  ["action", "arguments"],
+  ["content", "*", "json", "action", "arguments"],
+  ["messages", "*", "content", "text"]
+] as const satisfies readonly (readonly string[])[];
+
+const mcpRestrictedContainerPathPatterns = [
+  ["payload", "request", "args"],
+  ["payload", "result", "output"],
+  ["request", "args"],
+  ["result", "output"],
+  ["output"],
+  ["content", "*", "json", "output"],
+  ["content", "*", "json", "payload", "request", "args"],
+  ["content", "*", "json", "payload", "result", "output"],
+  ["content", "*", "json", "request", "args"],
+  ["content", "*", "json", "result", "output"],
+  ["action", "arguments"],
+  ["content", "*", "json", "action", "arguments"]
+] as const satisfies readonly (readonly string[])[];
+
+function redactEgressValue(
+  value: unknown,
+  context: RedactionWalkContext
+): RedactionWalkResult {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const output = value.map((item, index) => {
+      const child = redactEgressValue(item, {
+        ...context,
+        path: [...context.path, String(index)]
+      });
+
+      changed ||= child.changed;
+      return child.value;
+    });
+
+    return {
+      value: changed ? output : value,
+      changed
+    };
+  }
+
+  if (!isRecord(value)) {
+    if (typeof value === "string" && context.surface === "error") {
+      const sanitized = sanitizeErrorMessage(value);
+
+      if (sanitized !== value) {
+        return {
+          value: sanitized,
+          changed: true
+        };
+      }
+    }
+
+    if (isRestrictedClass(context.inheritedClass)) {
+      return {
+        value: hashReference(value),
+        changed: true
+      };
+    }
+
+    if (typeof value === "string" && isAbsoluteHostPath(value)) {
+      return {
+        value: hashReference(value),
+        changed: true
+      };
+    }
+
+    return {
+      value,
+      changed: false
+    };
+  }
+
+  const objectClass =
+    redactionClassFromUnknown(value.redactionPolicy) ??
+    redactionClassFromUnknown(value.redactionClass) ??
+    context.inheritedClass;
+  let changed = false;
+  const output: Record<string, unknown> = {};
+
+  for (const key of Object.keys(value)) {
+    const childValue = value[key];
+
+    if (childValue === undefined) {
+      continue;
+    }
+
+    const childClass = redactionClassForChild(value, key, objectClass, context);
+
+    if (shouldHashField(key, childValue, childClass)) {
+      output[key] = hashReference(childValue);
+      changed = true;
+      continue;
+    }
+
+    const child = redactEgressValue(childValue, {
+      surface: context.surface,
+      path: [...context.path, key],
+      inheritedClass: childClass,
+      egressClasses: context.egressClasses
+    });
+
+    output[key] = child.value;
+    changed ||= child.changed;
+  }
+
+  return {
+    value: changed ? output : value,
+    changed
+  };
+}
+
+function redactionClassForChild(
+  parent: Record<string, unknown>,
+  key: string,
+  objectClass: RedactionClass | undefined,
+  context: RedactionWalkContext
+): RedactionClass | undefined {
+  const childPath = [...context.path, key];
+  const policyClass = redactionClassFromPolicy(parent.redactionPolicy, key, [
+    ...childPath
+  ]);
+
+  if (policyClass !== undefined) {
+    return policyClass;
+  }
+
+  if (isContractRestrictedPath(childPath, context)) {
+    return "restricted";
+  }
+
+  if (sensitiveKeyPattern.test(key)) {
+    return "secret";
+  }
+
+  if (trustLabelKeys.has(key)) {
+    return key === "metadata" ? objectClass : undefined;
+  }
+
+  if (isRestrictedClass(objectClass)) {
+    return objectClass;
+  }
+
+  if (typeof parent[key] === "string" && isAbsoluteHostPath(parent[key])) {
+    return "restricted";
+  }
+
+  return undefined;
+}
+
+function shouldHashField(
+  key: string,
+  value: unknown,
+  redactionClass: RedactionClass | undefined
+) {
+  if (!isRestrictedClass(redactionClass)) {
+    return false;
+  }
+
+  if (trustLabelKeys.has(key) && key !== "metadata") {
+    return false;
+  }
+
+  if (key === "arguments" && isRecord(value)) {
+    return false;
+  }
+
+  if (dataBearingKeys.has(key) || sensitiveKeyPattern.test(key)) {
+    return true;
+  }
+
+  return !isRecord(value) && !Array.isArray(value);
+}
+
+function isContractRestrictedPath(
+  path: readonly string[],
+  context: RedactionWalkContext
+) {
+  if (!mcpEgressProfileApplies(context)) {
+    return false;
+  }
+
+  return (
+    pathMatchesAnyPattern(path, mcpRestrictedEgressPathPatterns) ||
+    pathIsDescendantOfAnyPattern(path, mcpRestrictedContainerPathPatterns)
+  );
+}
+
+function mcpEgressProfileApplies(context: RedactionWalkContext) {
+  if (context.egressClasses.length === 0) {
+    return true;
+  }
+
+  return context.egressClasses.some((entry) =>
+    /ToolCallResult|RuntimeEvent|RunState|RunReport|Prompt|Error|Schema|runtime-owned|authoritative|derived|tool:|run:|prompt/i.test(
+      entry
+    )
+  );
+}
+
+function pathMatchesAnyPattern(
+  path: readonly string[],
+  patterns: readonly (readonly string[])[]
+) {
+  const candidates = redactionPathCandidates(path);
+
+  return candidates.some((candidate) =>
+    patterns.some((pattern) => pathMatchesPattern(candidate, pattern))
+  );
+}
+
+function pathIsDescendantOfAnyPattern(
+  path: readonly string[],
+  patterns: readonly (readonly string[])[]
+) {
+  const candidates = redactionPathCandidates(path);
+
+  return candidates.some((candidate) =>
+    patterns.some(
+      (pattern) =>
+        candidate.length > pattern.length &&
+        pathMatchesPattern(candidate.slice(0, pattern.length), pattern)
+    )
+  );
+}
+
+function pathMatchesPattern(
+  path: readonly string[],
+  pattern: readonly string[]
+) {
+  if (path.length !== pattern.length) {
+    return false;
+  }
+
+  return pattern.every(
+    (segment, index) => segment === "*" || segment === path[index]
+  );
+}
+
+function redactionPathCandidates(path: readonly string[]) {
+  const withoutArrayIndexes = path.filter((segment) => !/^\d+$/.test(segment));
+
+  return [path, withoutArrayIndexes];
+}
+
+function redactionClassFromPolicy(
+  policy: unknown,
+  key: string,
+  path: readonly string[]
+): RedactionClass | undefined {
+  const direct = redactionClassFromUnknown(policy);
+
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  if (!isRecord(policy)) {
+    return undefined;
+  }
+
+  const candidates = [
+    key,
+    path.join("."),
+    path.slice(-2).join(".")
+  ];
+
+  for (const candidate of candidates) {
+    const parsed = redactionClassFromUnknown(policy[candidate]);
+
+    if (parsed !== undefined) {
+      return parsed;
+    }
+  }
+
+  return undefined;
+}
+
+function redactionClassFromUnknown(value: unknown): RedactionClass | undefined {
+  const parsed = RedactionClassBoundarySchema.safeParse(value);
+
+  return parsed.success ? parsed.data : undefined;
+}
+
+function isRestrictedClass(
+  redactionClass: RedactionClass | undefined
+): redactionClass is RedactionClass {
+  return (
+    redactionClass !== undefined &&
+    redactionClassAtLeast(redactionClass, "restricted")
+  );
+}
+
+function hashReference(value: unknown) {
+  return `sha256:${createHash("sha256")
+    .update(stableHashInput(value))
+    .digest("hex")}`;
+}
+
+function stableHashInput(value: unknown) {
+  const text = JSON.stringify(canonicalJsonValue(value));
+
+  return text ?? String(value);
+}
+
+function isAbsoluteHostPath(value: unknown) {
+  return (
+    typeof value === "string" &&
+    /^\/(?:Users|private|var|tmp|Volumes|workspace|runs-root)\//.test(value)
+  );
 }
 
 function validationErrorResponse(error: ZodError): McpErrorResponse {
@@ -2029,6 +3452,7 @@ function enabledBinding(input: {
   inputParser: ZodTypeAny;
   inputSchemaRef: string;
   outputSchemaRef: string;
+  requiredScopes?: readonly string[] | undefined;
 }): EnabledMcpToolBinding {
   return {
     name: input.name,
@@ -2040,7 +3464,7 @@ function enabledBinding(input: {
     inputParser: input.inputParser,
     inputSchema: schemaRef(input.inputSchemaRef),
     outputSchemaRef: input.outputSchemaRef,
-    requiredScopes: []
+    requiredScopes: input.requiredScopes ?? []
   };
 }
 
@@ -2185,6 +3609,15 @@ function isZodError(error: unknown): error is ZodError {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
+  return (
+    (typeof value === "object" || typeof value === "function") &&
+    value !== null &&
+    "then" in value &&
+    typeof (value as { then?: unknown }).then === "function"
+  );
 }
 
 function assertNever(value: never): never {

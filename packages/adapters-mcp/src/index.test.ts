@@ -3,11 +3,17 @@ import { executeCli, type CliRuntime } from "@specwright/adapters-cli";
 import type { RuntimeApi } from "@specwright/runtime";
 import { projectRunState } from "@specwright/run-store";
 import {
+  applyEgressRedaction,
+  AuthorizationContextSchema,
+  ClientPrincipalSchema,
   createMcpAdapter,
   defaultMcpCatalog,
   defaultMcpPromptCatalog,
   defaultMcpResourceCatalog,
   McpCatalogError,
+  RedactionClassBoundarySchema,
+  SubjectClaimSchema,
+  SubjectEntitlementsSchema,
   mcpPromptBindings,
   mcpResourceBindings,
   mcpToolBindings,
@@ -316,7 +322,7 @@ describe("specwright mcp adapter", () => {
     expect(calls).toEqual([]);
   });
 
-  test("callTool success preserves provenance unmodified", async () => {
+  test("callTool success preserves provenance while redacting restricted output", async () => {
     const provenance = {
       toolId: "fs.read",
       toolVersion: "0.1.0",
@@ -349,9 +355,11 @@ describe("specwright mcp adapter", () => {
     });
 
     expect(result.isError).toBe(false);
-    expect(result.content[0].json).toBe(runtimeResult);
+    expect(result.content[0].json).not.toBe(runtimeResult);
     expect((result.result as typeof runtimeResult).provenance).toBe(provenance);
     expect((result.result as typeof runtimeResult).provenance).toEqual(provenance);
+    expect((result.result as typeof runtimeResult).output).toMatch(/^sha256:/);
+    expect(JSON.stringify(result)).not.toContain('"ok":true');
   });
 
   test("callTool denied, approval_required, and failed outcomes surface as errors", async () => {
@@ -404,7 +412,12 @@ describe("specwright mcp adapter", () => {
           code: outcome.expectedCode
         }
       });
-      expect(response.content[0].json).toBe(outcome.result);
+      expect(response.content[0].json).not.toBe(outcome.result);
+      expect(response.content[0].json).toMatchObject({
+        toolCallId: outcome.result.toolCallId,
+        status: outcome.result.status,
+        provenance: outcome.result.provenance
+      });
 
       if (outcome.approvalId !== undefined) {
         expect(response).toMatchObject({
@@ -838,7 +851,7 @@ describe("specwright mcp adapter", () => {
         applyEgressRedaction(payload, context) {
           invocations.push({
             uri: context.uri,
-            template: context.resource.uriTemplate,
+            template: context.resource?.uriTemplate,
             classes: context.classes,
             payload
           });
@@ -865,7 +878,697 @@ describe("specwright mcp adapter", () => {
     expect(invocations).toHaveLength(uris.length);
     expect(invocations.map((item) => (item as { uri: string }).uri)).toEqual(uris);
   });
+
+  test("strict Packet 03 boundary schemas reject unknown auth and redaction fields", () => {
+    expect(
+      ClientPrincipalSchema.safeParse({
+        clientId: "client-1",
+        tenantId: "tenant-a",
+        grantedScopes: ["run:read"],
+        runMode: "assisted",
+        extra: true
+      }).success
+    ).toBe(false);
+    expect(
+      SubjectClaimSchema.safeParse({
+        subjectId: "subject-1",
+        tenantId: "tenant-a",
+        injectedScope: "run:write"
+      }).success
+    ).toBe(false);
+    expect(
+      SubjectEntitlementsSchema.safeParse({
+        subjectId: "subject-1",
+        tenantId: "tenant-a",
+        scopes: ["run:read"],
+        hiddenToken: "tok-secret"
+      }).success
+    ).toBe(false);
+    expect(
+      AuthorizationContextSchema.safeParse({
+        clientPrincipal: securePrincipal(["run:read"]),
+        requestedScopes: ["run:read"],
+        effectiveScopes: ["run:read"],
+        toolContext: {
+          runMode: "assisted",
+          snapshots: {
+            sourceTrust: {}
+          },
+          ambientToken: "tok-secret"
+        }
+      }).success
+    ).toBe(false);
+    expect(RedactionClassBoundarySchema.safeParse("public").success).toBe(false);
+  });
+
+  test("secure tools/list rejects missing and invalid credentials before authority is exposed", () => {
+    const adapter = createMcpAdapter(fakeRuntime(), {
+      auth: secureAuth()
+    });
+
+    const missing = adapter.tools.list();
+    const invalid = adapter.tools.list({
+      credential: "invalid"
+    });
+
+    expect(missing).toMatchObject({
+      isError: true,
+      error: {
+        contractId: "specwright.mcp.error.v1",
+        code: "unauthenticated",
+        retryable: false
+      },
+      tools: []
+    });
+    expect(invalid).toMatchObject({
+      isError: true,
+      error: {
+        code: "unauthenticated"
+      },
+      tools: []
+    });
+  });
+
+  test("malformed and unverifiable subject claims fail closed with zero runtime calls", async () => {
+    const { runtime, calls } = countedRuntime();
+    const malformed = await createMcpAdapter(runtime, {
+      auth: secureAuth()
+    }).tools.call({
+      name: "specwright_call_tool",
+      arguments: validToolCallArguments(),
+      credential: "valid",
+      subject: {
+        subjectId: "subject-1",
+        tenantId: "tenant-a",
+        extra: "not allowed"
+      }
+    });
+    const unverifiable = await createMcpAdapter(runtime, {
+      auth: secureAuth({
+        subjectVerifier() {
+          return false;
+        }
+      })
+    }).tools.call({
+      name: "specwright_call_tool",
+      arguments: validToolCallArguments(),
+      credential: "valid",
+      subject: validSubjectClaim()
+    });
+
+    expect(malformed).toMatchObject({
+      isError: true,
+      error: {
+        code: "subject_unverifiable"
+      }
+    });
+    expect(unverifiable).toMatchObject({
+      isError: true,
+      error: {
+        code: "subject_unverifiable"
+      }
+    });
+    expect(calls).toEqual([]);
+  });
+
+  test("client and subject scope overreach deny before runtime", async () => {
+    const clientLimited = countedRuntime();
+    const clientDenied = await createMcpAdapter(clientLimited.runtime, {
+      auth: secureAuth({
+        principal: securePrincipal(["tool:call"]),
+        entitlements: secureEntitlements(["tool:call", "workspace:read"])
+      })
+    }).tools.call({
+      name: "specwright_call_tool",
+      arguments: validToolCallArguments(),
+      credential: "valid",
+      subject: validSubjectClaim(),
+      requestedScopes: ["workspace:read"]
+    });
+    const subjectLimited = countedRuntime();
+    const subjectDenied = await createMcpAdapter(subjectLimited.runtime, {
+      auth: secureAuth({
+        principal: securePrincipal(["tool:call", "workspace:read"]),
+        entitlements: secureEntitlements(["tool:call"])
+      })
+    }).tools.call({
+      name: "specwright_call_tool",
+      arguments: validToolCallArguments(),
+      credential: "valid",
+      subject: validSubjectClaim(),
+      requestedScopes: ["workspace:read"]
+    });
+
+    expect(clientDenied).toMatchObject({
+      isError: true,
+      error: {
+        code: "scope_exceeded"
+      }
+    });
+    expect(subjectDenied).toMatchObject({
+      isError: true,
+      error: {
+        code: "scope_exceeded"
+      }
+    });
+    expect(clientLimited.calls).toEqual([]);
+    expect(subjectLimited.calls).toEqual([]);
+  });
+
+  test("runtime policy denial and approval_required are surfaced without laundering", async () => {
+    const deniedRuntimeCalls: unknown[] = [];
+    const denied = await createMcpAdapter(
+      fakeRuntime({
+        async callTool(runId, request, options) {
+          deniedRuntimeCalls.push([runId, request, options]);
+          return toolResult({
+            status: "denied",
+            code: "policy_error",
+            message: "Policy engine failed closed."
+          });
+        }
+      }),
+      {
+        auth: secureAuth()
+      }
+    ).tools.call({
+      name: "specwright_call_tool",
+      arguments: validToolCallArguments(),
+      credential: "valid",
+      subject: validSubjectClaim()
+    });
+    const approval = await createMcpAdapter(
+      fakeRuntime({
+        async callTool() {
+          return toolResult({
+            status: "approval_required",
+            code: "approval_required",
+            message: "Needs a human decision.",
+            approvalId: "approval-1"
+          });
+        }
+      }),
+      {
+        auth: secureAuth()
+      }
+    ).tools.call({
+      name: "specwright_call_tool",
+      arguments: validToolCallArguments(),
+      credential: "valid",
+      subject: validSubjectClaim()
+    });
+
+    expect(denied).toMatchObject({
+      isError: true,
+      error: {
+        code: "policy_error"
+      }
+    });
+    expect(approval).toMatchObject({
+      isError: true,
+      error: {
+        code: "approval_required",
+        approvalId: "approval-1"
+      }
+    });
+    expect(deniedRuntimeCalls).toHaveLength(1);
+  });
+
+  test("secure callTool binds composed principal context and strips caller toolContext tokens", async () => {
+    const calls: unknown[] = [];
+    const adapter = createMcpAdapter(
+      fakeRuntime({
+        async callTool(runId, request, options) {
+          calls.push([runId, request, options]);
+          return {
+            toolCallId: "tool-call-1",
+            status: "success",
+            output: {
+              ok: true
+            },
+            provenance: {
+              toolId: "fs.read",
+              toolVersion: "0.1.0",
+              argsHash: "sha256:args",
+              resultHash: "sha256:result",
+              cacheStatus: "miss",
+              traceId: "trace-1",
+              adapterVersion: "0.1.0",
+              decisionHash: "sha256:decision"
+            }
+          };
+        }
+      }),
+      {
+        auth: secureAuth()
+      }
+    );
+
+    const response = await adapter.tools.call({
+      name: "specwright_call_tool",
+      arguments: {
+        ...validToolCallArguments(),
+        options: {
+          rootDir: "/runs-root",
+          cwd: "/workspace",
+          traceId: "trace-1",
+          toolContext: {
+            token: "tok-client-secret",
+            runMode: "autonomous"
+          }
+        }
+      },
+      credential: "valid",
+      subject: validSubjectClaim(),
+      requestedScopes: ["workspace:read"]
+    });
+
+    expect(response.isError).toBe(false);
+    expect(calls).toHaveLength(1);
+
+    const options = (calls[0] as unknown[])[2] as Record<string, unknown>;
+    const toolContext = options.toolContext as Record<string, unknown>;
+
+    expect(options).toMatchObject({
+      rootDir: "/runs-root",
+      cwd: "/workspace",
+      traceId: "trace-1"
+    });
+    expect(toolContext.runMode).toBe("assisted");
+    expect(JSON.stringify(toolContext)).not.toContain("tok-client-secret");
+    expect(JSON.stringify(toolContext)).not.toContain("credential");
+    expect(toolContext.snapshots).toMatchObject({
+      sourceTrust: {
+        mcp: {
+          clientId: "client-1",
+          tenantId: "tenant-a",
+          subjectId: "subject-1",
+          requestedScopes: ["tool:call", "workspace:read"],
+          effectiveScopes: expect.arrayContaining(["tool:call", "workspace:read"])
+        }
+      }
+    });
+  });
+
+  test("tenant resolver denies cross-tenant resources without runtime lookup", async () => {
+    const { runtime, calls } = countedRuntime();
+    const response = await createMcpAdapter(runtime, {
+      auth: secureAuth({
+        tenantResolver() {
+          return "tenant-b";
+        }
+      })
+    }).resources.read({
+      uri: "specwright://runs/run-other-tenant/state",
+      credential: "valid",
+      subject: validSubjectClaim()
+    });
+
+    expect(response).toMatchObject({
+      isError: true,
+      error: {
+        code: "tenant_mismatch"
+      }
+    });
+    expect(JSON.stringify(response)).not.toContain("run-other-tenant");
+    expect(calls).toEqual([]);
+  });
+
+  test("default egress redaction hashes restricted nested values and preserves trust labels", () => {
+    const payload = {
+      authority: "repo",
+      claimLevel: "source_fact",
+      evidenceRefs: ["evidence-1"],
+      generatedStatus: "generated",
+      externalOrigin: "external-mcp",
+      provenance: {
+        toolId: "fs.read",
+        decisionHash: "sha256:decision",
+        traceId: "trace-1"
+      },
+      sourceRefs: [
+        {
+          uri: "file:///Users/nikolacehic/secret.md",
+          authority: "repo",
+          redactionClass: "secret"
+        }
+      ],
+      content: {
+        public: "ok",
+        apiToken: "tok-raw-secret",
+        nested: [
+          {
+            value: "restricted raw value",
+            redactionPolicy: {
+              value: "restricted"
+            }
+          }
+        ]
+      }
+    };
+
+    const first = applyEgressRedaction(payload, {
+      surface: "tool_result",
+      classes: ["ToolCallResultSchema"]
+    });
+    const second = applyEgressRedaction(payload, {
+      surface: "tool_result",
+      classes: ["ToolCallResultSchema"]
+    });
+    const text = JSON.stringify(first);
+
+    expect(first).toEqual(second);
+    expect(text).toContain('"authority":"repo"');
+    expect(text).toContain('"claimLevel":"source_fact"');
+    expect(text).toContain('"evidenceRefs":["evidence-1"]');
+    expect(text).toContain('"generatedStatus":"generated"');
+    expect(text).toContain('"externalOrigin":"external-mcp"');
+    expect(text).toContain('"decisionHash":"sha256:decision"');
+    expect(text).not.toContain("tok-raw-secret");
+    expect(text).not.toContain("restricted raw value");
+    expect(text).not.toContain("/Users/nikolacehic/secret.md");
+    expect(text.match(/sha256:/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  test("contract egress paths hash restricted non-secret runtime and prompt fields", () => {
+    const payload = {
+      payload: {
+        request: {
+          args: {
+            customerNote: "internal roadmap",
+            nested: [
+              {
+                summary: "restricted but non-secret"
+              }
+            ]
+          }
+        },
+        result: {
+          output: {
+            summary: "restricted but non-secret",
+            nested: [
+              {
+                customerNote: "internal roadmap"
+              }
+            ]
+          },
+          provenance: {
+            decisionHash: "sha256:decision"
+          }
+        }
+      },
+      request: {
+        args: {
+          customerNote: "internal roadmap"
+        }
+      },
+      result: {
+        output: {
+          summary: "restricted but non-secret"
+        }
+      },
+      action: {
+        tool: "specwright_start_run",
+        arguments: {
+          task: "internal roadmap",
+          nested: {
+            summary: "restricted but non-secret"
+          }
+        },
+        mutates: true
+      },
+      content: [
+        {
+          type: "json",
+          json: {
+            payload: {
+              request: {
+                args: {
+                  customerNote: "internal roadmap"
+                }
+              },
+              result: {
+                output: {
+                  summary: "restricted but non-secret"
+                }
+              }
+            },
+            action: {
+              arguments: {
+                task: "internal roadmap"
+              }
+            },
+            error: {
+              message: "restricted but non-secret"
+            }
+          }
+        }
+      ],
+      provenance: {
+        decisionHash: "sha256:decision"
+      }
+    };
+
+    const first = applyEgressRedaction(payload, {
+      surface: "prompt",
+      classes: ["RuntimeEventSchema", "ToolCallResultSchema", "Prompt", "Error"]
+    });
+    const second = applyEgressRedaction(payload, {
+      surface: "prompt",
+      classes: ["RuntimeEventSchema", "ToolCallResultSchema", "Prompt", "Error"]
+    });
+    const text = JSON.stringify(first);
+
+    expect(first).toEqual(second);
+    expect(text).not.toContain("internal roadmap");
+    expect(text).not.toContain("restricted but non-secret");
+    expect(text).toContain('"decisionHash":"sha256:decision"');
+    expect(text.match(/sha256:/g)?.length).toBeGreaterThanOrEqual(8);
+    expect((first as { action: { arguments: unknown } }).action.arguments).toEqual({
+      task: expect.stringMatching(/^sha256:/),
+      nested: {
+        summary: expect.stringMatching(/^sha256:/)
+      }
+    });
+  });
+
+  test("resource event egress hashes payload request args and result output without inline metadata", async () => {
+    const runId = "run-contract-redaction";
+    const events = [
+      fakeEvent({
+        runId,
+        id: "event-1",
+        sequence: 0
+      }),
+      {
+        id: "event-2",
+        runId,
+        type: "tool.completed",
+        timestamp: "2026-05-29T00:00:01.000Z",
+        sequence: 1,
+        traceId: "trace-1",
+        payload: {
+          request: {
+            toolId: "crm.read",
+            args: {
+              customerNote: "internal roadmap",
+              nested: [
+                {
+                  summary: "restricted but non-secret"
+                }
+              ]
+            },
+            reason: "Read customer note.",
+            idempotencyKey: "idem-redaction",
+            requestedBy: {
+              phase: "intake"
+            }
+          },
+          result: {
+            toolCallId: "tool-call-redaction",
+            status: "success",
+            output: {
+              summary: "restricted but non-secret",
+              nested: [
+                {
+                  customerNote: "internal roadmap"
+                }
+              ]
+            },
+            provenance: {
+              toolId: "crm.read",
+              toolVersion: "0.1.0",
+              argsHash: "sha256:args",
+              resultHash: "sha256:result",
+              cacheStatus: "miss",
+              traceId: "trace-1",
+              adapterVersion: "0.1.0",
+              decisionHash: "sha256:decision"
+            }
+          }
+        }
+      }
+    ] satisfies Awaited<ReturnType<RuntimeApi["getEvents"]>>;
+    const response = await createMcpAdapter(
+      fakeRuntime({
+        async getEvents() {
+          return events;
+        }
+      })
+    ).resources.read({
+      uri: `specwright://runs/${runId}/events`
+    });
+    const text = JSON.stringify(response);
+
+    expect(response.isError).toBe(false);
+    expect(text).not.toContain("internal roadmap");
+    expect(text).not.toContain("restricted but non-secret");
+    expect(text).toContain('"decisionHash":"sha256:decision"');
+    expect(text).toContain('"args":"sha256:');
+    expect(text).toContain('"output":"sha256:');
+  });
+
+  test("secure runtime throws use safe error contract without secrets, paths, or stacks", async () => {
+    const response = await createMcpAdapter(
+      fakeRuntime({
+        async startRun() {
+          throw new Error(
+            "boom secret=super-secret at /Users/nikolacehic/private/file.txt\n    at Runtime.start (/Users/nikolacehic/private/runtime.ts:1:1)"
+          );
+        }
+      }),
+      {
+        auth: secureAuth({
+          principal: securePrincipal(["run:start"]),
+          entitlements: secureEntitlements(["run:start"])
+        })
+      }
+    ).tools.call({
+      name: "specwright_start_run",
+      arguments: validRunInput(),
+      credential: "valid",
+      subject: validSubjectClaim()
+    });
+    const text = JSON.stringify(response);
+
+    expect(response).toMatchObject({
+      isError: true,
+      error: {
+        contractId: "specwright.mcp.error.v1",
+        code: "invalid_request",
+        retryable: false
+      }
+    });
+    expect(text).not.toContain("super-secret");
+    expect(text).not.toContain("/Users/nikolacehic");
+    expect(text).not.toContain("Runtime.start");
+    expect(text).toContain("sha256:");
+  });
+
+  test("prompt egress uses the redaction chokepoint in secure mode", () => {
+    const invocations: string[] = [];
+    const adapter = createMcpAdapter(fakeRuntime(), {
+      auth: secureAuth({
+        principal: securePrincipal(["run:start"]),
+        entitlements: secureEntitlements(["run:start"])
+      }),
+      applyEgressRedaction(payload, context) {
+        invocations.push(context.surface);
+        return payload;
+      }
+    });
+    const response = adapter.prompts.get({
+      name: "specwright_start_frontend_contract",
+      credential: "valid"
+    });
+
+    expect(response.isError).toBe(false);
+    expect(invocations).toEqual(["prompt"]);
+  });
 });
+
+function secureAuth(
+  overrides: {
+    principal?: ReturnType<typeof securePrincipal> | undefined;
+    entitlements?: ReturnType<typeof secureEntitlements> | undefined;
+    subjectVerifier?:
+      | ((claim: ReturnType<typeof validSubjectClaim>) => unknown)
+      | undefined;
+    tenantResolver?: (() => string | undefined) | undefined;
+  } = {}
+) {
+  return {
+    mode: "authenticated" as const,
+    credentialVerifier(credential: unknown) {
+      if (credential !== "valid") {
+        throw new Error("invalid credential");
+      }
+
+      return overrides.principal ?? securePrincipal();
+    },
+    subjectVerifier(claim: ReturnType<typeof validSubjectClaim>) {
+      if (overrides.subjectVerifier !== undefined) {
+        return overrides.subjectVerifier(claim);
+      }
+
+      if (claim.subjectId !== "subject-1") {
+        return false;
+      }
+
+      return overrides.entitlements ?? secureEntitlements();
+    },
+    ...(overrides.tenantResolver === undefined
+      ? {}
+      : {
+          tenantResolver: overrides.tenantResolver
+        })
+  };
+}
+
+function securePrincipal(scopes: readonly string[] = allSecureScopes()) {
+  return {
+    clientId: "client-1",
+    tenantId: "tenant-a",
+    grantedScopes: [...scopes],
+    runMode: "assisted" as const
+  };
+}
+
+function secureEntitlements(scopes: readonly string[] = allSecureScopes()) {
+  return {
+    subjectId: "subject-1",
+    tenantId: "tenant-a",
+    scopes: [...scopes],
+    sourceTrust: {
+      subjectAuthority: "idp.fixture"
+    }
+  };
+}
+
+function validSubjectClaim() {
+  return {
+    subjectId: "subject-1",
+    tenantId: "tenant-a",
+    claimRef: "claim-1",
+    issuedBy: "idp.fixture"
+  };
+}
+
+function allSecureScopes() {
+  return [
+    "artifact:write",
+    "eval:run",
+    "evidence:write",
+    "gate:evaluate",
+    "harness:read",
+    "report:read",
+    "report:write",
+    "run:read",
+    "run:start",
+    "tool:call",
+    "workspace:read"
+  ];
+}
 
 function validRunInput() {
   return {
