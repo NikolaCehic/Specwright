@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./evals": {
+      "types": "./dist/evals/index.d.ts",
+      "import": "./dist/evals/index.js"
     }
   },
   "files": [
@@ -17,7 +21,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json --pretty false",
     "typecheck": "tsc --noEmit -p tsconfig.json --pretty false",
-    "test": "bun test src/index.test.ts src/ranking/ranking.test.ts"
+    "test": "bun test src/index.test.ts src/ranking/ranking.test.ts src/evals/evals.test.ts"
   },
   "dependencies": {
     "@specwright/schemas": "workspace:*",
