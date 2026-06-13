@@ -89,7 +89,9 @@
       "name": "@specwright/memory",
       "version": "0.0.0",
       "dependencies": {
+        "@specwright/policy-engine": "workspace:*",
         "@specwright/schemas": "workspace:*",
+        "@specwright/tool-broker": "workspace:*",
         "zod": "^3.22.4",
       },
     },
