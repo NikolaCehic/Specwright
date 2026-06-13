@@ -1,0 +1,78 @@
+{
+  "schemaVersion": "specwright.memory.retrieval-eval-dataset.v1",
+  "datasetId": "memory.semantic.hybrid_retrieval_quality.v1",
+  "version": "1.0.0",
+  "evalId": "memory.semantic.retrieval_quality.v1",
+  "corpusClass": "semantic",
+  "pinned": {
+    "indexVersion": "sha256:dac7e43860e0e2e0f7c2d80557c8396a3f55903e8b6ecccae93c066cb2f86bdf",
+    "embeddingModelVersion": "1.0.0",
+    "chunkingStrategyVersion": "sha256:1dbe9d255c30e315f075f60a38a87f03f4fd9f31dfd6e04c58d7a124765b78d4"
+  },
+  "thresholds": {
+    "recallAtK": {
+      "k": 3,
+      "minimum": 0.66
+    },
+    "precisionAtK": {
+      "k": 3,
+      "minimum": 0.66
+    },
+    "mrr": {
+      "k": 3,
+      "minimum": 1
+    },
+    "ndcgAtK": {
+      "k": 3,
+      "minimum": 0.89
+    }
+  },
+  "queries": [
+    {
+      "id": "runtime-hybrid",
+      "query": "How does the runtime combine lexical, dense, and proximity retrieval?",
+      "queryHash": "sha256:f55c6084c94d223ab15b72c4d08d2ff2a180d20adc9bcf68a7886294b1988f7b",
+      "relevant": [
+        {
+          "chunkId": "chunk-alpha",
+          "sourceRef": "docs/runtime.md#alpha",
+          "sourceHash": "sha256:7e84c4e04817c9f55ebb2845f2fce3f49695f3c2dfd5ae3985fb64ddaff03781",
+          "grade": 3
+        },
+        {
+          "chunkId": "chunk-beta",
+          "sourceRef": "docs/runtime.md#beta",
+          "sourceHash": "sha256:81a118f1d478f286959d4d9f69e47fdf0503d33097b8b0e887fb0a5a2ee06ae8",
+          "grade": 2
+        },
+        {
+          "chunkId": "chunk-epsilon",
+          "sourceRef": "docs/memory.md#epsilon",
+          "sourceHash": "sha256:cb85de833619513afe133ffb8d02c3b700d9942914d9e0a8aa37040c0516e768",
+          "grade": 1
+        }
+      ]
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim-runtime-grounded",
+      "claim": "The runtime combines deterministic hybrid retrieval signals before promotion.",
+      "claimLevel": "source_fact",
+      "authority": "repo",
+      "owningArtifactId": "artifact-runtime-summary",
+      "support": [
+        {
+          "chunkId": "chunk-alpha",
+          "sourceRef": "docs/runtime.md#alpha",
+          "sourceHash": "sha256:7e84c4e04817c9f55ebb2845f2fce3f49695f3c2dfd5ae3985fb64ddaff03781"
+        }
+      ],
+      "independentEvidenceRefs": [
+        "evidence:repo:runtime-alpha"
+      ]
+    }
+  ],
+  "tombstonedChunkIds": [],
+  "contentHash": "sha256:6ab173ca9eac854398a78fe3ee767fbcd39897cdc3123659716576322ad13bfc"
+}

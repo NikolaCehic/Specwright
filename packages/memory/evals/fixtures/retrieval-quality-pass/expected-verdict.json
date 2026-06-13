@@ -1,0 +1,15 @@
+{
+  "evalId": "memory.semantic.retrieval_quality.v1",
+  "evidenceRefs": [
+    "memory-dataset:memory.semantic.hybrid_retrieval_quality.v1@1.0.0",
+    "memory-index:sha256:dac7e43860e0e2e0f7c2d80557c8396a3f55903e8b6ecccae93c066cb2f86bdf"
+  ],
+  "findings": [],
+  "producedBy": {
+    "kind": "deterministic",
+    "ref": "specwright.memory.retrieval-quality-grader@1.0.0"
+  },
+  "severity": "blocking",
+  "status": "pass",
+  "targetRef": "memory-index:sha256:dac7e43860e0e2e0f7c2d80557c8396a3f55903e8b6ecccae93c066cb2f86bdf"
+}
