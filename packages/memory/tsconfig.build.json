@@ -10,6 +10,18 @@
       ],
       "@specwright/schemas/*": [
         "../schemas/dist/*"
+      ],
+      "@specwright/policy-engine": [
+        "../policy-engine/dist/index.d.ts"
+      ],
+      "@specwright/policy-engine/*": [
+        "../policy-engine/dist/*"
+      ],
+      "@specwright/tool-broker": [
+        "../tool-broker/dist/index.d.ts"
+      ],
+      "@specwright/tool-broker/*": [
+        "../tool-broker/dist/*"
       ]
     }
   }

@@ -27,9 +27,6 @@
       "@specwright/memory": [
         "packages/memory/src/index.ts"
       ],
-      "@specwright/memory/*": [
-        "packages/memory/src/*"
-      ],
       "@specwright/trace-recorder": [
         "packages/trace-recorder/src/index.ts"
       ],

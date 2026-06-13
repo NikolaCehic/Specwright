@@ -19,13 +19,13 @@ import {
   searchDenseVectorIndex,
   searchExactReference,
   verifyDenseVectorIndexIntegrity
-} from "../index";
+} from "../internal";
 import type {
   Chunk,
   DenseRetrievalResult,
   EmbeddingProvider,
   MemoryDocument
-} from "../index";
+} from "../internal";
 
 const denseFixtureRoot = join(import.meta.dir, "..", "..", "test", "fixtures", "dense");
 const fixedConfig = {
