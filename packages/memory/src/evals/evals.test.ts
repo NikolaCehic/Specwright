@@ -11,6 +11,8 @@ import {
   GROUNDEDNESS_SELF_RETRIEVAL_CODE,
   MEMORY_RETRIEVAL_EVAL_DEFINITIONS,
   RETRIEVAL_NDCG_BELOW_THRESHOLD_CODE,
+  RETRIEVAL_INDEX_VERSION_MISMATCH_CODE,
+  RETRIEVAL_QUERY_RESULT_MISSING_CODE,
   RETRIEVAL_RECALL_BELOW_THRESHOLD_CODE,
   RETRIEVAL_TOMBSTONED_HIT_RETURNED_CODE,
   RETRIEVAL_EVAL_DATASET_SCHEMA_VERSION,
@@ -215,63 +217,106 @@ describe("memory retrieval-quality grader", () => {
       RETRIEVAL_TOMBSTONED_HIT_RETURNED_CODE
     );
   });
+
+  test("fails closed when query results are missing or from a different index", () => {
+    const dataset = datasetWithHash(baseDatasetContent());
+    const missingResult = gradeRetrievalQuality({
+      dataset,
+      resultsByQueryId: new Map(),
+      availableIndexVersions: [INDEX_VERSION]
+    });
+    expect(missingResult.status).toBe("fail");
+    expect(findingCodes(missingResult)).toContain(
+      RETRIEVAL_QUERY_RESULT_MISSING_CODE
+    );
+
+    const mismatchedResult = clone(goldenResult());
+    mismatchedResult.provenance.indexVersion = ZETA_HASH;
+    const indexMismatch = gradeRetrievalQuality({
+      dataset,
+      resultsByQueryId: new Map([["runtime-hybrid", mismatchedResult]]),
+      availableIndexVersions: [INDEX_VERSION]
+    });
+    expect(indexMismatch.status).toBe("fail");
+    expect(findingCodes(indexMismatch)).toContain(
+      RETRIEVAL_INDEX_VERSION_MISMATCH_CODE
+    );
+  });
 });
 
 describe("memory groundedness grader", () => {
   test("passes traced repo support and fails untraced, low-trust, self, and hash-mismatch claims", () => {
+    const passingDataset = datasetWithHash(baseDatasetContent());
     const passing = gradeGroundedness({
-      dataset: datasetWithHash(baseDatasetContent()),
+      dataset: passingDataset,
       resultsByQueryId: resultsByQuery()
     });
     expect(passing.status).toBe("pass");
-
-    const failing = gradeGroundedness({
-      dataset: datasetWithHash(
-        baseDatasetContent({
-          claims: [
-            claim({
-              id: "claim-untraced",
-              support: [
-                {
-                  chunkId: "chunk-missing",
-                  sourceRef: "docs/missing.md#missing",
-                  sourceHash: ZETA_HASH
-                }
-              ]
-            }),
-            claim({
-              id: "claim-low-trust",
-              support: [
-                {
-                  chunkId: "chunk-delta",
-                  sourceRef: "docs/retrieval.md#delta",
-                  sourceHash: DELTA_HASH
-                }
-              ]
-            }),
-            claim({
-              id: "claim-self",
-              owningArtifactId: "artifact-self",
-              selfArtifactId: "artifact-self"
-            }),
-            claim({
-              id: "claim-faithfulness",
-              support: [
-                {
-                  chunkId: "chunk-alpha",
-                  sourceRef: "docs/runtime.md#alpha",
-                  sourceHash: ALPHA_HASH,
-                  modelVisibleSourceHash: BETA_HASH
-                }
-              ],
-              independentEvidenceRefs: ["evidence:repo:runtime-alpha"]
-            })
-          ]
+    expect(
+      stableStringify(
+        gradeGroundedness({
+          dataset: passingDataset,
+          resultsByQueryId: resultsByQuery()
         })
-      ),
+      )
+    ).toBe(stableStringify(passing));
+
+    const failingDataset = datasetWithHash(
+      baseDatasetContent({
+        claims: [
+          claim({
+            id: "claim-untraced",
+            support: [
+              {
+                chunkId: "chunk-missing",
+                sourceRef: "docs/missing.md#missing",
+                sourceHash: ZETA_HASH
+              }
+            ]
+          }),
+          claim({
+            id: "claim-low-trust",
+            support: [
+              {
+                chunkId: "chunk-delta",
+                sourceRef: "docs/retrieval.md#delta",
+                sourceHash: DELTA_HASH
+              }
+            ]
+          }),
+          claim({
+            id: "claim-self",
+            owningArtifactId: "artifact-self",
+            selfArtifactId: "artifact-self"
+          }),
+          claim({
+            id: "claim-faithfulness",
+            support: [
+              {
+                chunkId: "chunk-alpha",
+                sourceRef: "docs/runtime.md#alpha",
+                sourceHash: ALPHA_HASH,
+                modelVisibleSourceHash: BETA_HASH
+              }
+            ],
+            independentEvidenceRefs: ["evidence:repo:runtime-alpha"]
+          })
+        ]
+      })
+    );
+    const failing = gradeGroundedness({
+      dataset: failingDataset,
       resultsByQueryId: resultsByQuery()
     });
     expect(failing.status).toBe("fail");
+    expect(
+      stableStringify(
+        gradeGroundedness({
+          dataset: failingDataset,
+          resultsByQueryId: resultsByQuery()
+        })
+      )
+    ).toBe(stableStringify(failing));
     expect(findingCodes(failing)).toEqual(
       expect.arrayContaining([
         GROUNDEDNESS_CLAIM_UNTRACED_CODE,
