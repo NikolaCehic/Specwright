@@ -16,8 +16,8 @@ import {
   retrieveLexical,
   scoreBM25,
   scoreProximity
-} from "../internal";
-import type { Chunk, MemoryDocument } from "../internal";
+} from "../../test/internal";
+import type { Chunk, MemoryDocument } from "../../test/internal";
 
 const lexicalFixtureRoot = join(import.meta.dir, "..", "..", "test", "fixtures", "lexical");
 const fixedConfig = {

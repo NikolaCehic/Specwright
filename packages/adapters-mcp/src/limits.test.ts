@@ -7,7 +7,7 @@ import {
   DEFAULT_ADAPTER_LIMITS,
   measureMcpPayloadBytes
 } from "./index";
-import { fakeRuntimeForPacket06 } from "./packet06-test-helpers";
+import { fakeRuntimeForPacket06 } from "../test/packet06-test-helpers";
 
 describe("Packet 06 MCP operability limits", () => {
   test("malformed limit config fails closed", () => {

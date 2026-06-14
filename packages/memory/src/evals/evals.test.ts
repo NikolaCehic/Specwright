@@ -28,14 +28,14 @@ import {
   reciprocalRank,
   scoreRetrievalMetrics,
   stableStringify
-} from "../internal";
+} from "../../test/internal";
 import type {
   RankedHit,
   RetrievalEvalDataset,
   RetrievalEvalDatasetContent,
   RetrievalGroundedClaim,
   RetrievalResult
-} from "../internal";
+} from "../../test/internal";
 
 const fixtureRoot = join(import.meta.dir, "..", "..", "evals");
 const rankingFixtureRoot = join(

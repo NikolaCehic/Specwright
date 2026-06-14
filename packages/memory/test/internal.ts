@@ -2,23 +2,23 @@ export {
   MemoryError,
   isMemoryError,
   memoryError
-} from "./errors";
-export type { MemoryErrorCode, MemoryErrorOptions } from "./errors";
+} from "../src/errors";
+export type { MemoryErrorCode, MemoryErrorOptions } from "../src/errors";
 export {
   Sha256HashSchema,
   hashString,
   hashValue,
   stableStringify
-} from "./hash";
-export type { Sha256Hash } from "./hash";
+} from "../src/hash";
+export type { Sha256Hash } from "../src/hash";
 export {
   MemoryClassSchema,
   MemoryCorpusSchema,
   TrustLabelSchema
-} from "./corpus";
-export type { MemoryClass, MemoryCorpus, TrustLabel } from "./corpus";
-export { MemoryDocumentSchema, parseMemoryDocument } from "./document";
-export type { MemoryDocument } from "./document";
+} from "../src/corpus";
+export type { MemoryClass, MemoryCorpus, TrustLabel } from "../src/corpus";
+export { MemoryDocumentSchema, parseMemoryDocument } from "../src/document";
+export type { MemoryDocument } from "../src/document";
 export {
   CandidateChunkSchema,
   ChunkSchema,
@@ -27,14 +27,14 @@ export {
   finalizeChunk,
   parseCandidateChunk,
   parseChunk
-} from "./chunk";
+} from "../src/chunk";
 export type {
   CandidateChunk,
   Chunk,
   ChunkingStrategyStamp,
   FinalizeChunkInput,
   Span
-} from "./chunk";
+} from "../src/chunk";
 export {
   BuiltInChunkingStrategies,
   ChunkingStrategyRegistry,
@@ -49,20 +49,20 @@ export {
   chunkDocument,
   defaultChunkingStrategyRegistry,
   tokenizeText
-} from "./chunking";
-export type { ChunkDocumentInput, ChunkingStrategy } from "./chunking";
+} from "../src/chunking";
+export type { ChunkDocumentInput, ChunkingStrategy } from "../src/chunking";
 export {
   ChunkStoreKeySchema,
   InMemoryChunkStore,
   ingestDocument
-} from "./chunk-store";
-export type { IngestDocumentInput, IngestDocumentResult } from "./chunk-store";
+} from "../src/chunk-store";
+export type { IngestDocumentInput, IngestDocumentResult } from "../src/chunk-store";
 export { diffChunks } from "./diff";
 export type { ChunkDiff, ChunkDiffEntry } from "./diff";
-export * from "./lexical";
-export * from "./dense-contracts";
-export * from "./embedding";
-export * from "./vector";
-export * from "./retrieval";
-export * from "./ranking";
-export * from "./evals";
+export * from "../src/lexical";
+export * from "../src/dense-contracts";
+export * from "../src/embedding";
+export * from "../src/vector";
+export * from "../src/retrieval";
+export * from "../src/ranking";
+export * from "../src/evals";
