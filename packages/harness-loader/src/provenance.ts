@@ -6,14 +6,14 @@ import {
   type HarnessSnapshot
 } from "@specwright/schemas";
 import { z } from "zod";
+import type { CompatibilityAdmission } from "./compatibility/admission";
+import type { GrantEvaluation } from "./capability-grant";
 import type {
-  CompatibilityAdmission,
   DependencyResolution,
-  GrantEvaluation,
-  ResolvedDependency,
-  SourceFile,
-  TrustVerdict
-} from "./index";
+  ResolvedDependency
+} from "./dependency-resolver";
+import type { TrustVerdict } from "./trust";
+import type { SourceFile } from "./types";
 import type {
   HarnessLoaderAuditEvent,
   HarnessRedactionHashReference
