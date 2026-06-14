@@ -331,30 +331,13 @@ describe("runtime facade", () => {
       );
   });
 
-  test("evaluateGate delegates to GateEngine and records verdict and instruction", async () => {
+  test("evaluateGate delegates to GateEngine and applies transition lifecycle events", async () => {
     let delegatedRequest: EvaluateGateRequest | undefined;
-    const gateResult: GateEvaluationResult = {
-      verdict: {
-        gateId: "intake.exit",
-        phase: "intake",
-        status: "pass",
-        severity: "blocking",
-        reasons: ["Gate passed"],
-        findings: [],
-        evidenceRefs: [],
-        obligations: [],
-        evaluatedAt: "2026-05-29T00:00:00.000Z",
-        evaluator: {
-          kind: "deterministic",
-          ref: "test-gate-engine"
-        }
-      },
-      instruction: {
-        kind: "transition_phase",
-        gateId: "intake.exit",
-        targetPhase: "evidence"
-      }
-    };
+    const gateResult = gateResultForInstruction({
+      kind: "transition_phase",
+      gateId: "intake.exit",
+      targetPhase: "evidence"
+    });
     const runtime = runtimeForTests({
       gateEngine(request) {
         delegatedRequest = request;
@@ -365,6 +348,10 @@ describe("runtime facade", () => {
 
     const result = await runtime.evaluateGate(handle.runId, "intake.exit");
     const events = await runtime.getEvents(handle.runId);
+    const state = await runtime.getRun(handle.runId);
+    const replayed = await runtime.replay(handle.runId);
+    const evaluated = events.at(-2);
+    const transitioned = events.at(-1);
 
     expect(result).toEqual(gateResult);
     expect(delegatedRequest?.gateId).toBe("intake.exit");
@@ -374,8 +361,11 @@ describe("runtime facade", () => {
       runId: handle.runId,
       phase: "intake"
     });
-    expect(events.at(-1)?.type).toBe("gate.evaluated");
-    expect(events.at(-1)?.payload).toMatchObject({
+    expect(events.slice(-2).map((event) => event.type)).toEqual([
+      "gate.evaluated",
+      "phase.transitioned"
+    ]);
+    expect(evaluated?.payload).toMatchObject({
       verdict: {
         gateId: "intake.exit",
         status: "pass"
@@ -385,15 +375,171 @@ describe("runtime facade", () => {
         targetPhase: "evidence"
       }
     });
+    expect(transitioned?.payload).toMatchObject({
+      phase: "evidence",
+      fromPhase: "intake",
+      toPhase: "evidence",
+      reason: "gate:intake.exit"
+    });
+    expect(transitioned?.causationId).toBe(evaluated?.id);
+    expect(state.phase).toBe("evidence");
+    expect(replayed.state.phase).toBe("evidence");
     expect((await readTrace({ rootDir, runId: handle.runId })).spans)
       .toContainEqual(
         expect.objectContaining({
           kind: "gate",
           name: "gate.intake.exit",
-          status: "pass"
+          status: "pass",
+          eventIds: [evaluated?.id, transitioned?.id],
+          metadata: expect.objectContaining({
+            lifecycleApplication: "applied",
+            lifecycleEventType: "phase.transitioned"
+          })
         })
       );
   });
+
+  test("evaluateGate applies fail_run lifecycle events", async () => {
+    const gateResult = gateResultForInstruction(
+      {
+        kind: "fail_run",
+        gateId: "intake.exit",
+        reason: "Gate failed"
+      },
+      {
+        status: "fail",
+        reasons: ["Gate failed"]
+      }
+    );
+    const runtime = runtimeForTests({
+      gateEngine() {
+        return gateResult;
+      }
+    });
+    const handle = await runtime.startRun(runInput);
+
+    const result = await runtime.evaluateGate(handle.runId, "intake.exit");
+    const events = await runtime.getEvents(handle.runId);
+    const state = await runtime.getRun(handle.runId);
+    const replayed = await runtime.replay(handle.runId);
+    const evaluated = events.at(-2);
+    const failed = events.at(-1);
+
+    expect(result).toEqual(gateResult);
+    expect(events.slice(-2).map((event) => event.type)).toEqual([
+      "gate.evaluated",
+      "run.failed"
+    ]);
+    expect(failed?.payload).toMatchObject({
+      reason: "Gate failed",
+      metadata: {
+        gateId: "intake.exit",
+        gateCausation: "gate:intake.exit",
+        instructionKind: "fail_run"
+      }
+    });
+    expect(failed?.causationId).toBe(evaluated?.id);
+    expect(state.status).toBe("failed");
+    expect(replayed.state.status).toBe("failed");
+    expect((await readTrace({ rootDir, runId: handle.runId })).spans)
+      .toContainEqual(
+        expect.objectContaining({
+          kind: "gate",
+          name: "gate.intake.exit",
+          status: "fail",
+          eventIds: [evaluated?.id, failed?.id],
+          metadata: expect.objectContaining({
+            lifecycleApplication: "applied",
+            lifecycleEventType: "run.failed"
+          })
+        })
+      );
+  });
+
+  test("evaluateGate keeps continue as a gate.evaluated no-op", async () => {
+    const gateResult = gateResultForInstruction({
+      kind: "continue",
+      gateId: "intake.exit"
+    });
+    const runtime = runtimeForTests({
+      gateEngine() {
+        return gateResult;
+      }
+    });
+    const handle = await runtime.startRun(runInput);
+
+    const result = await runtime.evaluateGate(handle.runId, "intake.exit");
+    const events = await runtime.getEvents(handle.runId);
+    const state = await runtime.getRun(handle.runId);
+    const replayed = await runtime.replay(handle.runId);
+
+    expect(result).toEqual(gateResult);
+    expect(events.at(-1)?.type).toBe("gate.evaluated");
+    expect(events.filter((event) => event.type === "phase.transitioned"))
+      .toHaveLength(0);
+    expect(events.filter((event) => event.type === "run.failed"))
+      .toHaveLength(0);
+    expect(state.phase).toBe("intake");
+    expect(replayed.state.phase).toBe("intake");
+    expect((await readTrace({ rootDir, runId: handle.runId })).spans)
+      .toContainEqual(
+        expect.objectContaining({
+          kind: "gate",
+          name: "gate.intake.exit",
+          status: "pass",
+          metadata: expect.objectContaining({
+            lifecycleApplication: "no_op"
+          })
+        })
+      );
+  });
+
+  for (const [kind, instruction] of deferredGateInstructions()) {
+    test(`evaluateGate stops for deferred ${kind} lifecycle instructions`, async () => {
+      const gateResult = gateResultForInstruction(instruction);
+      const runtime = runtimeForTests({
+        gateEngine() {
+          return gateResult;
+        }
+      });
+      const handle = await runtime.startRun(runInput);
+
+      await expect(runtime.evaluateGate(handle.runId, "intake.exit"))
+        .rejects.toThrow(
+          `Gate lifecycle instruction ${kind} for gate intake.exit is deferred`
+        );
+
+      const events = await runtime.getEvents(handle.runId);
+
+      expect(events.at(-1)?.type).toBe("gate.evaluated");
+      expect(events.at(-1)?.payload).toMatchObject({
+        instruction: {
+          kind
+        }
+      });
+      expect(events.filter((event) => event.type === "phase.transitioned"))
+        .toHaveLength(0);
+      expect(events.filter((event) => event.type === "run.failed"))
+        .toHaveLength(0);
+      expect(events.filter((event) => event.type === "human.input_requested"))
+        .toHaveLength(0);
+      expect(events.filter((event) => event.type === "policy.evaluated"))
+        .toHaveLength(0);
+      expect((await readTrace({ rootDir, runId: handle.runId })).spans)
+        .toContainEqual(
+          expect.objectContaining({
+            kind: "gate",
+            name: "gate.intake.exit",
+            metadata: expect.objectContaining({
+              lifecycleApplication: "stopped",
+              lifecycleError: expect.stringContaining(
+                `Gate lifecycle instruction ${kind}`
+              )
+            })
+          })
+        );
+    });
+  }
 
   test("writeRunReport creates a summary across run package projections", async () => {
     const broker: ToolBrokerLike = {
@@ -510,6 +656,84 @@ function runtimeForTests(
     now: () => "2026-05-29T00:00:00.000Z",
     ...overrides
   });
+}
+
+function gateResultForInstruction(
+  instruction: GateEvaluationResult["instruction"],
+  verdictOverrides: Partial<GateEvaluationResult["verdict"]> = {}
+): GateEvaluationResult {
+  return {
+    verdict: {
+      gateId: instruction.gateId,
+      phase: "intake",
+      status: "pass",
+      severity: "blocking",
+      reasons: ["Gate passed"],
+      findings: [],
+      evidenceRefs: [],
+      obligations: [],
+      evaluatedAt: "2026-05-29T00:00:00.000Z",
+      evaluator: {
+        kind: "deterministic",
+        ref: "test-gate-engine"
+      },
+      ...verdictOverrides
+    },
+    instruction
+  };
+}
+
+function deferredGateInstructions(): Array<
+  [string, GateEvaluationResult["instruction"]]
+> {
+  return [
+    [
+      "pause_for_human",
+      {
+        kind: "pause_for_human",
+        gateId: "intake.exit",
+        question: {
+          id: "human-review-1",
+          gateId: "intake.exit",
+          phase: "intake",
+          question: "Confirm the gate result.",
+          requiredFor: "intake.exit"
+        }
+      }
+    ],
+    [
+      "request_approval",
+      {
+        kind: "request_approval",
+        gateId: "intake.exit",
+        approvalRequest: {
+          id: "approval-1",
+          gateId: "intake.exit",
+          phase: "intake",
+          reason: "Gate requires approval.",
+          requiredFor: "intake.exit"
+        }
+      }
+    ],
+    [
+      "create_repair_task",
+      {
+        kind: "create_repair_task",
+        gateId: "intake.exit",
+        repairTask: {
+          id: "repair-1",
+          gateId: "intake.exit",
+          failedPhase: "intake",
+          problem: "Missing required evidence.",
+          requiredEvidenceRefs: ["evidence:missing"],
+          allowedTools: ["fs.read"],
+          blockedTools: [],
+          successGate: "intake.exit",
+          createdFromFindingIds: ["finding-1"]
+        }
+      }
+    ]
+  ];
 }
 
 function toolRequest() {
