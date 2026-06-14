@@ -22,7 +22,6 @@
   "dependencies": {
     "@specwright/adapters-cli": "workspace:*",
     "@specwright/run-store": "workspace:*",
-    "@specwright/runtime": "workspace:*",
-    "@specwright/schemas": "workspace:*"
+    "@specwright/runtime": "workspace:*"
   }
 }

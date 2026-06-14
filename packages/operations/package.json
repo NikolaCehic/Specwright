@@ -23,7 +23,9 @@
     "@specwright/run-reports": "workspace:*",
     "@specwright/run-store": "workspace:*",
     "@specwright/schemas": "workspace:*",
-    "@specwright/trace-recorder": "workspace:*",
     "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@specwright/trace-recorder": "workspace:*"
   }
 }

@@ -22,5 +22,8 @@
   "dependencies": {
     "@specwright/schemas": "workspace:*",
     "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@specwright/harness-loader": "workspace:*"
   }
 }
