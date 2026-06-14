@@ -141,6 +141,12 @@
       },
       "type": "array"
     },
+    "pendingRepairTasks": {
+      "items": {
+        "x-zod-type": "ZodLazy"
+      },
+      "type": "array"
+    },
     "phase": {
       "type": "string"
     },
@@ -172,7 +178,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "lifecycle",
-    "hash": "sha256:532d6baee777d10718203e243a9987cc28e7f1f39f4f4a608cc5ff76f723c774",
+    "hash": "sha256:6abeaf8f51bb78b4c5150bb9c3fe8ff2187b7a0aaa14dd405bcc424ff9effbbc",
     "id": "specwright.lifecycle.run-state",
     "status": "public",
     "version": "1"

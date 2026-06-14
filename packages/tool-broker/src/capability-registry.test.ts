@@ -21,6 +21,7 @@ import {
   ToolBrokerError,
   createDefaultCapabilityRegistry,
   createToolBroker,
+  deriveTierConstraints,
   isolationTierForKind,
   type CapabilityDefinition,
   type CapabilityKind,
@@ -44,6 +45,113 @@ const expectedIsolationTiers = {
   human: 4
 } as const satisfies Record<CapabilityKind, IsolationTier>;
 
+const defaultBrokerCapabilityBaseline = [
+  {
+    id: "fs.list",
+    kind: "filesystem",
+    risk: "low",
+    requestedScopes: ["workspace:read"],
+    mutability: "read_only",
+    durable: false,
+    adapterSpecific: false,
+    cacheEnabled: false,
+    isolationTier: 0,
+    execution: "sanctioned",
+    networkAllowlist: "deny_all",
+    subprocess: "forbidden",
+    writeConfinement: "workspace_readonly"
+  },
+  {
+    id: "fs.read",
+    kind: "filesystem",
+    risk: "low",
+    requestedScopes: ["workspace:read"],
+    mutability: "read_only",
+    durable: false,
+    adapterSpecific: false,
+    cacheEnabled: false,
+    isolationTier: 0,
+    execution: "sanctioned",
+    networkAllowlist: "deny_all",
+    subprocess: "forbidden",
+    writeConfinement: "workspace_readonly"
+  }
+] as const;
+
+const harnessCriticalCapabilityGaps = [
+  {
+    family: "filesystem.write_edit",
+    kind: "filesystem",
+    examples: ["fs.write", "fs.patch"],
+    owner: "FEAT-EPIC-007/G-CAPACK-001"
+  },
+  {
+    family: "shell.command",
+    kind: "shell",
+    examples: ["shell.exec", "package.install"],
+    owner: "FEAT-EPIC-007/G-CAPACK-001"
+  },
+  {
+    family: "git",
+    kind: "git",
+    examples: ["git.branch", "git.commit", "git.push"],
+    owner: "FEAT-EPIC-007/G-CAPACK-001"
+  },
+  {
+    family: "browser",
+    kind: "browser",
+    examples: ["browser.open", "browser.screenshot"],
+    owner: "FEAT-EPIC-007/G-CAPACK-001"
+  },
+  {
+    family: "network",
+    kind: "network",
+    examples: ["network.request", "network.write"],
+    owner: "FEAT-EPIC-007/G-CAPACK-001"
+  },
+  {
+    family: "model",
+    kind: "model",
+    examples: ["model.generate", "model.review"],
+    owner: "FEAT-EPIC-007/G-CAPACK-001"
+  },
+  {
+    family: "memory",
+    kind: "memory",
+    examples: ["memory.ingest", "memory.search", "memory.get", "memory.forget"],
+    owner: "FEAT-EPIC-010/G-CAP-002"
+  },
+  {
+    family: "embeddings",
+    kind: "embeddings",
+    examples: ["embeddings.search"],
+    owner: "FEAT-EPIC-010/G-CAP-002"
+  },
+  {
+    family: "cache",
+    kind: "cache",
+    examples: ["cache.read", "cache.write"],
+    owner: "FEAT-EPIC-010/G-CAP-002"
+  },
+  {
+    family: "human",
+    kind: "human",
+    examples: ["human.approval", "human.answer"],
+    owner: "AUD-004A/FEAT-EPIC-004"
+  },
+  {
+    family: "mcp",
+    kind: "mcp",
+    examples: ["mcp.server", "mcp.tool.call"],
+    owner: "AUD-011A/FEAT-EPIC-011/FEAT-EPIC-012"
+  }
+] as const satisfies readonly Array<{
+  family: string;
+  kind: CapabilityKind;
+  examples: readonly string[];
+  owner: string;
+}>;
+
 describe("capability registry declaration contracts", () => {
   test("default filesystem definitions are schema-complete and tier-bound", () => {
     const definitions = createDefaultCapabilityRegistry().list();
@@ -64,6 +172,34 @@ describe("capability registry declaration contracts", () => {
       expect(definition.isolationTier).toBe(
         isolationTierForKind(definition.kind)
       );
+    }
+  });
+
+  test("AUD-012A default broker capability baseline is read-only and gap-owned", () => {
+    const definitions = createDefaultCapabilityRegistry().list();
+    const defaultIds = new Set(definitions.map((definition) => definition.id));
+
+    expect(brokerCapabilityBaselineRows(definitions)).toEqual(
+      defaultBrokerCapabilityBaseline
+    );
+    expect(definitions.map((definition) => definition.id)).toEqual([
+      "fs.list",
+      "fs.read"
+    ]);
+
+    for (const gap of harnessCriticalCapabilityGaps) {
+      expect(gap.owner.length).toBeGreaterThan(0);
+
+      for (const example of gap.examples) {
+        expect(defaultIds.has(example)).toBe(false);
+      }
+    }
+
+    const visibleGapKinds = new Set(
+      harnessCriticalCapabilityGaps.map((gap) => gap.kind)
+    );
+    for (const kind of CAPABILITY_KINDS.filter((kind) => kind !== "filesystem")) {
+      expect(visibleGapKinds.has(kind)).toBe(true);
     }
   });
 
@@ -205,4 +341,28 @@ function captureToolBrokerError(action: () => unknown) {
   }
 
   throw new Error("Expected ToolBrokerError.");
+}
+
+function brokerCapabilityBaselineRows(
+  definitions: readonly CapabilityDefinition[]
+) {
+  return definitions.map((definition) => {
+    const tierConstraints = deriveTierConstraints(definition);
+
+    return {
+      id: definition.id,
+      kind: definition.kind,
+      risk: definition.risk,
+      requestedScopes: definition.requestedScopes,
+      mutability: "read_only",
+      durable: false,
+      adapterSpecific: false,
+      cacheEnabled: definition.cache.enabled,
+      isolationTier: definition.isolationTier,
+      execution: tierConstraints.execution,
+      networkAllowlist: tierConstraints.networkAllowlist,
+      subprocess: tierConstraints.subprocess,
+      writeConfinement: tierConstraints.writeConfinement
+    };
+  });
 }

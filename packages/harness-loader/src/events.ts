@@ -6,7 +6,7 @@ import {
   type RuntimeEvent
 } from "@specwright/schemas";
 import { z } from "zod";
-import type { HarnessLoaderErrorCode } from "./index";
+import type { HarnessLoaderErrorCode } from "./errors";
 
 const nonEmptyString = z.string().min(1);
 const isoDateTimeString = z.string().datetime({ offset: true });
