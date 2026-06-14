@@ -15,7 +15,7 @@ Package and binary posture:
 | Surface | Decision |
 | --- | --- |
 | `@specwright/mcp-server` | Public later-wave package that owns the MCP server executable and host setup contract. |
-| `@specwright/adapters-mcp` | Internal or advanced library substrate for protocol dispatch, catalog, auth composition, limits, observability, and tests. No first-wave public server bin here. |
+| `@specwright/adapters-mcp` | Internal or advanced library substrate for protocol dispatch, catalog, auth composition, limits, observability, and tests. It may carry an adapter-scoped local stdio executable for implementation smoke tests, but that binary is not the public server package contract. |
 | Server executable name | Deferred to the package implementation packet, with preference for a package-local executable that is unambiguous in host config. |
 | `createMcpServer` export | Current alias remains source evidence only. It must not be marketed as a transport/process server until a real server wrapper exists. |
 
@@ -68,7 +68,7 @@ First server wave may expose the current enabled adapter catalog:
 | `specwright_generate_report` | `generateReport` | No |
 | `specwright_write_report` | `writeRunReport` | Yes |
 
-Human-loop tools remain disabled until FEAT-004 implementation exists:
+Human-loop tools are available as local RuntimeApi-backed adapter tools after the first FEAT-004 implementation slice:
 
 - `specwright_get_next_action`
 - `specwright_answer_question`
@@ -89,6 +89,10 @@ HermesAgent setup is deferred until host-kind, command-pack, and adapter-priorit
 
 Host setup snippets belong to the MCP server implementation/docs packet, not this decision packet. Each snippet must include the package command, local profile, project root/config expectations, and a warning that remote transports are not first-wave.
 
+Implementation update: the first executable packets add `specwright-mcp-adapter` in `@specwright/adapters-mcp` as a repo-local stdio wrapper around `createMcpAdapter`. It requires `--profile local-stdio --root <path>` for local mode or `--profile ci --root <path> --client-id <id> --tenant-id <id> --scopes <scopes>` for CI mode, reads newline-delimited JSON-RPC from stdin, writes only protocol messages to stdout while serving, and keeps the dedicated public `@specwright/mcp-server` package deferred.
+
+Implementation update: the adapter-local executable can print source-checkout host snippets with `--print-host-config <host>` for `codex`, `claude-code`, `opencode`, and `generic`. The snippets cover local stdio and CI stdio launch arguments only; remote, HTTP/SSE, managed, and enterprise network profiles remain deferred to the public server-mode/security packets.
+
 ## Process Lifecycle Requirements
 
 The executable server packet must define and test:
@@ -105,7 +109,9 @@ The executable server packet must define and test:
 - Redaction-safe errors for protocol and runtime failures.
 - No persistence of authority in process-local caches after restart.
 
-The current in-process adapter has strong dispatch, limits, auth, observability, and conformance substrate, but it does not by itself satisfy process lifecycle requirements.
+The current in-process adapter has strong dispatch, limits, auth, observability, and conformance substrate, but it does not by itself satisfy every process lifecycle requirement.
+
+Implementation update: the adapter-local stdio executable now enables the existing observability substrate for serving profiles. Local stdio sessions record local-only identity, CI sessions record configured client/tenant/subject/scope identity, and `serveMcpStdio` opens and closes the observed session so session audit records flush before process exit. Cancellation propagation, signal handling, remote queues, and enterprise network lifecycle controls remain deferred.
 
 ## Integration Test Posture
 
@@ -123,14 +129,14 @@ Later MCP server implementation must add a staged test stack:
 
 Live source on this stacked branch shows:
 
-- `@specwright/adapters-mcp` is private `0.0.0` and has `main`, `types`, `exports`, and `files`, but no `bin`.
+- `@specwright/adapters-mcp` is private `0.0.0` and has `main`, `types`, `exports`, `files`, and an adapter-scoped `specwright-mcp-adapter` bin.
 - No `@specwright/mcp-server` package exists.
-- `@specwright/adapters-cli` is the only package manifest with a `specwright` executable bin.
+- `@specwright/cli` is the only package manifest with a `specwright` executable bin.
 - `McpAdapter` is an in-process TypeScript API with `tools`, `resources`, `prompts`, optional `observability`, and `dispatch`.
-- `createMcpServer` is currently an alias to `createMcpAdapter`, not a process or transport server.
+- `createMcpServer` is currently an alias to `createMcpAdapter`; process transport is owned by the adapter-scoped stdio wrapper, not by this alias.
 - Dispatch handles `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list`, and `prompts/get`.
 - Security defaults to disabled unless authenticated mode is explicitly configured.
-- Future human-loop MCP tools are present as disabled catalog entries.
+- Human-loop MCP tools are present as local RuntimeApi-backed bindings.
 
 ## Downstream Owners
 
@@ -140,8 +146,8 @@ Live source on this stacked branch shows:
 | Stdio transport implementation | FEAT-005 implementation packet |
 | HTTP/SSE or other network transports | Runtime server mode and MCP follow-up packets |
 | Auth profiles and credential verification for remote/shared use | FEAT-005 plus FEAT-012 server-mode/security packets |
-| Human-loop MCP tools | FEAT-004 implementation before FEAT-005 enablement |
-| Host config snippets and install UX | FEAT-006 and FEAT-015 |
+| Human-loop MCP tool hardening beyond local RuntimeApi bindings | FEAT-004 implementation plus FEAT-005/FEAT-012 server hardening |
+| Host config snippets and install UX | Adapter-local source-checkout snippets are implemented for FEAT-005; installed-package host setup and command packs remain FEAT-006 and FEAT-015 |
 | Release, provenance, compatibility, and package dry-run | FEAT-013 |
 | CI checks and required status contexts | OPT-001 and release packets |
 
@@ -151,9 +157,9 @@ Live source on this stacked branch shows:
 | --- | --- |
 | Specwright needs an executable MCP server, not only adapter library code | raw features log `F5`, `FEAT-EPIC-005` |
 | Future package shape is either `@specwright/mcp-server` or an MCP adapter bin | raw features log `F5` |
-| Current MCP package is an in-process adapter without a bin | `packages/adapters-mcp/package.json`, `packages/adapters-mcp/src/index.ts` |
+| Current MCP package is an in-process adapter with an adapter-scoped local stdio bin and host-config helper | `packages/adapters-mcp/package.json`, `packages/adapters-mcp/src/index.ts`, `packages/adapters-mcp/src/bin.ts`, `packages/adapters-mcp/src/stdio.ts` |
 | Current server-named factory is only an alias | `packages/adapters-mcp/src/index.ts` |
-| Existing adapter dispatch, resources, prompts, auth, limits, observability, and disabled future tools are useful substrate | `packages/adapters-mcp/src/index.ts`, adapter tests |
+| Existing adapter dispatch, resources, prompts, auth, limits, observability, and human-loop RuntimeApi tools are useful substrate | `packages/adapters-mcp/src/index.ts`, adapter tests |
 | Current package taxonomy reserves `@specwright/mcp-server` as a later public target | `docs/package-taxonomy-decision.md` |
 | CLI command taxonomy says MCP should expose runtime operations, not private command shortcuts | `docs/cli-command-taxonomy-decision.md` |
 
