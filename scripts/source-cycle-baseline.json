@@ -79,37 +79,7 @@
       "to": "packages/gate-engine/src/index.ts"
     },
     {
-      "from": "packages/harness-loader/src/cache.ts",
-      "package": "@specwright/harness-loader",
-      "specifier": "./index",
-      "to": "packages/harness-loader/src/index.ts"
-    },
-    {
-      "from": "packages/harness-loader/src/events.ts",
-      "package": "@specwright/harness-loader",
-      "specifier": "./index",
-      "to": "packages/harness-loader/src/index.ts"
-    },
-    {
-      "from": "packages/harness-loader/src/limits.ts",
-      "package": "@specwright/harness-loader",
-      "specifier": "./index",
-      "to": "packages/harness-loader/src/index.ts"
-    },
-    {
       "from": "packages/harness-loader/src/observe.ts",
-      "package": "@specwright/harness-loader",
-      "specifier": "./index",
-      "to": "packages/harness-loader/src/index.ts"
-    },
-    {
-      "from": "packages/harness-loader/src/provenance.ts",
-      "package": "@specwright/harness-loader",
-      "specifier": "./index",
-      "to": "packages/harness-loader/src/index.ts"
-    },
-    {
-      "from": "packages/harness-loader/src/registry.ts",
       "package": "@specwright/harness-loader",
       "specifier": "./index",
       "to": "packages/harness-loader/src/index.ts"
@@ -326,12 +296,12 @@
     }
   ],
   "inventory": {
-    "barrelImportCount": 54,
+    "barrelImportCount": 49,
     "packageCount": 17,
     "packageCycleCount": 0,
     "packageEdgeCount": 45,
-    "productionFileCount": 177,
-    "sameCycleBarrelImportCount": 21,
+    "productionFileCount": 178,
+    "sameCycleBarrelImportCount": 16,
     "sourceCycleCount": 8
   },
   "packageCycles": [],
@@ -399,38 +369,13 @@
     {
       "barrelBackEdges": [
         {
-          "from": "packages/harness-loader/src/cache.ts",
-          "to": "packages/harness-loader/src/index.ts"
-        },
-        {
-          "from": "packages/harness-loader/src/events.ts",
-          "to": "packages/harness-loader/src/index.ts"
-        },
-        {
-          "from": "packages/harness-loader/src/limits.ts",
-          "to": "packages/harness-loader/src/index.ts"
-        },
-        {
           "from": "packages/harness-loader/src/observe.ts",
-          "to": "packages/harness-loader/src/index.ts"
-        },
-        {
-          "from": "packages/harness-loader/src/provenance.ts",
-          "to": "packages/harness-loader/src/index.ts"
-        },
-        {
-          "from": "packages/harness-loader/src/registry.ts",
           "to": "packages/harness-loader/src/index.ts"
         }
       ],
       "files": [
-        "packages/harness-loader/src/cache.ts",
-        "packages/harness-loader/src/events.ts",
         "packages/harness-loader/src/index.ts",
-        "packages/harness-loader/src/limits.ts",
-        "packages/harness-loader/src/observe.ts",
-        "packages/harness-loader/src/provenance.ts",
-        "packages/harness-loader/src/registry.ts"
+        "packages/harness-loader/src/observe.ts"
       ],
       "includesIndex": true,
       "package": "@specwright/harness-loader"
