@@ -85,7 +85,7 @@ describe("AUD-005A installability readiness", () => {
       }))
     ).toEqual([
       {
-        name: "@specwright/adapters-cli",
+        name: "@specwright/cli",
         bin: {
           specwright: "./dist/bin.js"
         }

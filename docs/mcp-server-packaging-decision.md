@@ -125,7 +125,7 @@ Live source on this stacked branch shows:
 
 - `@specwright/adapters-mcp` is private `0.0.0` and has `main`, `types`, `exports`, and `files`, but no `bin`.
 - No `@specwright/mcp-server` package exists.
-- `@specwright/adapters-cli` is the only package manifest with a `specwright` executable bin.
+- `@specwright/cli` is the only package manifest with a `specwright` executable bin.
 - `McpAdapter` is an in-process TypeScript API with `tools`, `resources`, `prompts`, optional `observability`, and `dispatch`.
 - `createMcpServer` is currently an alias to `createMcpAdapter`, not a process or transport server.
 - Dispatch handles `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list`, and `prompts/get`.

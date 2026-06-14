@@ -43,7 +43,7 @@ This repository is the TypeScript/Bun implementation of the Specwright runtime p
 | `@specwright/operations` | Enterprise operations contracts for audit records, tenant partitioning, compatibility classification, release promotion, rollback, and replay readiness. |
 | `@specwright/memory` | Governed harness memory: corpus ingestion, chunking, BM25, proximity, dense retrieval, vector indexing, fusion, rerank, MMR diversification, retrieval evals, redaction, tombstones, and broker capability definitions for `memory.*` and `embeddings.*`. |
 | `@specwright/runtime` | The orchestration facade that wires stores, loader, policy, gates, brokered tools, evals, traces, artifacts, evidence, and reports. |
-| `@specwright/adapters-cli` | Reference CLI adapter with stable output contracts, exit-code semantics, CI posture, redaction profiles, telemetry, and fail-closed command handling. |
+| `@specwright/cli` | Reference CLI package with stable output contracts, exit-code semantics, CI posture, redaction profiles, telemetry, and fail-closed command handling. |
 | `@specwright/adapters-mcp` | MCP protocol adapter exposing runtime-backed tools, read-only resources, runtime-action prompts, auth composition, egress redaction, observability, audit export, external MCP mediation, limits, versioning, and conformance coverage. |
 | `@specwright/adapter-parity` | Adapter parity conformance checks proving host surfaces preserve runtime semantics. |
 | `harnesses/default` | Default source-bound harness package: phases, gates, policies, tools, artifact schemas, and eval definitions used by the proof path. |

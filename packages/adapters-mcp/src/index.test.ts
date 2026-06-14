@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { readdir, readFile } from "node:fs/promises";
-import { executeCli, type CliRuntime } from "@specwright/adapters-cli";
+import { executeCli, type CliRuntime } from "@specwright/cli";
 import type { RuntimeApi } from "@specwright/runtime";
 import { projectRunState } from "@specwright/run-store";
 import {

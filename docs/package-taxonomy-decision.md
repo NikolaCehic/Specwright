@@ -14,7 +14,7 @@ The public taxonomy is:
 
 | Target package | Wave | Intended consumers | Responsibility | Current source |
 | --- | --- | --- | --- | --- |
-| `@specwright/cli` | First wave | End users, host command installers, CI jobs | Own the `specwright` executable, product command map, local project initialization, diagnostics, run control, and JSON output contracts | Current `@specwright/adapters-cli`, renamed or wrapped by a publish packet |
+| `@specwright/cli` | First wave | End users, host command installers, CI jobs | Own the `specwright` executable, product command map, local project initialization, diagnostics, run control, and JSON output contracts | Current CLI source under `packages/adapters-cli`, promoted by the package identity packet |
 | `@specwright/runtime` | First wave | Adapter authors, governed workflow integrators, advanced platform teams | Own the RuntimeApi, lifecycle contracts, policy/gate/eval orchestration boundary, run-control APIs, and adapter-facing runtime behavior | Current `@specwright/runtime` |
 | `@specwright/harness-loader` | First wave | Harness authors, CLI/runtime integrations | Load, validate, and resolve harness definitions used by the runtime and CLI | Current `@specwright/harness-loader` |
 | `@specwright/schemas` | First wave | Package consumers, harness authors, adapter authors | Publish stable TypeScript types and validation schemas shared across runtime, harnesses, run events, artifacts, policies, and adapters | Current `@specwright/schemas` |
@@ -51,7 +51,7 @@ These packages remain internal for the first publishable slice. They may be cons
 | Current package | First-wave status | Reason |
 | --- | --- | --- |
 | `@specwright/adapter-parity` | Internal/deferred | Parity corpus and release-gate semantics are not yet productized. |
-| `@specwright/adapters-cli` | Source for public `@specwright/cli` | Current private implementation owns the only `specwright` bin, but the public product package name should be `@specwright/cli`. |
+| `@specwright/cli` | Public CLI package source in `packages/adapters-cli` | Current implementation owns the only `specwright` bin and now uses the public product package name. |
 | `@specwright/adapters-mcp` | Source for later `@specwright/mcp-server` | Current package is an in-process library with no bin; executable server packaging is deferred. |
 | `@specwright/artifact-store` | Internal | Runtime implementation plane; public contract should flow through runtime and schemas first. |
 | `@specwright/eval-runner` | Internal/deferred | Eval product surface and release gate need CLI/runtime decisions before separate publishing. |
@@ -69,7 +69,7 @@ These packages remain internal for the first publishable slice. They may be cons
 
 | Current package | Target package or posture | Notes |
 | --- | --- | --- |
-| `@specwright/adapters-cli` | `@specwright/cli` | Rename or wrapper decision is assigned to the manifest implementation packet. The public package must expose a `bin` entry for `specwright`. |
+| `packages/adapters-cli` source | `@specwright/cli` | The package identity is promoted in place while the folder remains stable for scoped implementation history. The public package must expose a `bin` entry for `specwright`. |
 | `@specwright/runtime` | `@specwright/runtime` | Keep name. Public API review and dependency rewriting are required before publish. |
 | `@specwright/harness-loader` | `@specwright/harness-loader` | Keep name. Publish with runtime and schemas because harness loading is a first-run requirement. |
 | `@specwright/schemas` | `@specwright/schemas` | Keep name. Publish as the shared contract package. |
@@ -118,7 +118,7 @@ Evidence was refreshed from the current repository on 2026-06-14:
 - There are 17 package manifests under `packages/*`.
 - All 17 workspace packages are private and have `version: "0.0.0"`.
 - All 17 workspace packages currently define `main`, `types`, `exports`, and `files`.
-- Only `@specwright/adapters-cli` defines a `bin`, mapping `specwright` to `./dist/bin.js`.
+- Only `@specwright/cli` defines a `bin`, mapping `specwright` to `./dist/bin.js`.
 - No workspace package currently defines `publishConfig`, `license`, or `repository`.
 - 16 packages use `workspace:*` in production dependencies; all 17 use `workspace:*` when dev dependencies are included.
 - README install/use flow is source-checkout oriented and invokes built CLI output directly, while naming `specwright` as the intended installed command.
@@ -130,7 +130,7 @@ Evidence was refreshed from the current repository on 2026-06-14:
 | Specwright needs public packages for CLI, runtime, MCP server, harness loader, and schemas, with optional adapter/capability splits | raw features log `F1` |
 | The package set must become installable, versioned, externally consumable, and smoke-tested | `FEAT-EPIC-001`, `FEAT-TASK-001.1` through `FEAT-TASK-001.5` |
 | Current repo is a Bun source checkout rather than an installable product | raw audit log `A5`, `AUD-005A` evidence |
-| Current CLI package is private and owns the only `specwright` bin | package manifest inventory |
+| Current CLI package source owns the only `specwright` bin | package manifest inventory |
 | Current MCP adapter is an in-process package with no deployable server bin | `AUD-011A` evidence and package manifest inventory |
 | Release tags, provenance, changelog, compatibility policy, and dry-run behavior remain release-system work | raw features log `F13`, `G-REL-001` |
 | Host command packs, capability packs, SDK distribution, docs/install UX, and MCP server packaging are separate gates | `G-HOST-001`, `G-CAPACK-001`, `G-SDK-001`, `G-DOCS-001`, `G-MCP-001` |

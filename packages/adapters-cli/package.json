@@ -1,5 +1,5 @@
 {
-  "name": "@specwright/adapters-cli",
+  "name": "@specwright/cli",
   "version": "0.0.0",
   "private": true,
   "type": "module",

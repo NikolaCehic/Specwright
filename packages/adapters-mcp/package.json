@@ -28,6 +28,6 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@specwright/adapters-cli": "workspace:*"
+    "@specwright/cli": "workspace:*"
   }
 }
