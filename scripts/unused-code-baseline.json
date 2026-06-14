@@ -1,0 +1,337 @@
+{
+  "command": "tsc --noEmit --pretty false --noUnusedLocals --noUnusedParameters",
+  "diagnostics": [
+    {
+      "code": "TS6133",
+      "column": 8,
+      "file": "packages/adapters-mcp/src/index.ts",
+      "line": 29,
+      "message": "'McpAuditRecord' is declared but its value is never read.",
+      "package": "@specwright/adapters-mcp"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/adapters-mcp/src/index.ts",
+      "line": 57,
+      "message": "'MCP_PROVENANCE_GAP_CODE' is declared but its value is never read.",
+      "package": "@specwright/adapters-mcp"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/eval-runner/src/index.ts",
+      "line": 43,
+      "message": "'datasetReferenceFromDefinition' is declared but its value is never read.",
+      "package": "@specwright/eval-runner"
+    },
+    {
+      "code": "TS6133",
+      "column": 10,
+      "file": "packages/eval-runner/src/index.ts",
+      "line": 2235,
+      "message": "'stringFrom' is declared but its value is never read.",
+      "package": "@specwright/eval-runner"
+    },
+    {
+      "code": "TS6133",
+      "column": 8,
+      "file": "packages/gate-engine/src/index.ts",
+      "line": 19,
+      "message": "'GateVerdictStatus' is declared but its value is never read.",
+      "package": "@specwright/gate-engine"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/gate-engine/src/index.ts",
+      "line": 1761,
+      "message": "'phase' is declared but its value is never read.",
+      "package": "@specwright/gate-engine"
+    },
+    {
+      "code": "TS6133",
+      "column": 8,
+      "file": "packages/harness-loader/src/events.ts",
+      "line": 6,
+      "message": "'RuntimeEvent' is declared but its value is never read.",
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/harness-loader/src/index.ts",
+      "line": 9,
+      "message": "'HarnessSchemaVersionSchema' is declared but its value is never read.",
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "code": "TS6133",
+      "column": 1,
+      "file": "packages/harness-loader/src/index.ts",
+      "line": 78,
+      "message": "'HarnessLoaderErrorCode' is declared but its value is never read.",
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "code": "TS6196",
+      "column": 6,
+      "file": "packages/harness-loader/src/index.ts",
+      "line": 346,
+      "message": "'FetchedHarnessFiles' is declared but never used.",
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "code": "TS6196",
+      "column": 6,
+      "file": "packages/harness-loader/src/index.ts",
+      "line": 366,
+      "message": "'CollectionKey' is declared but never used.",
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/harness-loader/src/index.ts",
+      "line": 1418,
+      "message": "'label' is declared but its value is never read.",
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "code": "TS6196",
+      "column": 3,
+      "file": "packages/harness-loader/src/provenance.ts",
+      "line": 13,
+      "message": "'ResolvedDependency' is declared but never used.",
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "code": "TS6133",
+      "column": 6,
+      "file": "packages/memory/src/broker/redaction.ts",
+      "line": 89,
+      "message": "'match' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 8,
+      "file": "packages/memory/src/broker/runtime.ts",
+      "line": 31,
+      "message": "'EmbeddingsSearchInput' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 10,
+      "file": "packages/memory/src/broker/runtime.ts",
+      "line": 1414,
+      "message": "'normalizeQuery' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 34,
+      "file": "packages/memory/src/chunking/index.ts",
+      "line": 12,
+      "message": "'TConfig' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6192",
+      "column": 1,
+      "file": "packages/memory/src/lexical/inverted-index.ts",
+      "line": 3,
+      "message": "All imports in import declaration are unused.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6196",
+      "column": 22,
+      "file": "packages/memory/src/lexical/inverted-index.ts",
+      "line": 5,
+      "message": "'ChunkingStrategyStamp' is declared but never used.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6192",
+      "column": 1,
+      "file": "packages/memory/src/lexical/inverted-index.ts",
+      "line": 8,
+      "message": "All imports in import declaration are unused.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 1,
+      "file": "packages/memory/src/lexical/retriever.ts",
+      "line": 10,
+      "message": "'Sha256Hash' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6196",
+      "column": 15,
+      "file": "packages/memory/src/ranking/contracts.ts",
+      "line": 7,
+      "message": "'CacheStatus' is declared but never used.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 1,
+      "file": "packages/memory/src/retrieval/dense.ts",
+      "line": 13,
+      "message": "'Sha256Hash' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6192",
+      "column": 1,
+      "file": "packages/memory/src/vector/ann-index.ts",
+      "line": 2,
+      "message": "All imports in import declaration are unused.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6196",
+      "column": 22,
+      "file": "packages/memory/src/vector/ann-index.ts",
+      "line": 4,
+      "message": "'ChunkingStrategyStamp' is declared but never used.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 10,
+      "file": "packages/memory/src/vector/ann-index.ts",
+      "line": 6,
+      "message": "'Sha256HashSchema' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6192",
+      "column": 1,
+      "file": "packages/memory/src/vector/ann-index.ts",
+      "line": 16,
+      "message": "All imports in import declaration are unused.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 7,
+      "file": "packages/memory/src/vector/ann-index.ts",
+      "line": 25,
+      "message": "'nonEmptyString' is declared but its value is never read.",
+      "package": "@specwright/memory"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/run-reports/src/audit-bundle.ts",
+      "line": 5,
+      "message": "'readFile' is declared but its value is never read.",
+      "package": "@specwright/run-reports"
+    },
+    {
+      "code": "TS6133",
+      "column": 8,
+      "file": "packages/run-reports/src/index.ts",
+      "line": 19,
+      "message": "'ArtifactRecord' is declared but its value is never read.",
+      "package": "@specwright/run-reports"
+    },
+    {
+      "code": "TS6133",
+      "column": 8,
+      "file": "packages/run-reports/src/index.ts",
+      "line": 21,
+      "message": "'EvidenceRecord' is declared but its value is never read.",
+      "package": "@specwright/run-reports"
+    },
+    {
+      "code": "TS6133",
+      "column": 8,
+      "file": "packages/run-store/src/administration.ts",
+      "line": 17,
+      "message": "'RunStoreErrorCode' is declared but its value is never read.",
+      "package": "@specwright/run-store"
+    },
+    {
+      "code": "TS6133",
+      "column": 10,
+      "file": "packages/runtime/src/index.ts",
+      "line": 1528,
+      "message": "'artifactsForGateInput' is declared but its value is never read.",
+      "package": "@specwright/runtime"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/schemas/scripts/generate.ts",
+      "line": 7,
+      "message": "'canonicalHashInput' is declared but its value is never read.",
+      "package": "@specwright/schemas"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/schemas/scripts/generate.ts",
+      "line": 9,
+      "message": "'canonicalStringify' is declared but its value is never read.",
+      "package": "@specwright/schemas"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/schemas/scripts/generate.ts",
+      "line": 10,
+      "message": "'describeZodSchema' is declared but its value is never read.",
+      "package": "@specwright/schemas"
+    },
+    {
+      "code": "TS6133",
+      "column": 7,
+      "file": "packages/schemas/src/index.ts",
+      "line": 1448,
+      "message": "'PolicyRequestSchema' is declared but its value is never read.",
+      "package": "@specwright/schemas"
+    },
+    {
+      "code": "TS6133",
+      "column": 3,
+      "file": "packages/tool-broker/src/conformance-runner.ts",
+      "line": 16,
+      "message": "'CapabilityRegistry' is declared but its value is never read.",
+      "package": "@specwright/tool-broker"
+    }
+  ],
+  "inventory": {
+    "codeCounts": {
+      "TS6133": 28,
+      "TS6192": 4,
+      "TS6196": 6
+    },
+    "diagnosticCount": 38,
+    "fileCount": 21,
+    "packageCount": 10,
+    "packageCounts": {
+      "@specwright/adapters-mcp": 2,
+      "@specwright/eval-runner": 2,
+      "@specwright/gate-engine": 2,
+      "@specwright/harness-loader": 7,
+      "@specwright/memory": 15,
+      "@specwright/run-reports": 3,
+      "@specwright/run-store": 1,
+      "@specwright/runtime": 1,
+      "@specwright/schemas": 4,
+      "@specwright/tool-broker": 1
+    }
+  },
+  "policy": {
+    "ci": "deferred",
+    "cleanup": "deferred",
+    "diagnostics": "baseline"
+  },
+  "version": 1
+}
