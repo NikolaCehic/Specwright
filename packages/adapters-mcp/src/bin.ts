@@ -15,15 +15,22 @@ import {
 
 const stdioProcess = process as typeof process & {
   stdin: AsyncIterable<Uint8Array>;
+  cwd(): string;
 };
 
 type BinOptions =
   | {
       ok: true;
+      mode: "serve";
       rootDir: string;
       workspaceRoot?: string | undefined;
       auth: McpAuthOptions;
       requestContext?: McpStdioRequestContext | undefined;
+    }
+  | {
+      ok: true;
+      mode: "host-config";
+      config: string;
     }
   | {
       ok: false;
@@ -31,11 +38,15 @@ type BinOptions =
       message: string;
     };
 
-const options = parseOptions(process.argv.slice(2));
+type BinParseError = Extract<BinOptions, { ok: false }>;
+
+const options = parseOptions(process.argv.slice(2), stdioProcess.cwd());
 
 if (!options.ok) {
   process.stderr.write(`${options.message}\n`);
   process.exitCode = options.exitCode;
+} else if (options.mode === "host-config") {
+  process.stdout.write(`${options.config}\n`);
 } else {
   const runtime = createRuntime({
     rootDir: options.rootDir,
@@ -54,7 +65,7 @@ if (!options.ok) {
   });
 }
 
-function parseOptions(argv: readonly string[]): BinOptions {
+function parseOptions(argv: readonly string[], cwd: string): BinOptions {
   if (argv.includes("--help") || argv.includes("-h")) {
     return {
       ok: false,
@@ -73,9 +84,16 @@ function parseOptions(argv: readonly string[]): BinOptions {
     return rootValidation;
   }
 
+  const hostConfig = stringFlag(flags, "print-host-config");
+
+  if (hostConfig !== undefined) {
+    return hostConfigOptions(flags, hostConfig, rootValidation, cwd);
+  }
+
   if (profile === "local-stdio") {
     return {
       ok: true,
+      mode: "serve",
       rootDir: rootValidation.rootDir,
       ...(rootValidation.workspaceRoot === undefined
         ? {}
@@ -107,12 +125,12 @@ function validateRoot(
       rootDir: string;
       workspaceRoot?: string | undefined;
     }
-  | Extract<BinOptions, { ok: false }> {
+  | BinParseError {
   if (typeof root !== "string") {
     return {
       ok: false,
       exitCode: 2,
-      message: "Missing required --root <path> for the local stdio server."
+      message: "Missing required --root <path> for the MCP stdio server."
     };
   }
 
@@ -139,35 +157,20 @@ function ciProfileOptions(
   flags: Record<string, string | true>,
   rootValidation: Extract<ReturnType<typeof validateRoot>, { ok: true }>
 ): BinOptions {
-  const clientId = stringFlag(flags, "client-id");
-  const tenantId = stringFlag(flags, "tenant-id");
-  const scopes = listFlag(flags, "scopes");
-  const subjectScopes = listFlag(flags, "subject-scopes") ?? scopes;
-  const runMode = runModeFlag(flags);
+  const profile = ciProfileSettings(flags);
 
-  if (clientId === undefined) {
-    return missingCiFlag("--client-id <id>");
+  if (!profile.ok) {
+    return profile;
   }
 
-  if (tenantId === undefined) {
-    return missingCiFlag("--tenant-id <id>");
-  }
-
-  if (scopes === undefined || scopes.length === 0) {
-    return missingCiFlag("--scopes <comma-separated-scopes>");
-  }
-
-  if (runMode === undefined) {
-    return {
-      ok: false,
-      exitCode: 2,
-      message: "--run-mode must be autonomous, assisted, or read_only."
-    };
-  }
-
-  const grantedScopes = scopes;
-  const subjectId = stringFlag(flags, "subject-id") ?? clientId;
-  const effectiveSubjectScopes = subjectScopes ?? grantedScopes;
+  const {
+    clientId,
+    tenantId,
+    grantedScopes,
+    subjectId,
+    effectiveSubjectScopes,
+    runMode
+  } = profile;
   const credential = {
     profile: "ci",
     clientId,
@@ -190,6 +193,7 @@ function ciProfileOptions(
 
   return {
     ok: true,
+    mode: "serve",
     rootDir: rootValidation.rootDir,
     ...(rootValidation.workspaceRoot === undefined
       ? {}
@@ -222,6 +226,234 @@ function ciProfileOptions(
       subject
     }
   };
+}
+
+function ciProfileSettings(
+  flags: Record<string, string | true>
+):
+  | {
+      ok: true;
+      clientId: string;
+      tenantId: string;
+      grantedScopes: string[];
+      subjectId: string;
+      effectiveSubjectScopes: string[];
+      runMode: "autonomous" | "assisted" | "read_only";
+    }
+  | BinParseError {
+  const clientId = stringFlag(flags, "client-id");
+  const tenantId = stringFlag(flags, "tenant-id");
+  const scopes = listFlag(flags, "scopes");
+  const subjectScopes = listFlag(flags, "subject-scopes") ?? scopes;
+  const runMode = runModeFlag(flags);
+
+  if (clientId === undefined) {
+    return missingCiFlag("--client-id <id>");
+  }
+
+  if (tenantId === undefined) {
+    return missingCiFlag("--tenant-id <id>");
+  }
+
+  if (scopes === undefined || scopes.length === 0) {
+    return missingCiFlag("--scopes <comma-separated-scopes>");
+  }
+
+  if (runMode === undefined) {
+    return {
+      ok: false,
+      exitCode: 2,
+      message: "--run-mode must be autonomous, assisted, or read_only."
+    };
+  }
+
+  const grantedScopes = scopes;
+  const subjectId = stringFlag(flags, "subject-id") ?? clientId;
+  const effectiveSubjectScopes = subjectScopes ?? grantedScopes;
+
+  return {
+    ok: true,
+    clientId,
+    tenantId,
+    grantedScopes,
+    subjectId,
+    effectiveSubjectScopes,
+    runMode
+  };
+}
+
+function hostConfigOptions(
+  flags: Record<string, string | true>,
+  host: string,
+  rootValidation: Extract<ReturnType<typeof validateRoot>, { ok: true }>,
+  cwd: string
+): BinOptions {
+  const profile = flags.profile;
+  const hostTarget = hostConfigTarget(host);
+
+  if (hostTarget === undefined) {
+    return {
+      ok: false,
+      exitCode: 2,
+      message:
+        "--print-host-config must be codex, claude-code, opencode, or generic."
+    };
+  }
+
+  if (profile === "local-stdio") {
+    return {
+      ok: true,
+      mode: "host-config",
+      config: renderHostConfig(
+        hostTarget,
+        launchSpec(flags, cwd, [
+          "--profile",
+          "local-stdio",
+          "--root",
+          rootValidation.rootDir,
+          ...(rootValidation.workspaceRoot === undefined
+            ? []
+            : ["--workspace-root", rootValidation.workspaceRoot])
+        ])
+      )
+    };
+  }
+
+  if (profile === "ci") {
+    const parsed = ciProfileSettings(flags);
+
+    if (!parsed.ok) {
+      return parsed;
+    }
+
+    return {
+      ok: true,
+      mode: "host-config",
+      config: renderHostConfig(
+        hostTarget,
+        launchSpec(flags, cwd, [
+          "--profile",
+          "ci",
+          "--root",
+          rootValidation.rootDir,
+          ...(rootValidation.workspaceRoot === undefined
+            ? []
+            : ["--workspace-root", rootValidation.workspaceRoot]),
+          "--client-id",
+          parsed.clientId,
+          "--tenant-id",
+          parsed.tenantId,
+          "--scopes",
+          parsed.grantedScopes.join(","),
+          "--subject-id",
+          parsed.subjectId,
+          "--subject-scopes",
+          parsed.effectiveSubjectScopes.join(","),
+          "--run-mode",
+          parsed.runMode
+        ])
+      )
+    };
+  }
+
+  return {
+    ok: false,
+    exitCode: 2,
+    message:
+      "Missing explicit MCP profile. Use --profile local-stdio or --profile ci."
+  };
+}
+
+type HostConfigTarget = "codex" | "claude-code" | "opencode" | "generic";
+
+type LaunchSpec = {
+  command: string;
+  args: string[];
+  cwd: string;
+};
+
+function hostConfigTarget(value: string): HostConfigTarget | undefined {
+  return value === "codex" ||
+    value === "claude-code" ||
+    value === "opencode" ||
+    value === "generic"
+    ? value
+    : undefined;
+}
+
+function launchSpec(
+  flags: Record<string, string | true>,
+  cwd: string,
+  profileArgs: readonly string[]
+): LaunchSpec {
+  const command = stringFlag(flags, "launcher") ?? "bun";
+  const entry = stringFlag(flags, "entry") ?? "packages/adapters-mcp/dist/bin.js";
+  const resolvedEntry = entry.includes("/") ? resolve(cwd, entry) : entry;
+
+  return {
+    command,
+    args: [resolvedEntry, ...profileArgs],
+    cwd
+  };
+}
+
+function renderHostConfig(target: HostConfigTarget, spec: LaunchSpec) {
+  if (target === "codex") {
+    return renderCodexConfig(spec);
+  }
+
+  if (target === "opencode") {
+    return JSON.stringify(
+      {
+        $schema: "https://opencode.ai/config.json",
+        mcp: {
+          specwright: {
+            type: "local",
+            command: [spec.command, ...spec.args],
+            cwd: spec.cwd,
+            enabled: true
+          }
+        }
+      },
+      null,
+      2
+    );
+  }
+
+  return JSON.stringify(
+    {
+      mcpServers: {
+        specwright: {
+          type: "stdio",
+          command: spec.command,
+          args: spec.args,
+          env: {}
+        }
+      }
+    },
+    null,
+    2
+  );
+}
+
+function renderCodexConfig(spec: LaunchSpec) {
+  return [
+    '[mcp_servers."specwright"]',
+    "enabled = true",
+    `command = ${tomlString(spec.command)}`,
+    `args = ${tomlStringArray(spec.args)}`,
+    `cwd = ${tomlString(spec.cwd)}`,
+    "startup_timeout_sec = 10",
+    "tool_timeout_sec = 60"
+  ].join("\n");
+}
+
+function tomlStringArray(values: readonly string[]) {
+  return `[${values.map((value) => tomlString(value)).join(", ")}]`;
+}
+
+function tomlString(value: string) {
+  return JSON.stringify(value);
 }
 
 function stringFlag(flags: Record<string, string | true>, name: string) {
@@ -267,7 +499,7 @@ function sameCredential(candidate: unknown, expected: Record<string, unknown>) {
   return JSON.stringify(candidate) === JSON.stringify(expected);
 }
 
-function missingCiFlag(flag: string): BinOptions {
+function missingCiFlag(flag: string): BinParseError {
   return {
     ok: false,
     exitCode: 2,
@@ -306,7 +538,9 @@ function usage() {
     "Usage:",
     `  ${MCP_STDIO_SERVER_NAME} --profile local-stdio --root <path> [--workspace-root <path>]`,
     `  ${MCP_STDIO_SERVER_NAME} --profile ci --root <path> --client-id <id> --tenant-id <id> --scopes <scopes>`,
+    `  ${MCP_STDIO_SERVER_NAME} --print-host-config <host> --profile <profile> --root <path>`,
     "",
-    "This executable speaks MCP JSON-RPC over stdio. Stdout is reserved for MCP messages."
+    "Hosts: codex, claude-code, opencode, generic.",
+    "This executable speaks MCP JSON-RPC over stdio. Stdout is reserved for MCP messages while serving; the host-config helper prints snippets to stdout."
   ].join("\n");
 }

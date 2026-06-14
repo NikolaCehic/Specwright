@@ -340,6 +340,116 @@ describe("MCP stdio transport", () => {
     }
   });
 
+  test("host config helper prints Codex TOML for local stdio without launching MCP", () => {
+    const result = spawnMcpConfig([
+      "--print-host-config",
+      "codex",
+      "--profile",
+      "local-stdio",
+      "--root",
+      "fixtures/simple-app"
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain('[mcp_servers."specwright"]');
+    expect(result.stdout).toContain('command = "bun"');
+    expect(result.stdout).toContain('"--profile", "local-stdio"');
+    expect(result.stdout).toContain('cwd = "');
+  });
+
+  test("host config helper prints Claude MCP JSON for authenticated CI stdio", () => {
+    const result = spawnMcpConfig([
+      "--print-host-config",
+      "claude-code",
+      "--profile",
+      "ci",
+      "--root",
+      "fixtures/simple-app",
+      "--client-id",
+      "ci-worker",
+      "--tenant-id",
+      "tenant-a",
+      "--scopes",
+      "run:read"
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed).toMatchObject({
+      mcpServers: {
+        specwright: {
+          type: "stdio",
+          command: "bun",
+          args: expect.arrayContaining([
+            expect.stringContaining("/packages/adapters-mcp/dist/bin.js"),
+            "--profile",
+            "ci",
+            "--client-id",
+            "ci-worker",
+            "--tenant-id",
+            "tenant-a",
+            "--scopes",
+            "run:read",
+            "--subject-id",
+            "ci-worker",
+            "--run-mode",
+            "assisted"
+          ]),
+          env: {}
+        }
+      }
+    });
+  });
+
+  test("host config helper prints OpenCode local MCP JSON", () => {
+    const result = spawnMcpConfig([
+      "--print-host-config",
+      "opencode",
+      "--profile",
+      "local-stdio",
+      "--root",
+      "fixtures/simple-app"
+    ]);
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+
+    const parsed = JSON.parse(result.stdout);
+    expect(parsed).toMatchObject({
+      $schema: "https://opencode.ai/config.json",
+      mcp: {
+        specwright: {
+          type: "local",
+          command: expect.arrayContaining([
+            "bun",
+            expect.stringContaining("/packages/adapters-mcp/dist/bin.js"),
+            "--profile",
+            "local-stdio"
+          ]),
+          enabled: true
+        }
+      }
+    });
+  });
+
+  test("host config helper fails closed for unknown host targets", () => {
+    const result = spawnMcpConfig([
+      "--print-host-config",
+      "unknown-host",
+      "--profile",
+      "local-stdio",
+      "--root",
+      "fixtures/simple-app"
+    ]);
+
+    expect(result.status).toBe(2);
+    expect(result.stdout).toBe("");
+    expect(result.stderr).toContain("codex, claude-code, opencode, or generic");
+  });
+
   test("process startup fails closed without an explicit local profile", () => {
     const result = spawnSync(
       "bun",
@@ -420,6 +530,17 @@ function spawnMcpStdioProcess(args: readonly string[], input: string) {
     {
       cwd: repoRoot,
       input,
+      encoding: "utf8"
+    }
+  );
+}
+
+function spawnMcpConfig(args: readonly string[]) {
+  return spawnSync(
+    "bun",
+    ["packages/adapters-mcp/src/bin.ts", ...args],
+    {
+      cwd: repoRoot,
       encoding: "utf8"
     }
   );
