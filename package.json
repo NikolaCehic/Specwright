@@ -9,6 +9,7 @@
     "build": "bun run --cwd packages/schemas build && bun run --cwd packages/run-store build && bun run --cwd packages/evidence-store build && bun run --cwd packages/artifact-store build && bun run --cwd packages/trace-recorder build && bun run --cwd packages/run-reports build && bun run --cwd packages/operations build && bun run --cwd packages/harness-loader build && bun run --cwd packages/policy-engine build && bun run --cwd packages/gate-engine build && bun run --cwd packages/tool-broker build && bun run --cwd packages/memory build && bun run --cwd packages/eval-runner build && bun run --cwd packages/runtime build && bun run --cwd packages/adapters-cli build && bun run --cwd packages/adapters-mcp build && bun run --cwd packages/adapter-parity build",
     "check:deps": "bun scripts/check-package-dependencies.mjs",
     "check:cycles": "bun scripts/check-source-cycles.mjs",
+    "check:pack": "bun run build && bun scripts/check-package-packlists.mjs",
     "check:unused": "bun scripts/check-unused-code.mjs",
     "test": "bun test",
     "test:all": "bun run test",

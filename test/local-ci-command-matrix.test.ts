@@ -9,6 +9,7 @@ const expectedRootScripts = [
   "build",
   "check:cycles",
   "check:deps",
+  "check:pack",
   "check:unused",
   "proof:v0",
   "test",
@@ -73,6 +74,7 @@ const localCiRows = [
   ["dependency_isolation", "bun run check:deps", "implemented", "OPT-003A"],
   ["source_cycles", "bun run check:cycles", "implemented", "AUD-006A"],
   ["unused_code", "bun run check:unused", "implemented", "AUD-008A"],
+  ["package_packlist_dry_run", "bun run check:pack", "implemented", "FEAT-001D"],
   [
     "installability_readiness",
     "bun test test/installability-readiness.test.ts",

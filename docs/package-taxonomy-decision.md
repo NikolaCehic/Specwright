@@ -101,13 +101,14 @@ Before any package leaves private workspace status, the implementation packet mu
 
 ## Install Smoke And Publish Dry Run
 
-Install smoke and publish dry-run are assigned, not implemented here.
+Install smoke remains assigned, not implemented here. The first-wave package packlist dry-run now exists as `bun run check:pack`; full release dry-run remains release-gated until dependency rewriting, versions, release notes, provenance, and install smoke exist.
 
 | Workflow | Owner | Scope |
 | --- | --- | --- |
 | Fresh-project install smoke | `FEAT-001B` or package implementation packet | Verify `npm`, `npx`, `bunx`, packed tarball installation, and the documented `specwright` smoke command in a clean project. |
 | Host command install smoke | `FEAT-006A` / `G-HOST-001` | Verify Codex, Claude Code, OpenCode, HermesAgent, and generic host command-pack install paths after host package format is decided. |
-| Publish dry-run | `FEAT-013A` / `G-REL-001` plus package implementation packet | Verify `npm pack` or equivalent dry-run output, provenance inputs, dependency rewriting, tag policy, and changelog/release-note linkage. |
+| First-wave packlist dry-run | `FEAT-001D` | Verify `npm pack --dry-run --json` output for first-wave package files, entrypoints, declarations, bins, and metadata while reporting current publish blockers. |
+| Full publish dry-run | `FEAT-013A` / `G-REL-001` plus package implementation packet | Verify rewritten dependency declarations, provenance inputs, tag policy, changelog/release-note linkage, and install-smoke evidence for release candidates. |
 | Compatibility check | `FEAT-013A` / `G-REL-001` | Verify runtime, schemas, harness-loader, CLI, MCP, adapter, and run-package contract compatibility before release. |
 
 ## Live Manifest Evidence
@@ -120,6 +121,7 @@ Evidence was refreshed from the current repository on 2026-06-14:
 - All 17 workspace packages currently define `main`, `types`, `exports`, and `files`.
 - Only `@specwright/cli` defines a `bin`, mapping `specwright` to `./dist/bin.js`.
 - First-wave package manifests define `description`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `engines`, and `publishConfig`; internal and deferred package manifests do not.
+- Root scripts include `check:pack`, which builds and runs the first-wave npm packlist dry-run without publishing artifacts.
 - 16 packages use `workspace:*` in production dependencies; all 17 use `workspace:*` when dev dependencies are included.
 - README install/use flow is source-checkout oriented and invokes built CLI output directly, while naming `specwright` as the intended installed command.
 
@@ -132,7 +134,7 @@ Evidence was refreshed from the current repository on 2026-06-14:
 | Current repo is a Bun source checkout rather than an installable product | raw audit log `A5`, `AUD-005A` evidence |
 | Current CLI package source owns the only `specwright` bin | package manifest inventory |
 | Current MCP adapter is an in-process package with no deployable server bin | `AUD-011A` evidence and package manifest inventory |
-| Release tags, provenance, changelog, compatibility policy, and dry-run behavior remain release-system work | raw features log `F13`, `G-REL-001` |
+| Release tags, provenance, changelog, compatibility policy, and full release dry-run behavior remain release-system work | raw features log `F13`, `G-REL-001` |
 | Host command packs, capability packs, SDK distribution, docs/install UX, and MCP server packaging are separate gates | `G-HOST-001`, `G-CAPACK-001`, `G-SDK-001`, `G-DOCS-001`, `G-MCP-001` |
 
 ## Diff Boundary

@@ -129,6 +129,7 @@ describe("AUD-016A repository release readiness", () => {
       "build",
       "check:cycles",
       "check:deps",
+      "check:pack",
       "check:unused",
       "proof:v0",
       "test",
