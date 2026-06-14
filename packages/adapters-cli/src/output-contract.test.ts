@@ -13,7 +13,9 @@ const fixtureNames = [
   "events-ok.json",
   "replay-ok.json",
   "report-ok.json",
-  "eval-run-ok.json"
+  "tool-call-ok.json",
+  "eval-run-ok.json",
+  "gate-evaluate-ok.json"
 ] as const;
 const authenticatedContext = {
   principal: {
@@ -51,6 +53,12 @@ describe("cli output contract fixtures", () => {
     expect(classifications).toMatchObject({
       apiVersion: 1,
       changes: [
+        {
+          classification: "additive-compatible"
+        },
+        {
+          classification: "additive-compatible"
+        },
         {
           classification: "additive-compatible"
         },
@@ -124,12 +132,36 @@ async function liveEnvelopes(): Promise<Record<string, Record<string, unknown>>>
       "1"
     ],
     "report-ok.json": ["report", "run-contract", "--json"],
+    "tool-call-ok.json": [
+      "tool",
+      "call",
+      "run-contract",
+      "--tool",
+      "fs.read",
+      "--args-json",
+      "{\"path\":\"AGENTS.md\"}",
+      "--reason",
+      "Read project instructions",
+      "--idempotency-key",
+      "tool-request-contract",
+      "--phase",
+      "intake",
+      "--json"
+    ],
     "eval-run-ok.json": [
       "eval",
       "run",
       "run-contract",
       "--eval",
       "eval.required",
+      "--json"
+    ],
+    "gate-evaluate-ok.json": [
+      "gate",
+      "evaluate",
+      "run-contract",
+      "--gate",
+      "intake.exit",
       "--json"
     ]
   };
@@ -214,11 +246,48 @@ function contractRuntime(): CliRuntime {
         missingInputs: []
       };
     },
+    async callTool() {
+      return fakeToolCallResult();
+    },
     async runEval() {
       return fakeEvalVerdict();
     },
+    async evaluateGate() {
+      return fakeGateEvaluation();
+    },
     async recordEvidence(_runId, record) {
       return record;
+    },
+    async recordApproval(runId, decision) {
+      return {
+        decision,
+        event: {
+          ...fakeEvent(runId, 1),
+          type: "decision.recorded",
+          payload: {
+            approvalId: decision.approvalId,
+            decision
+          }
+        },
+        state: fakeState({
+          runId,
+          pendingApprovals: []
+        })
+      };
+    },
+    async recordHumanAnswer(runId, answer) {
+      return {
+        answer,
+        event: {
+          ...fakeEvent(runId, 1),
+          type: "human.answer_recorded",
+          payload: answer
+        },
+        state: fakeState({
+          runId,
+          pendingQuestions: []
+        })
+      };
     }
   };
 }
@@ -282,6 +351,7 @@ function fakeState(
     phase?: string;
     pendingApprovals?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingApprovals"];
     pendingQuestions?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingQuestions"];
+    pendingRepairTasks?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingRepairTasks"];
   }
 ): Awaited<ReturnType<CliRuntime["getRun"]>> {
   return {
@@ -296,6 +366,7 @@ function fakeState(
     budgets: {},
     pendingApprovals: overrides.pendingApprovals ?? [],
     pendingQuestions: overrides.pendingQuestions ?? [],
+    pendingRepairTasks: overrides.pendingRepairTasks ?? [],
     artifacts: [],
     lastEventId: "event-1"
   };
@@ -346,6 +417,51 @@ function fakeEvalVerdict(): Awaited<ReturnType<CliRuntime["runEval"]>> {
     producedBy: {
       kind: "deterministic",
       ref: "contract-eval-runner"
+    }
+  };
+}
+
+function fakeToolCallResult(): Awaited<ReturnType<CliRuntime["callTool"]>> {
+  return {
+    toolCallId: "tool-call-contract",
+    status: "success",
+    output: {
+      ok: true
+    },
+    provenance: {
+      toolId: "fs.read",
+      toolVersion: "0.1.0",
+      adapterVersion: "0.1.0",
+      argsHash: "sha256:args",
+      resultHash: "sha256:result",
+      decisionHash: "sha256:decision",
+      cacheStatus: "bypass",
+      traceId: "trace-tool"
+    }
+  };
+}
+
+function fakeGateEvaluation(): Awaited<ReturnType<CliRuntime["evaluateGate"]>> {
+  return {
+    verdict: {
+      gateId: "intake.exit",
+      phase: "intake",
+      status: "pass",
+      severity: "blocking",
+      reasons: ["Gate passed"],
+      findings: [],
+      evidenceRefs: ["evidence:1"],
+      obligations: [],
+      evaluatedAt: "2026-05-29T00:00:00.000Z",
+      evaluator: {
+        kind: "deterministic",
+        ref: "contract-gate-engine"
+      },
+      decisionHash: "sha256:gate"
+    },
+    instruction: {
+      kind: "continue",
+      gateId: "intake.exit"
     }
   };
 }

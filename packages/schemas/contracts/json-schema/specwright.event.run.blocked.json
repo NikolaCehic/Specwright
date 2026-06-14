@@ -1,0 +1,29 @@
+{
+  "$id": "specwright.event.run.blocked",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "blockedBy": {
+      "type": "string"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "reason"
+  ],
+  "title": "RunBlockedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:cd2c3c22f38afacfb6a4c20e9aa08b09906e75c4498f7721335afc99bb9f1b7f",
+    "id": "specwright.event.run.blocked",
+    "status": "public",
+    "version": "1"
+  }
+}

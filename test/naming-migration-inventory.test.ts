@@ -102,7 +102,7 @@ const directProductionArchetypeSites = [
   "packages/adapters-mcp/src/audit/writer.ts:234",
   "packages/adapters-mcp/src/observability/correlation.ts:368",
   "packages/run-reports/src/retention.ts:1097",
-  "packages/run-store/src/index.ts:56"
+  "packages/run-store/src/index.ts:58"
 ] as const;
 
 const futureMigrationOwners = [

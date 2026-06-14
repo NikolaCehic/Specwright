@@ -4,7 +4,7 @@ import { HarnessLoaderError } from "./errors";
 import type {
   HarnessLoadStageObserver,
   SourceFile
-} from "./index";
+} from "./types";
 
 const nonEmptyString = z.string().min(1);
 

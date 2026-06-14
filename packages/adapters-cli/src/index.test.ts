@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
+import type { ToolCallResult } from "@specwright/schemas";
 import {
   OUTCOMES,
   executeCli,
@@ -30,7 +31,9 @@ const cliSurfaceBaseline = [
   { command: "events", runtimeOperation: "getEvents", mutates: false },
   { command: "replay", runtimeOperation: "replay", mutates: false },
   { command: "report", runtimeOperation: "writeRunReport", mutates: true },
+  { command: "tool.call", runtimeOperation: "callTool", mutates: true },
   { command: "eval.run", runtimeOperation: "runEval", mutates: true },
+  { command: "gate.evaluate", runtimeOperation: "evaluateGate", mutates: true },
   { command: "approve", runtimeOperation: "recordApproval", mutates: true },
   { command: "reject", runtimeOperation: "recordApproval", mutates: true },
   { command: "answer", runtimeOperation: "recordEvidence", mutates: true }
@@ -45,8 +48,12 @@ describe("specwright cli adapter", () => {
       .map((line) => {
         const parts = line.trim().split(/\s+/);
 
-        return parts[1] === "eval" && parts[2] === "run"
+        return parts[1] === "tool" && parts[2] === "call"
+          ? "tool.call"
+          : parts[1] === "eval" && parts[2] === "run"
           ? "eval.run"
+          : parts[1] === "gate" && parts[2] === "evaluate"
+            ? "gate.evaluate"
           : parts[1];
       });
 
@@ -54,15 +61,26 @@ describe("specwright cli adapter", () => {
     expect(commands).toEqual(cliSurfaceBaseline.map((row) => row.command));
     expect(
       cliSurfaceBaseline.filter((row) => row.mutates).map((row) => row.command)
-    ).toEqual(["run", "report", "eval.run", "approve", "reject", "answer"]);
+    ).toEqual([
+      "run",
+      "report",
+      "tool.call",
+      "eval.run",
+      "gate.evaluate",
+      "approve",
+      "reject",
+      "answer"
+    ]);
     expect(new Set(cliSurfaceBaseline.map((row) => row.runtimeOperation))).toEqual(
       new Set([
         "startRun",
         "getRun",
         "getEvents",
         "replay",
+        "callTool",
         "writeRunReport",
         "runEval",
+        "evaluateGate",
         "recordApproval",
         "diagnose",
         "recordEvidence"
@@ -439,6 +457,238 @@ describe("specwright cli adapter", () => {
     outputSchemas["eval.run"].parse(envelope);
   });
 
+  test("tool call sends an explicit ToolCallRequest through the runtime broker", async () => {
+    const calls: unknown[] = [];
+    const runtime = fakeRuntime({
+      async callTool(runId, request, options) {
+        calls.push([runId, request, options]);
+
+        return fakeToolCallResult({
+          status: "success",
+          output: {
+            ok: true
+          }
+        });
+      }
+    });
+
+    const result = await executeCli(
+      [
+        "tool",
+        "call",
+        "run-tool",
+        "--tool",
+        "fs.read",
+        "--args-json",
+        "{\"path\":\"AGENTS.md\"}",
+        "--reason",
+        "Read project instructions",
+        "--idempotency-key",
+        "tool-request-1",
+        "--phase",
+        "intake",
+        "--root",
+        "/runs-root",
+        "--cwd",
+        "/workspace",
+        "--trace",
+        "trace-cli",
+        "--json"
+      ],
+      runtime,
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(calls).toEqual([
+      [
+        "run-tool",
+        {
+          toolId: "fs.read",
+          args: {
+            path: "AGENTS.md"
+          },
+          reason: "Read project instructions",
+          idempotencyKey: "tool-request-1",
+          requestedBy: {
+            phase: "intake"
+          }
+        },
+        {
+          rootDir: "/runs-root",
+          cwd: "/workspace",
+          traceId: "trace-cli"
+        }
+      ]
+    ]);
+    expect(envelope).toMatchObject({
+      command: "tool.call",
+      outcome: "ok",
+      runId: "run-tool",
+      data: {
+        toolCallId: "tool-call-1",
+        status: "success"
+      }
+    });
+    outputSchemas["tool.call"].parse(envelope);
+  });
+
+  test("tool call returns broker denial data with a classified nonzero outcome", async () => {
+    const result = await executeCli(
+      [
+        "tool",
+        "call",
+        "run-tool",
+        "--tool",
+        "fs.write",
+        "--args-json",
+        "{}",
+        "--reason",
+        "Write generated file",
+        "--idempotency-key",
+        "tool-request-denied",
+        "--phase",
+        "intake",
+        "--json"
+      ],
+      fakeRuntime({
+        async callTool() {
+          return fakeToolCallResult({
+            toolCallId: "tool-call-denied",
+            status: "denied",
+            error: {
+              code: "policy_denied",
+              message: "Policy denied fs.write",
+              retryable: false
+            },
+            provenance: {
+              toolId: "fs.write",
+              toolVersion: "0.1.0",
+              argsHash: "sha256:args",
+              cacheStatus: "bypass",
+              traceId: "trace-tool"
+            }
+          });
+        }
+      }),
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(4);
+    expect(result.stderr).toBe("");
+    expect(envelope).toMatchObject({
+      command: "tool.call",
+      outcome: "denied",
+      runId: "run-tool",
+      data: {
+        status: "denied",
+        error: {
+          code: "policy_denied"
+        }
+      },
+      error: {
+        errorClass: "denied",
+        code: 4
+      }
+    });
+    outputSchemas["tool.call"].parse(envelope);
+  });
+
+  test("tool call requires an authenticated actor before runtime mutation", async () => {
+    const calls: unknown[] = [];
+    const result = await executeCli(
+      [
+        "tool",
+        "call",
+        "run-tool",
+        "--tool",
+        "fs.read",
+        "--args-json",
+        "{}",
+        "--reason",
+        "Read",
+        "--idempotency-key",
+        "tool-request-1",
+        "--phase",
+        "intake",
+        "--json"
+      ],
+      fakeRuntime({
+        async callTool(runId, request, options) {
+          calls.push([runId, request, options]);
+
+          return fakeToolCallResult();
+        }
+      }),
+      {
+        context: {
+          principal: {
+            id: "anonymous",
+            source: "anonymous",
+            assuranceLevel: "anonymous",
+            roles: []
+          },
+          tenant: {
+            id: "tenant-a",
+            allowedRoots: ["/runs-root"]
+          },
+          ci: true
+        }
+      }
+    );
+
+    expect(result.exitCode).toBe(11);
+    expect(calls).toEqual([]);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      errorClass: "auth",
+      code: 11,
+      runId: "run-tool"
+    });
+  });
+
+  test("tool call rejects malformed args json before runtime mutation", async () => {
+    const calls: unknown[] = [];
+    const result = await executeCli(
+      [
+        "tool",
+        "call",
+        "run-tool",
+        "--tool",
+        "fs.read",
+        "--args-json",
+        "{bad",
+        "--reason",
+        "Read",
+        "--idempotency-key",
+        "tool-request-1",
+        "--phase",
+        "intake",
+        "--json"
+      ],
+      fakeRuntime({
+        async callTool(runId, request, options) {
+          calls.push([runId, request, options]);
+
+          return fakeToolCallResult();
+        }
+      }),
+      { context: authenticatedContext }
+    );
+
+    expect(result.exitCode).toBe(3);
+    expect(calls).toEqual([]);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      errorClass: "input_validation",
+      code: 3,
+      runId: "run-tool"
+    });
+  });
+
   test("eval run returns failing verdict data with a classified nonzero outcome", async () => {
     const result = await executeCli(
       [
@@ -531,6 +781,170 @@ describe("specwright cli adapter", () => {
       errorClass: "auth",
       code: 11,
       runId: "run-eval"
+    });
+  });
+
+  test("gate evaluate calls runtime.evaluateGate and envelopes the result", async () => {
+    const calls: unknown[] = [];
+    const runtime = fakeRuntime({
+      async evaluateGate(runId, request, options) {
+        calls.push([runId, request, options]);
+
+        return fakeGateEvaluation({
+          gateId: String(request),
+          status: "pass",
+          instruction: {
+            kind: "continue",
+            gateId: String(request)
+          }
+        });
+      }
+    });
+
+    const result = await executeCli(
+      [
+        "gate",
+        "evaluate",
+        "run-gate",
+        "--gate",
+        "intake.exit",
+        "--root",
+        "/runs-root",
+        "--json"
+      ],
+      runtime,
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(calls).toEqual([
+      ["run-gate", "intake.exit", { rootDir: "/runs-root" }]
+    ]);
+    expect(envelope).toMatchObject({
+      command: "gate.evaluate",
+      outcome: "ok",
+      runId: "run-gate",
+      data: {
+        verdict: {
+          gateId: "intake.exit",
+          status: "pass"
+        },
+        instruction: {
+          kind: "continue",
+          gateId: "intake.exit"
+        }
+      }
+    });
+    outputSchemas["gate.evaluate"].parse(envelope);
+  });
+
+  test("gate evaluate returns failing verdict data with a classified nonzero outcome", async () => {
+    const result = await executeCli(
+      [
+        "gate",
+        "evaluate",
+        "run-gate",
+        "--gate",
+        "intake.exit",
+        "--json"
+      ],
+      fakeRuntime({
+        async evaluateGate() {
+          return fakeGateEvaluation({
+            status: "fail",
+            reasons: ["Required artifact missing"],
+            findings: [
+              {
+                id: "finding-1",
+                code: "missing_artifact",
+                message: "Required artifact was not produced.",
+                severity: "blocking",
+                evidenceRefs: []
+              }
+            ],
+            instruction: {
+              kind: "fail_run",
+              gateId: "intake.exit",
+              reason: "Required artifact missing"
+            }
+          });
+        }
+      }),
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(6);
+    expect(result.stderr).toBe("");
+    expect(envelope).toMatchObject({
+      command: "gate.evaluate",
+      outcome: "gate_failure",
+      runId: "run-gate",
+      data: {
+        verdict: {
+          status: "fail",
+          findings: [
+            {
+              code: "missing_artifact"
+            }
+          ]
+        },
+        instruction: {
+          kind: "fail_run"
+        }
+      },
+      error: {
+        errorClass: "gate_failure",
+        code: 6
+      }
+    });
+    outputSchemas["gate.evaluate"].parse(envelope);
+  });
+
+  test("gate evaluate requires an authenticated actor before runtime mutation", async () => {
+    const calls: unknown[] = [];
+    const result = await executeCli(
+      [
+        "gate",
+        "evaluate",
+        "run-gate",
+        "--gate",
+        "intake.exit",
+        "--json"
+      ],
+      fakeRuntime({
+        async evaluateGate(runId, request, options) {
+          calls.push([runId, request, options]);
+
+          return fakeGateEvaluation();
+        }
+      }),
+      {
+        context: {
+          principal: {
+            id: "anonymous",
+            source: "anonymous",
+            assuranceLevel: "anonymous",
+            roles: []
+          },
+          tenant: {
+            id: "tenant-a",
+            allowedRoots: ["/runs-root"]
+          },
+          ci: true
+        }
+      }
+    );
+
+    expect(result.exitCode).toBe(11);
+    expect(calls).toEqual([]);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      errorClass: "auth",
+      code: 11,
+      runId: "run-gate"
     });
   });
 
@@ -818,12 +1232,27 @@ describe("specwright cli adapter", () => {
     });
   });
 
-  test("answer records human decision evidence without source_fact", async () => {
+  test("answer records a runtime human answer event", async () => {
     const calls: unknown[] = [];
     const runtime = fakeRuntime({
-      async recordEvidence(runId, record, options) {
-        calls.push([runId, record, options]);
-        return record;
+      async recordHumanAnswer(runId, answer, options) {
+        calls.push([runId, answer, options]);
+
+        return {
+          answer,
+          event: {
+            ...fakeEvent({
+              runId,
+              id: "event-answer"
+            }),
+            type: "human.answer_recorded",
+            payload: answer
+          },
+          state: fakeState({
+            runId,
+            pendingQuestions: []
+          })
+        };
       }
     });
 
@@ -843,16 +1272,41 @@ describe("specwright cli adapter", () => {
 
     expect(result.exitCode).toBe(0);
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject([
-      "run-question",
-      {
-        class: "human_decision",
-        authority: "user",
-        claim: "Use the repo README"
-      },
-      {}
+    expect(calls).toEqual([
+      [
+        "run-question",
+        {
+          questionId: "question-1",
+          answer: "Use the repo README",
+          answeredBy: "operator-1",
+          metadata: {
+            tenant: "tenant-a"
+          }
+        },
+        {}
+      ]
     ]);
-    expect(JSON.stringify(calls[0])).not.toContain("source_fact");
+    const envelope = JSON.parse(result.stdout);
+
+    expect(envelope).toMatchObject({
+      command: "answer",
+      outcome: "ok",
+      runId: "run-question",
+      data: {
+        answer: {
+          questionId: "question-1",
+          answeredBy: "operator-1"
+        },
+        event: {
+          id: "event-answer",
+          type: "human.answer_recorded"
+        },
+        state: {
+          pendingQuestions: []
+        }
+      }
+    });
+    outputSchemas.answer.parse(envelope);
   });
 
   test("all outcome codes are unique and no failure maps to exit 1", () => {
@@ -928,6 +1382,9 @@ function fakeRuntime(overrides: Partial<CliRuntime> = {}): CliRuntime {
         missingInputs: []
       };
     },
+    async callTool() {
+      return fakeToolCallResult();
+    },
     async recordEvidence(_runId, record) {
       return record;
     },
@@ -950,8 +1407,27 @@ function fakeRuntime(overrides: Partial<CliRuntime> = {}): CliRuntime {
         })
       };
     },
+    async recordHumanAnswer(runId, answer) {
+      return {
+        answer,
+        event: {
+          ...fakeEvent({
+            runId
+          }),
+          type: "human.answer_recorded",
+          payload: answer
+        },
+        state: fakeState({
+          runId,
+          pendingQuestions: []
+        })
+      };
+    },
     async runEval() {
       return fakeEvalVerdict();
+    },
+    async evaluateGate() {
+      return fakeGateEvaluation();
     },
     ...overrides
   };
@@ -1014,6 +1490,7 @@ function fakeState(
     lastEventId?: string;
     pendingApprovals?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingApprovals"];
     pendingQuestions?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingQuestions"];
+    pendingRepairTasks?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingRepairTasks"];
   } = {}
 ): Awaited<ReturnType<CliRuntime["getRun"]>> {
   return {
@@ -1028,6 +1505,7 @@ function fakeState(
     budgets: {},
     pendingApprovals: overrides.pendingApprovals ?? [],
     pendingQuestions: overrides.pendingQuestions ?? [],
+    pendingRepairTasks: overrides.pendingRepairTasks ?? [],
     artifacts: [],
     lastEventId: overrides.lastEventId ?? "event-1"
   };
@@ -1090,6 +1568,66 @@ function fakeEvalVerdict(
     ...(overrides.provenance === undefined
       ? {}
       : { provenance: overrides.provenance })
+  };
+}
+
+function fakeToolCallResult(
+  overrides: Partial<ToolCallResult> = {}
+): ToolCallResult {
+  return {
+    toolCallId: overrides.toolCallId ?? "tool-call-1",
+    status: overrides.status ?? "success",
+    output: overrides.output ?? {
+      ok: true
+    },
+    ...(overrides.error === undefined ? {} : { error: overrides.error }),
+    provenance: overrides.provenance ?? {
+      toolId: "fs.read",
+      toolVersion: "0.1.0",
+      adapterVersion: "0.1.0",
+      argsHash: "sha256:args",
+      resultHash: "sha256:result",
+      decisionHash: "sha256:decision",
+      cacheStatus: "bypass",
+      traceId: "trace-tool"
+    }
+  };
+}
+
+function fakeGateEvaluation(
+  overrides: Partial<Awaited<ReturnType<CliRuntime["evaluateGate"]>>["verdict"]> & {
+    instruction?: Awaited<ReturnType<CliRuntime["evaluateGate"]>>["instruction"];
+  } = {}
+): Awaited<ReturnType<CliRuntime["evaluateGate"]>> {
+  const gateId = overrides.gateId ?? "intake.exit";
+
+  return {
+    verdict: {
+      gateId,
+      phase: overrides.phase ?? "intake",
+      status: overrides.status ?? "pass",
+      severity: overrides.severity ?? "blocking",
+      reasons: overrides.reasons ?? ["Gate passed"],
+      findings: overrides.findings ?? [],
+      evidenceRefs: overrides.evidenceRefs ?? ["evidence:1"],
+      obligations: overrides.obligations ?? [],
+      evaluatedAt: overrides.evaluatedAt ?? "2026-05-29T00:00:00.000Z",
+      evaluator: overrides.evaluator ?? {
+        kind: "deterministic",
+        ref: "test-gate-engine"
+      },
+      decisionHash: overrides.decisionHash ?? "sha256:gate",
+      ...(overrides.requiredAction === undefined
+        ? {}
+        : { requiredAction: overrides.requiredAction }),
+      ...(overrides.provenance === undefined
+        ? {}
+        : { provenance: overrides.provenance })
+    },
+    instruction: overrides.instruction ?? {
+      kind: "continue",
+      gateId
+    }
   };
 }
 
