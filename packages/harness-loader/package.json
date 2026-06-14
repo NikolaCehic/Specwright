@@ -2,6 +2,33 @@
   "name": "@specwright/harness-loader",
   "version": "0.0.0",
   "private": true,
+  "description": "Harness loading and validation utilities for Specwright runtimes.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NikolaCehic/Specwright.git",
+    "directory": "packages/harness-loader"
+  },
+  "homepage": "https://github.com/NikolaCehic/Specwright#readme",
+  "bugs": {
+    "url": "https://github.com/NikolaCehic/Specwright/issues"
+  },
+  "keywords": [
+    "specwright",
+    "harness",
+    "agent-workflows",
+    "workflow-runtime"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "bun": ">=1.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "latest",
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

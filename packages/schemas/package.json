@@ -2,6 +2,33 @@
   "name": "@specwright/schemas",
   "version": "0.0.0",
   "private": true,
+  "description": "Shared TypeScript contracts and validation schemas for Specwright.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NikolaCehic/Specwright.git",
+    "directory": "packages/schemas"
+  },
+  "homepage": "https://github.com/NikolaCehic/Specwright#readme",
+  "bugs": {
+    "url": "https://github.com/NikolaCehic/Specwright/issues"
+  },
+  "keywords": [
+    "specwright",
+    "schemas",
+    "agent-workflows",
+    "runtime-contracts"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "bun": ">=1.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "latest",
+    "provenance": true
+  },
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

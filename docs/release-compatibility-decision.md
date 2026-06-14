@@ -164,7 +164,7 @@ Live source and GitHub state on this branch show:
 - Root scripts include build, test, typecheck, proof, dependency, cycle, unused-code, and core-test commands, but no root release, publish, changelog, package dry-run, or release-readiness command.
 - The root package is private.
 - All 17 workspace packages are private and versioned `0.0.0`.
-- No workspace package currently has `publishConfig`, `license`, or `repository` metadata.
+- First-wave package manifests now have npm-facing metadata and provenance-oriented `publishConfig`, but all packages remain private and workspace dependency rewriting, package dry-run, and release approval remain unresolved.
 - No top-level changelog, release notes, release checklist, package provenance policy, or product-level compatibility matrix was found.
 - Internal compatibility primitives exist in operations, schemas, harness-loader, gate-engine, and MCP adapter packages, but they do not yet form a public release discipline.
 

@@ -203,7 +203,7 @@ Live source on this stacked branch shows:
 - README says the intended installed command is `specwright`, while the simplest path today is direct `bun packages/adapters-cli/dist/bin.js`.
 - README still contains stale wording about approval commands being reserved until runtime approval support exists; current CLI code and tests now route `approve` and `reject` to `RuntimeApi.recordApproval`.
 - `docs/` contains decision records and the runtime hero image, not a complete public install/user guide set.
-- All 17 workspace packages are private `0.0.0`; only `@specwright/cli` declares a `specwright` bin.
+- All 17 workspace packages are private `0.0.0`; first-wave packages have npm-facing metadata; only `@specwright/cli` declares a `specwright` bin.
 - CLI usage exposes `run`, `status`, `events`, `replay`, `report`, `approve`, `reject`, and `answer`.
 - CLI tests reject an unknown harness id before runtime start, so docs must not promise arbitrary harness selection yet.
 - The current runnable example inventory is `fixtures/simple-app`; no `examples/` directory, monorepo example, docs-repo example, TypeScript app example, host setup example, or harness extension example exists.

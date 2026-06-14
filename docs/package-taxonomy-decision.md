@@ -119,7 +119,7 @@ Evidence was refreshed from the current repository on 2026-06-14:
 - All 17 workspace packages are private and have `version: "0.0.0"`.
 - All 17 workspace packages currently define `main`, `types`, `exports`, and `files`.
 - Only `@specwright/cli` defines a `bin`, mapping `specwright` to `./dist/bin.js`.
-- No workspace package currently defines `publishConfig`, `license`, or `repository`.
+- First-wave package manifests define `description`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `engines`, and `publishConfig`; internal and deferred package manifests do not.
 - 16 packages use `workspace:*` in production dependencies; all 17 use `workspace:*` when dev dependencies are included.
 - README install/use flow is source-checkout oriented and invokes built CLI output directly, while naming `specwright` as the intended installed command.
 
