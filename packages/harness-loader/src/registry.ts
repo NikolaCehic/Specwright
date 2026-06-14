@@ -13,12 +13,12 @@ import {
   type HarnessLoaderLimitsInput
 } from "./limits";
 import { SnapshotCache } from "./cache";
+import type { ResolvedDependency } from "./dependency-resolver";
 import type {
   HarnessLoadRecord,
   LoadHarnessPackageOptions,
-  ResolvedDependency,
   SourceFile
-} from "./index";
+} from "./types";
 import type { HarnessSnapshot } from "@specwright/schemas";
 
 export type RegistryPackageKey = {
