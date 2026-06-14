@@ -1,0 +1,14 @@
+{
+  "approvalRequest": {
+    "approvalId": "approval:contract-registry",
+    "reason": "Review generated registry changes.",
+    "requiredFor": "gate:contract.registry"
+  },
+  "gateApprovalRequest": {
+    "gateId": "contract.registry",
+    "id": "approval:contract-registry",
+    "phase": "shared-schemas",
+    "reason": "Generated registry change needs review.",
+    "requiredFor": "gate:contract.registry"
+  }
+}
