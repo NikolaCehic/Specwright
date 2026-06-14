@@ -188,6 +188,15 @@
       "unsupportedWithoutMigration": false
     },
     {
+      "classification": "additive-compatible",
+      "currentHash": "sha256:d7b9dbebfc1e4d992bf2050dea7f5d94d352cd6a71a46c4848880936da89c1af",
+      "currentVersion": "1",
+      "exportName": "ApprovalRequestedEventPayloadSchema",
+      "id": "specwright.event.approval.requested",
+      "reason": "New registered contract; old records remain readable.",
+      "unsupportedWithoutMigration": false
+    },
+    {
       "baselineHash": "sha256:e0e38fe8121eb83916a32e9df5e579375be806976937844e4ade9f73d548a80e",
       "baselineVersion": "1",
       "classification": "unchanged",
@@ -318,6 +327,24 @@
       "unsupportedWithoutMigration": true
     },
     {
+      "classification": "additive-compatible",
+      "currentHash": "sha256:1fc2098fc5c361a03e5235c4c2451e5f53c879dcbde074c4156e7bb3bafe7224",
+      "currentVersion": "1",
+      "exportName": "RepairTaskCreatedEventPayloadSchema",
+      "id": "specwright.event.repair.task_created",
+      "reason": "New registered contract; old records remain readable.",
+      "unsupportedWithoutMigration": false
+    },
+    {
+      "classification": "additive-compatible",
+      "currentHash": "sha256:cd2c3c22f38afacfb6a4c20e9aa08b09906e75c4498f7721335afc99bb9f1b7f",
+      "currentVersion": "1",
+      "exportName": "RunBlockedEventPayloadSchema",
+      "id": "specwright.event.run.blocked",
+      "reason": "New registered contract; old records remain readable.",
+      "unsupportedWithoutMigration": false
+    },
+    {
       "baselineHash": "sha256:e37ba0c18b1d30ea8da7b9a082f2ed3cac18ac6cde717b101699ecd99d704528",
       "baselineVersion": "1",
       "classification": "unchanged",
@@ -354,7 +381,7 @@
       "baselineHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
       "baselineVersion": "1",
       "classification": "migration-required",
-      "currentHash": "sha256:65662fff45c6f493c33091586a24a5e0c74898913afaeb04a5289c0a80022a17",
+      "currentHash": "sha256:6c077640020c4a278aeee402bd020fc70d3efde557ae07eac60bfd174a371319",
       "currentVersion": "1",
       "exportName": "RuntimeEventSchema",
       "id": "specwright.event.runtime-event",
@@ -947,13 +974,13 @@
     {
       "baselineHash": "sha256:532d6baee777d10718203e243a9987cc28e7f1f39f4f4a608cc5ff76f723c774",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:532d6baee777d10718203e243a9987cc28e7f1f39f4f4a608cc5ff76f723c774",
+      "classification": "migration-required",
+      "currentHash": "sha256:6abeaf8f51bb78b4c5150bb9c3fe8ff2187b7a0aaa14dd405bcc424ff9effbbc",
       "currentVersion": "1",
       "exportName": "RunStateSchema",
       "id": "specwright.lifecycle.run-state",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:613627b0bdcd82a10e50e5d13f42384a7aeb916a19aa158d547c1c608d5280c6",
@@ -1104,31 +1131,39 @@
   "releasePolicy": {
     "auditExportChanges": [
       "specwright.capability.tool-call-result",
+      "specwright.event.approval.requested",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
+      "specwright.event.repair.task_created",
+      "specwright.event.run.blocked",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.event.tool.completed",
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
-      "specwright.lifecycle.gate-verdict"
+      "specwright.lifecycle.gate-verdict",
+      "specwright.lifecycle.run-state"
     ],
     "changedContractIds": [
       "specwright.capability.tool-call-result",
+      "specwright.event.approval.requested",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
+      "specwright.event.repair.task_created",
+      "specwright.event.run.blocked",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.event.tool.completed",
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
-      "specwright.lifecycle.gate-verdict"
+      "specwright.lifecycle.gate-verdict",
+      "specwright.lifecycle.run-state"
     ],
     "compatibilityClasses": {
       "specwright.adapter.host-kind": "unchanged",
@@ -1148,6 +1183,7 @@
       "specwright.capability.tool-definition": "unchanged",
       "specwright.compatibility.harness-schema-version": "unchanged",
       "specwright.compatibility.metadata": "unchanged",
+      "specwright.event.approval.requested": "additive-compatible",
       "specwright.event.artifact.recorded": "unchanged",
       "specwright.event.decision.recorded": "unchanged",
       "specwright.event.eval.completed": "unchanged",
@@ -1160,6 +1196,8 @@
       "specwright.event.phase.transitioned": "unchanged",
       "specwright.event.policy-evaluated-event": "additive-compatible",
       "specwright.event.policy.evaluated": "migration-required",
+      "specwright.event.repair.task_created": "additive-compatible",
+      "specwright.event.run.blocked": "additive-compatible",
       "specwright.event.run.completed": "unchanged",
       "specwright.event.run.failed": "unchanged",
       "specwright.event.run.started": "unchanged",
@@ -1217,7 +1255,7 @@
       "specwright.lifecycle.gate-verdict-status": "unchanged",
       "specwright.lifecycle.repair-task": "unchanged",
       "specwright.lifecycle.run-input": "unchanged",
-      "specwright.lifecycle.run-state": "unchanged",
+      "specwright.lifecycle.run-state": "migration-required",
       "specwright.lifecycle.run-status": "unchanged",
       "specwright.observability.decision-produced-by": "unchanged",
       "specwright.observability.decision-provenance": "unchanged",
@@ -1236,17 +1274,21 @@
     "contractRegistryVersion": "scope-01.packet-05",
     "generatedSdkSurfaceChanges": [
       "specwright.capability.tool-call-result",
+      "specwright.event.approval.requested",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
       "specwright.event.policy.evaluated",
+      "specwright.event.repair.task_created",
+      "specwright.event.run.blocked",
       "specwright.event.runtime-event",
       "specwright.event.runtime-event-envelope",
       "specwright.event.tool.completed",
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
-      "specwright.lifecycle.gate-verdict"
+      "specwright.lifecycle.gate-verdict",
+      "specwright.lifecycle.run-state"
     ],
     "migrationRequirements": [
       "specwright.capability.tool-call-result",
@@ -1259,10 +1301,14 @@
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
       "specwright.harness.harness-snapshot",
-      "specwright.lifecycle.gate-verdict"
+      "specwright.lifecycle.gate-verdict",
+      "specwright.lifecycle.run-state"
     ],
     "redactionChanges": [
-      "specwright.event.policy-evaluated-event"
+      "specwright.event.approval.requested",
+      "specwright.event.policy-evaluated-event",
+      "specwright.event.repair.task_created",
+      "specwright.event.run.blocked"
     ],
     "unsupportedHistoricalVersions": [
       "specwright.capability.tool-call-result@1",
@@ -1275,16 +1321,17 @@
       "specwright.event.tool.denied@1",
       "specwright.governance.policy-bundle@1",
       "specwright.harness.harness-snapshot@1",
-      "specwright.lifecycle.gate-verdict@1"
+      "specwright.lifecycle.gate-verdict@1",
+      "specwright.lifecycle.run-state@1"
     ]
   },
   "summary": {
-    "additive-compatible": 1,
+    "additive-compatible": 4,
     "backward-compatible": 0,
     "breaking": 0,
     "forward-compatible": 0,
-    "migration-required": 11,
+    "migration-required": 12,
     "patch-compatible": 0,
-    "unchanged": 88
+    "unchanged": 87
   }
 }

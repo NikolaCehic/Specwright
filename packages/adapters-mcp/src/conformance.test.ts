@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { executeCli } from "@specwright/adapters-cli";
+import { executeCli } from "@specwright/cli";
 import { projectRunState } from "@specwright/run-store";
 import {
   MCP_ADAPTER_PROTOCOL_VERSION,
