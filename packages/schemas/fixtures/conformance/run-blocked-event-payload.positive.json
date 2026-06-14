@@ -1,0 +1,4 @@
+{
+  "blockedBy": "approval.requested",
+  "reason": "Contract registry generation is waiting for approval."
+}
