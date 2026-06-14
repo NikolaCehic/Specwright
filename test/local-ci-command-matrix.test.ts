@@ -11,17 +11,17 @@ const expectedRootScripts = [
   "check:deps",
   "check:pack",
   "check:unused",
+  "ci",
   "proof:v0",
   "test",
   "test:all",
   "test:core",
-  "typecheck"
+  "typecheck",
+  "typecheck:packages"
 ] as const;
 
 const missingRootMatrixScripts = [
-  "ci",
   "lint",
-  "typecheck:packages",
   "test:packages",
   "check:release",
   "package:smoke"
@@ -51,19 +51,29 @@ const workflowRows = [
     name: "Eval Runner Conformance",
     file: ".github/workflows/eval-runner-conformance.yml",
     requiredByBranchProtection: false,
-    packageScope: "packages/eval-runner/**"
+    packageScope: "packages/eval-runner/**",
+    pathFiltered: true
   },
   {
     name: "Policy Validation",
     file: ".github/workflows/policy-validation.yml",
     requiredByBranchProtection: true,
-    packageScope: "packages/policy-engine/**"
+    packageScope: "packages/policy-engine/**",
+    pathFiltered: true
+  },
+  {
+    name: "Specwright CI",
+    file: ".github/workflows/specwright-ci.yml",
+    requiredByBranchProtection: false,
+    packageScope: undefined,
+    pathFiltered: false
   },
   {
     name: "Tool Broker Conformance",
     file: ".github/workflows/tool-broker-conformance.yml",
     requiredByBranchProtection: false,
-    packageScope: "packages/tool-broker/**"
+    packageScope: "packages/tool-broker/**",
+    pathFiltered: true
   }
 ] as const;
 
@@ -71,6 +81,7 @@ const localCiRows = [
   ["root_build", "bun run build", "implemented", "OPT-001A"],
   ["root_typecheck", "bun run typecheck", "implemented", "OPT-001A"],
   ["root_test", "bun run test", "implemented", "OPT-007A"],
+  ["package_typecheck_matrix", "bun run typecheck:packages", "implemented", "OPT-002A/G-CI-001"],
   ["dependency_isolation", "bun run check:deps", "implemented", "OPT-003A"],
   ["source_cycles", "bun run check:cycles", "implemented", "AUD-006A"],
   ["unused_code", "bun run check:unused", "implemented", "AUD-008A"],
@@ -102,13 +113,10 @@ const localCiRows = [
 ] as const;
 
 const missingCiRowOwners = [
-  ["ci", "G-CI-001"],
   ["lint", "G-CI-001"],
-  ["typecheck:packages", "OPT-002A/G-CI-001"],
   ["test:packages", "OPT-001/G-CI-001"],
   ["check:release", "AUD-016A/FEAT-013A/G-REL-001"],
   ["package:smoke", "AUD-005A/FEAT-001A/G-PKG-001"],
-  ["workflow_path_filters", "G-CI-001/G-GH-002"],
   ["branch_protection_required_checks", "G-CI-001/G-GH-002"],
   ["current_main_without_checks", "G-CI-001/G-GH-002"]
 ] as const;
@@ -169,8 +177,12 @@ describe("OPT-001A local CI command matrix", () => {
       expect(workflow).toContain(`name: ${row.name}`);
       expect(workflow).toContain("pull_request:");
       expect(workflow).toContain("push:");
-      expect(workflow).toContain("paths:");
-      expect(workflow).toContain(row.packageScope);
+      if (row.pathFiltered) {
+        expect(workflow).toContain("paths:");
+        expect(workflow).toContain(row.packageScope);
+      } else {
+        expect(workflow).not.toContain("paths:");
+      }
     }
 
     expect(
@@ -182,13 +194,10 @@ describe("OPT-001A local CI command matrix", () => {
       command.length > 0 && status.length > 0 && owner.length > 0
     )).toBe(true);
     expect(missingCiRowOwners.map(([row]) => row)).toEqual([
-      "ci",
       "lint",
-      "typecheck:packages",
       "test:packages",
       "check:release",
       "package:smoke",
-      "workflow_path_filters",
       "branch_protection_required_checks",
       "current_main_without_checks"
     ]);

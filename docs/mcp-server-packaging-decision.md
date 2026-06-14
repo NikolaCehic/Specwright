@@ -68,7 +68,7 @@ First server wave may expose the current enabled adapter catalog:
 | `specwright_generate_report` | `generateReport` | No |
 | `specwright_write_report` | `writeRunReport` | Yes |
 
-Human-loop tools remain disabled until FEAT-004 implementation exists:
+Human-loop tools are available as local RuntimeApi-backed adapter tools after the first FEAT-004 implementation slice:
 
 - `specwright_get_next_action`
 - `specwright_answer_question`
@@ -109,7 +109,9 @@ The executable server packet must define and test:
 - Redaction-safe errors for protocol and runtime failures.
 - No persistence of authority in process-local caches after restart.
 
-The current in-process adapter has strong dispatch, limits, auth, observability, and conformance substrate, but it does not by itself satisfy process lifecycle requirements.
+The current in-process adapter has strong dispatch, limits, auth, observability, and conformance substrate, but it does not by itself satisfy every process lifecycle requirement.
+
+Implementation update: the adapter-local stdio executable now enables the existing observability substrate for serving profiles. Local stdio sessions record local-only identity, CI sessions record configured client/tenant/subject/scope identity, and `serveMcpStdio` opens and closes the observed session so session audit records flush before process exit. Cancellation propagation, signal handling, remote queues, and enterprise network lifecycle controls remain deferred.
 
 ## Integration Test Posture
 
@@ -134,7 +136,7 @@ Live source on this stacked branch shows:
 - `createMcpServer` is currently an alias to `createMcpAdapter`; process transport is owned by the adapter-scoped stdio wrapper, not by this alias.
 - Dispatch handles `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list`, and `prompts/get`.
 - Security defaults to disabled unless authenticated mode is explicitly configured.
-- Future human-loop MCP tools are present as disabled catalog entries.
+- Human-loop MCP tools are present as local RuntimeApi-backed bindings.
 
 ## Downstream Owners
 
@@ -144,7 +146,7 @@ Live source on this stacked branch shows:
 | Stdio transport implementation | FEAT-005 implementation packet |
 | HTTP/SSE or other network transports | Runtime server mode and MCP follow-up packets |
 | Auth profiles and credential verification for remote/shared use | FEAT-005 plus FEAT-012 server-mode/security packets |
-| Human-loop MCP tools | FEAT-004 implementation before FEAT-005 enablement |
+| Human-loop MCP tool hardening beyond local RuntimeApi bindings | FEAT-004 implementation plus FEAT-005/FEAT-012 server hardening |
 | Host config snippets and install UX | Adapter-local source-checkout snippets are implemented for FEAT-005; installed-package host setup and command packs remain FEAT-006 and FEAT-015 |
 | Release, provenance, compatibility, and package dry-run | FEAT-013 |
 | CI checks and required status contexts | OPT-001 and release packets |
@@ -157,7 +159,7 @@ Live source on this stacked branch shows:
 | Future package shape is either `@specwright/mcp-server` or an MCP adapter bin | raw features log `F5` |
 | Current MCP package is an in-process adapter with an adapter-scoped local stdio bin and host-config helper | `packages/adapters-mcp/package.json`, `packages/adapters-mcp/src/index.ts`, `packages/adapters-mcp/src/bin.ts`, `packages/adapters-mcp/src/stdio.ts` |
 | Current server-named factory is only an alias | `packages/adapters-mcp/src/index.ts` |
-| Existing adapter dispatch, resources, prompts, auth, limits, observability, and disabled future tools are useful substrate | `packages/adapters-mcp/src/index.ts`, adapter tests |
+| Existing adapter dispatch, resources, prompts, auth, limits, observability, and human-loop RuntimeApi tools are useful substrate | `packages/adapters-mcp/src/index.ts`, adapter tests |
 | Current package taxonomy reserves `@specwright/mcp-server` as a later public target | `docs/package-taxonomy-decision.md` |
 | CLI command taxonomy says MCP should expose runtime operations, not private command shortcuts | `docs/cli-command-taxonomy-decision.md` |
 
