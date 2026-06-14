@@ -253,15 +253,41 @@ bun packages/adapters-cli/dist/bin.js status <run-id> --root fixtures/simple-app
 bun packages/adapters-cli/dist/bin.js events <run-id> --root fixtures/simple-app
 bun packages/adapters-cli/dist/bin.js replay <run-id> --root fixtures/simple-app
 bun packages/adapters-cli/dist/bin.js report <run-id> --root fixtures/simple-app
+bun packages/adapters-cli/dist/bin.js gate evaluate <run-id> --gate intake.exit --root fixtures/simple-app --json
+bun packages/adapters-cli/dist/bin.js tool call <run-id> --tool fs.read --args-json '{"path":"src/main.ts"}' --reason "Inspect source" --idempotency-key tool-request-1 --phase source_discovery --root fixtures/simple-app --json
+bun packages/adapters-cli/dist/bin.js eval run <run-id> --eval <eval-id> --root fixtures/simple-app --json
 ```
 
-CLI commands support `--json`, `--ci`, and `--deadline <ms>`. Read commands enforce bounded output and redaction profiles. `doctor` runs read-only source-checkout diagnostics. `answer` records a clarification answer through runtime evidence. `approve` and `reject` record runtime-owned approval decisions and fail closed for stale, missing, or already resolved approvals.
+CLI commands support `--json`, `--ci`, and `--deadline <ms>`. Read commands enforce bounded output and redaction profiles. `doctor` runs read-only source-checkout diagnostics. `tool call` invokes brokered tools through runtime policy. `eval run` calls runtime-owned eval execution and returns a governed verdict envelope. `gate evaluate` calls runtime-owned lifecycle gate evaluation and returns the gate verdict plus instruction envelope. `answer` records a clarification answer through runtime evidence. `approve` and `reject` record runtime-owned approval decisions and fail closed for stale, missing, or already resolved approvals.
 
 The intended installed command name is `specwright`; the direct `bun packages/adapters-cli/dist/bin.js` form is the simplest local workspace path today.
 
 ## Use The MCP Adapter
 
 The MCP adapter exposes the runtime as MCP tools, resources, and prompts without becoming a second runtime.
+
+For local MCP stdio smoke tests and host wiring, launch the adapter-scoped executable with an explicit local profile and root:
+
+```bash
+bun packages/adapters-mcp/dist/bin.js --profile local-stdio --root fixtures/simple-app
+```
+
+The process reads newline-delimited JSON-RPC messages from stdin, writes only MCP messages to stdout while serving, and records MCP session open/close audit records under the configured run root. For CI smoke wiring, use the authenticated profile with explicit client, tenant, and scope inputs:
+
+```bash
+bun packages/adapters-mcp/dist/bin.js --profile ci --root fixtures/simple-app --client-id ci-worker --tenant-id tenant-a --scopes run:read
+```
+
+The adapter binary can also print local stdio host snippets without starting a server:
+
+```bash
+bun packages/adapters-mcp/dist/bin.js --print-host-config codex --profile local-stdio --root fixtures/simple-app
+bun packages/adapters-mcp/dist/bin.js --print-host-config claude-code --profile local-stdio --root fixtures/simple-app
+bun packages/adapters-mcp/dist/bin.js --print-host-config opencode --profile local-stdio --root fixtures/simple-app
+bun packages/adapters-mcp/dist/bin.js --print-host-config generic --profile local-stdio --root fixtures/simple-app
+```
+
+Supported snippet targets are `codex`, `claude-code`, `opencode`, and `generic`. The helper emits source-checkout commands for the adapter-local stdio executable and keeps network/remote transports deferred. The adapter-local binary is not the final public `@specwright/mcp-server` package; that package remains the later release target for host setup, package metadata, and enterprise remote/authenticated profiles.
 
 ```ts
 import { createRuntime } from "@specwright/runtime";

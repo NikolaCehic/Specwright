@@ -18,6 +18,9 @@ The current command names remain reserved product names:
 - `events`
 - `replay`
 - `report`
+- `tool call`
+- `eval run`
+- `gate evaluate`
 - `approve`
 - `reject`
 - `answer`
@@ -60,6 +63,9 @@ Live source on this stacked branch shows:
 | `events` | `getEvents` | No | Keep name with bounded output and redaction profile rules. |
 | `replay` | `replay` | No | Keep name. Add verification mode before public release. |
 | `report` | `writeRunReport` | Yes | Keep name. Split write/read/export behavior only if the docs and report packets require it. |
+| `tool call` | `callTool` | Yes | Implemented as a privileged runtime adapter; JSON args are parsed before dispatch, and brokered denial/approval/failure results keep their result envelope with classified outcomes. |
+| `eval run` | `runEval` | Yes | Implemented as a privileged runtime adapter; JSON output returns the eval verdict envelope, and blocking verdicts use classified nonzero outcomes while preserving verdict data. |
+| `gate evaluate` | `evaluateGate` | Yes | Implemented as a privileged runtime adapter; JSON output returns the gate verdict and lifecycle instruction envelope, and blocking verdicts use classified nonzero outcomes while preserving result data. |
 | `approve` | `recordApproval` | Yes | Keep name. Visible command must only resolve currently pending approvals. |
 | `reject` | `recordApproval` | Yes | Keep name. Visible command must only resolve currently pending approvals. |
 | `answer` | `recordEvidence` | Yes | Keep name, but final product behavior belongs to runtime-owned human question records. |
@@ -70,9 +76,9 @@ Live source on this stacked branch shows:
 
 | Target command | Existing runtime substrate | Required before implementation |
 | --- | --- | --- |
-| `tool call` | `RuntimeApi.callTool` | Command authority model, capability allowlist, input/output schema envelope, redaction, timeout, approval handling, and tests. |
-| `eval run` | `RuntimeApi.runEval` | Eval identifier resolution, dataset/reporting conventions, JSON envelope, failure classes, and release-gate posture. |
-| `gate evaluate` | `RuntimeApi.evaluateGate` | Gate identifier resolution, lifecycle state rules, repair instruction rendering, and blocking/nonblocking output policy. |
+| `tool call` | `RuntimeApi.callTool` | Implemented on this stacked branch for explicit tool requests, JSON args, idempotency keys, requester phase, auth/deadline posture, broker result envelopes, and classified denial/approval/failure outcomes. Capability reference docs and richer examples remain downstream. |
+| `eval run` | `RuntimeApi.runEval` | Implemented on this stacked branch for string eval identifiers, JSON verdict envelopes, auth/deadline posture, and classified blocking verdicts. Dataset/reporting docs and release-gate examples remain downstream. |
+| `gate evaluate` | `RuntimeApi.evaluateGate` | Implemented on this stacked branch for string gate identifiers, JSON result envelopes, auth/deadline posture, lifecycle instruction rendering, and classified blocking verdicts. Phase overrides and broader command-reference examples remain downstream. |
 | artifact record/read commands, if added | `RuntimeApi.recordArtifact` | Artifact command naming decision, schema selection, source binding, and docs. |
 | `export` / `audit` | `RuntimeApi.generateReport`, operations packages, reports packages | Audit bundle format, retention/security policy, release compatibility, and docs. |
 | full-lifecycle `run` | `startRun` plus future orchestrator | Phase runner, pending-state projection, retry/resume policy, eval/gate scheduling, and crash recovery. |
@@ -165,10 +171,10 @@ No command is public-product complete until a later implementation packet adds o
 | Claim | Source |
 | --- | --- |
 | CLI must become a stable product surface for project chat, terminals, and agent command surfaces | raw features log `F2`, `FEAT-EPIC-002` |
-| Current commands are `doctor`, `run`, `status`, `events`, `replay`, `report`, `approve`, `reject`, and `answer` | `packages/adapters-cli/src/index.ts`, CLI tests |
+| Current commands are `doctor`, `run`, `status`, `events`, `replay`, `report`, `tool call`, `eval run`, `gate evaluate`, `approve`, `reject`, and `answer` | `packages/adapters-cli/src/index.ts`, CLI tests |
 | Current output envelopes cover the runtime command union and outcome classes | `packages/adapters-cli/src/output-contract.ts`, `packages/adapters-cli/src/outcome.ts` |
 | Current stacked CLI maps approval commands to `recordApproval` | `packages/adapters-cli/src/index.ts`, `packages/adapters-cli/src/index.test.ts`, upstream `AUD-004A` stack |
-| Runtime exposes tool, eval, artifact, gate, and report APIs that lack first-class CLI command families | `packages/runtime/src/index.ts` |
+| Runtime exposes artifact APIs plus additional report/export APIs that still lack first-class CLI command families, while `tool call`, `eval run`, and `gate evaluate` now map to runtime tool/eval/gate APIs | `packages/runtime/src/index.ts`, `packages/adapters-cli/src/index.ts` |
 | README still documents direct local Bun invocation and the intended installed command name | `README.md` |
 | Public command targets include init, doctor, harness commands, full-lifecycle run, tool/eval/gate commands, durable approval/answer, export/audit, verified replay, config, completions, and host-install helpers | raw features log `F2` |
 

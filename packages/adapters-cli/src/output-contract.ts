@@ -2,9 +2,13 @@ import { z } from "zod";
 import {
   ApprovalDecisionSchema,
   ApprovalRequestSchema,
+  EvalVerdictSchema,
+  GateLifecycleInstructionSchema,
+  GateVerdictSchema,
   HumanQuestionSchema,
   RuntimeEventSchema,
-  RunStateSchema
+  RunStateSchema,
+  ToolCallResultSchema
 } from "@specwright/schemas";
 import { OUTPUT_API_VERSION } from "./constants";
 import type { CliErrorRecord } from "./errors";
@@ -17,6 +21,9 @@ export type CliCommandName =
   | "events"
   | "replay"
   | "report"
+  | "tool.call"
+  | "eval.run"
+  | "gate.evaluate"
   | "approve"
   | "reject"
   | "answer";
@@ -116,6 +123,13 @@ const doctorReportSchema = z
   })
   .strict();
 
+const gateEvaluationResultSchema = z
+  .object({
+    verdict: GateVerdictSchema,
+    instruction: GateLifecycleInstructionSchema
+  })
+  .strict();
+
 function envelopeSchema(command: CliCommandName, data: z.ZodTypeAny) {
   return z
     .object({
@@ -170,6 +184,18 @@ export const reportOutputSchema = envelopeSchema(
     })
     .strict()
 );
+export const toolCallOutputSchema = envelopeSchema(
+  "tool.call",
+  ToolCallResultSchema
+);
+export const evalRunOutputSchema = envelopeSchema(
+  "eval.run",
+  EvalVerdictSchema
+);
+export const gateEvaluateOutputSchema = envelopeSchema(
+  "gate.evaluate",
+  gateEvaluationResultSchema
+);
 export const approveOutputSchema = envelopeSchema(
   "approve",
   approvalDecisionResultSchema
@@ -187,6 +213,9 @@ export const outputSchemas = Object.freeze({
   events: eventsOutputSchema,
   replay: replayOutputSchema,
   report: reportOutputSchema,
+  "tool.call": toolCallOutputSchema,
+  "eval.run": evalRunOutputSchema,
+  "gate.evaluate": gateEvaluateOutputSchema,
   approve: approveOutputSchema,
   reject: rejectOutputSchema,
   answer: answerOutputSchema

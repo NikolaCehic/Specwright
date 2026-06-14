@@ -1,0 +1,100 @@
+{
+  "$id": "specwright.event.approval.requested",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "approvalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "approvalId": {
+          "type": "string"
+        },
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "policyVerdictRef": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requestedAction": {
+          "type": "string"
+        },
+        "requiredFor": {
+          "type": "string"
+        },
+        "riskSummary": {
+          "type": "string"
+        },
+        "subjectRef": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "approvalId"
+      ],
+      "type": "object"
+    },
+    "gateApprovalRequest": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "gateId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        },
+        "requiredFor": {
+          "type": "string"
+        },
+        "riskSummary": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "gateId",
+        "id",
+        "phase",
+        "reason",
+        "requiredFor"
+      ],
+      "type": "object"
+    },
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    }
+  },
+  "required": [
+    "approvalRequest"
+  ],
+  "title": "ApprovalRequestedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:d7b9dbebfc1e4d992bf2050dea7f5d94d352cd6a71a46c4848880936da89c1af",
+    "id": "specwright.event.approval.requested",
+    "status": "public",
+    "version": "1"
+  }
+}

@@ -5,6 +5,7 @@ import {
   ApprovalDecisionSchema,
   ApprovalDecisionValueSchema,
   ApprovalRequestSchema,
+  ApprovalRequestedEventPayloadSchema,
   ArtifactClaimSchema,
   ArtifactFileRefSchema,
   ArtifactInputSchema,
@@ -81,8 +82,10 @@ import {
   PolicyVerdictStatusSchema,
   PromptAssetRefSchema,
   RedactionClassSchema,
+  RepairTaskCreatedEventPayloadSchema,
   RepairTaskSchema,
   RoleDefinitionSchema,
+  RunBlockedEventPayloadSchema,
   RunCompletedEventPayloadSchema,
   RunFailedEventPayloadSchema,
   RunInputSchema,
@@ -122,6 +125,7 @@ export type ContractTypeById = {
   "specwright.capability.tool-definition": z.infer<typeof ToolDefinitionSchema>;
   "specwright.compatibility.harness-schema-version": z.infer<typeof HarnessSchemaVersionSchema>;
   "specwright.compatibility.metadata": z.infer<typeof MetadataSchema>;
+  "specwright.event.approval.requested": z.infer<typeof ApprovalRequestedEventPayloadSchema>;
   "specwright.event.artifact.recorded": z.infer<typeof ArtifactRecordedEventPayloadSchema>;
   "specwright.event.decision.recorded": z.infer<typeof DecisionRecordedEventPayloadSchema>;
   "specwright.event.eval.completed": z.infer<typeof EvalCompletedEventPayloadSchema>;
@@ -134,6 +138,8 @@ export type ContractTypeById = {
   "specwright.event.phase.transitioned": z.infer<typeof PhaseTransitionedEventPayloadSchema>;
   "specwright.event.policy-evaluated-event": z.infer<typeof PolicyEvaluatedEventSchema>;
   "specwright.event.policy.evaluated": z.infer<typeof PolicyEvaluatedEventPayloadSchema>;
+  "specwright.event.repair.task_created": z.infer<typeof RepairTaskCreatedEventPayloadSchema>;
+  "specwright.event.run.blocked": z.infer<typeof RunBlockedEventPayloadSchema>;
   "specwright.event.run.completed": z.infer<typeof RunCompletedEventPayloadSchema>;
   "specwright.event.run.failed": z.infer<typeof RunFailedEventPayloadSchema>;
   "specwright.event.run.started": z.infer<typeof RunStartedEventPayloadSchema>;
