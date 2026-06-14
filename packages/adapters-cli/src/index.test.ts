@@ -1,4 +1,7 @@
 import { describe, expect, test } from "bun:test";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 import {
   OUTCOMES,
   executeCli,
@@ -21,6 +24,7 @@ const authenticatedContext = {
 };
 
 const cliSurfaceBaseline = [
+  { command: "doctor", runtimeOperation: "diagnose", mutates: false },
   { command: "run", runtimeOperation: "startRun", mutates: true },
   { command: "status", runtimeOperation: "getRun", mutates: false },
   { command: "events", runtimeOperation: "getEvents", mutates: false },
@@ -52,9 +56,63 @@ describe("specwright cli adapter", () => {
         "replay",
         "writeRunReport",
         "recordApproval",
+        "diagnose",
         "recordEvidence"
       ])
     );
+  });
+
+  test("doctor diagnoses source checkout readiness without runtime calls", async () => {
+    const rootDir = await createDoctorFixture();
+    const runtime = fakeRuntime({
+      async startRun() {
+        throw new Error("doctor must not start a run");
+      },
+      async getRun() {
+        throw new Error("doctor must not read runtime state");
+      }
+    });
+
+    const result = await executeCli(
+      ["doctor", "--root", rootDir, "--json"],
+      runtime,
+      {
+        context: {
+          ...authenticatedContext,
+          tenant: {
+            id: "tenant-a",
+            allowedRoots: [rootDir]
+          }
+        }
+      }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    outputSchemas.doctor.parse(envelope);
+    expect(envelope).toMatchObject({
+      command: "doctor",
+      outcome: "ok",
+      data: {
+        rootDir,
+        mode: "source-checkout",
+        summary: {
+          fail: 0
+        }
+      }
+    });
+    expect(envelope.data.summary.pass).toBeGreaterThan(0);
+    expect(envelope.data.checks.map((check: { id: string }) => check.id))
+      .toEqual([
+        "root.exists",
+        "package.root_manifest",
+        "package.cli_manifest",
+        "build.cli_bin",
+        "build.runtime_entrypoint",
+        "config.local_root",
+        "package.license"
+      ]);
   });
 
   test("run calls runtime.startRun with resolved actor context", async () => {
@@ -659,6 +717,30 @@ describe("specwright cli adapter", () => {
 });
 
 type CliExecution = Awaited<ReturnType<typeof executeCli>>;
+
+async function createDoctorFixture() {
+  const rootDir = await mkdtemp(join(tmpdir(), "specwright-cli-doctor-"));
+  const configDir = `.${"specwright"}`;
+
+  await mkdir(join(rootDir, "packages/adapters-cli/dist"), { recursive: true });
+  await mkdir(join(rootDir, "packages/runtime/dist"), { recursive: true });
+  await mkdir(join(rootDir, configDir), { recursive: true });
+  await writeFile(
+    join(rootDir, "package.json"),
+    `${JSON.stringify({ name: "specwright", private: true }, null, 2)}\n`,
+    "utf8"
+  );
+  await writeFile(
+    join(rootDir, "packages/adapters-cli/package.json"),
+    `${JSON.stringify({ name: "@specwright/cli" }, null, 2)}\n`,
+    "utf8"
+  );
+  await writeFile(join(rootDir, "packages/adapters-cli/dist/bin.js"), "", "utf8");
+  await writeFile(join(rootDir, "packages/runtime/dist/index.js"), "", "utf8");
+  await writeFile(join(rootDir, "LICENSE"), "MIT\n", "utf8");
+
+  return rootDir;
+}
 
 function fakeRuntime(overrides: Partial<CliRuntime> = {}): CliRuntime {
   return {

@@ -59,6 +59,7 @@ const archetypeClassifications = [
 ] as const;
 
 const expectedSpecwrightFiles = [
+  "packages/adapters-cli/fixtures/output-contract/doctor-ok.json",
   "packages/adapters-mcp/test/packet06-test-helpers.ts",
   "packages/harness-loader/src/capability-grant.ts",
   "packages/harness-loader/src/index.test.ts",
@@ -70,6 +71,10 @@ const expectedSpecwrightFiles = [
 ] as const;
 
 const specwrightClassifications = [
+  [
+    "packages/adapters-cli/fixtures/output-contract/doctor-ok.json",
+    "output_contract_fixture"
+  ],
   ["packages/adapters-mcp/test/packet06-test-helpers.ts", "test_state_path"],
   ["packages/harness-loader/src/capability-grant.ts", "product_identifier"],
   ["packages/harness-loader/src/index.test.ts", "product_identifier"],

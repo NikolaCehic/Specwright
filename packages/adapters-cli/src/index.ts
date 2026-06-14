@@ -11,6 +11,7 @@ import {
   parsePositiveIntegerFlag,
   withDeadline
 } from "./deadline";
+import { runDoctor, type DoctorReport } from "./doctor";
 import {
   CliInputError,
   CliIntegrityError,
@@ -81,6 +82,13 @@ export type CliExecutionOptions = {
 type ParsedCommand =
   | {
       kind: "help";
+      json: boolean;
+      ci: boolean;
+      deadlineMs?: number | undefined;
+    }
+  | {
+      kind: "doctor";
+      rootDir?: string | undefined;
       json: boolean;
       ci: boolean;
       deadlineMs?: number | undefined;
@@ -222,6 +230,26 @@ async function executeCommand(
   const deadlineMs = command.deadlineMs ?? defaultDeadlineMs;
 
   switch (command.kind) {
+    case "doctor": {
+      const rootDir = canonicalizeAllowedPath({
+        value: command.rootDir ?? ".",
+        flagName: "root",
+        context
+      });
+      const report = await withDeadline(
+        runDoctor({ rootDir: rootDir ?? "." }),
+        deadlineMs,
+        "doctor exceeded the invocation deadline"
+      );
+
+      return {
+        command: "doctor",
+        outcome: "ok",
+        data: report,
+        stdout: renderDoctor(report)
+      };
+    }
+
     case "run": {
       validateHarnessId(command.harnessId);
       const cwd = canonicalizeAllowedPath({
@@ -570,6 +598,8 @@ function parseCommand(
   }
 
   switch (command) {
+    case "doctor":
+      return parseDoctor(rest, options.defaultDeadlineMs);
     case "run":
       return parseRun(rest, options.defaultDeadlineMs);
     case "status":
@@ -585,6 +615,28 @@ function parseCommand(
     default:
       throw new CliUsageError(`Unknown command: ${command}`);
   }
+}
+
+function parseDoctor(
+  argv: readonly string[],
+  defaultDeadlineMs: number
+): ParsedCommand {
+  const parsed = parseArguments(argv, {
+    valueFlags: ["root", "deadline"],
+    booleanFlags: ["json", "ci"]
+  });
+
+  if (parsed.positionals.length > 0) {
+    throw new CliUsageError("doctor does not accept positional arguments");
+  }
+
+  return {
+    kind: "doctor",
+    rootDir: stringFlag(parsed, "root"),
+    json: parsed.flags.json === true,
+    ci: parsed.flags.ci === true,
+    deadlineMs: deadlineFromParsed(parsed, defaultDeadlineMs)
+  };
 }
 
 function parseRun(argv: readonly string[], defaultDeadlineMs: number): ParsedCommand {
@@ -847,6 +899,24 @@ function renderRunStarted(
   ]);
 }
 
+function renderDoctor(report: DoctorReport) {
+  return lines([
+    "Specwright doctor",
+    `Root: ${report.rootDir}`,
+    `Checks: ${report.summary.pass} pass, ${report.summary.warn} warn, ${report.summary.fail} fail`,
+    ...report.checks.map((check) =>
+      [
+        check.status.toUpperCase(),
+        check.id,
+        sanitizeText(check.message),
+        check.path === undefined ? undefined : `(${sanitizeText(check.path)})`
+      ]
+        .filter((value) => value !== undefined)
+        .join(" ")
+    )
+  ]);
+}
+
 function renderStatus(state: Awaited<ReturnType<CliRuntime["getRun"]>>) {
   return lines([
     `Run: ${state.runId}`,
@@ -953,6 +1023,7 @@ function ok(stdout: string): CliExecution {
 function usage() {
   return [
     "Usage:",
+    "  specwright doctor [--root <path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright run --cwd <path> --task <task> [--harness <id-or-path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright status <run-id> [--root <path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright events <run-id> [--root <path>] [--limit <n>] [--redaction-profile <shared-log|operator>] [--json] [--ci] [--deadline <ms>]",
@@ -988,6 +1059,8 @@ function commandNameFromArgv(argv: readonly string[]): string {
 
 function authorityForCommand(command: RuntimeCommand["kind"]): CommandAuthority {
   switch (command) {
+    case "doctor":
+      return "read";
     case "run":
     case "report":
       return "privileged";

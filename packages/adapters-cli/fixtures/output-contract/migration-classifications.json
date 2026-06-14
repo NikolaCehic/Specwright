@@ -4,6 +4,10 @@
     {
       "classification": "additive-compatible",
       "description": "Initial apiVersion 1 envelope wraps prior raw JSON payloads under data and adds command/outcome metadata."
+    },
+    {
+      "classification": "additive-compatible",
+      "description": "Adds the doctor command envelope for read-only source-checkout diagnostics."
     }
   ]
 }

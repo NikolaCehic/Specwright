@@ -12,6 +12,7 @@ The Specwright CLI is the reference runtime-control adapter. Its public surface 
 
 The current command names remain reserved product names:
 
+- `doctor`
 - `run`
 - `status`
 - `events`
@@ -53,6 +54,7 @@ Live source on this stacked branch shows:
 
 | Current command | Runtime operation | Mutates runtime state | Current public posture |
 | --- | --- | --- | --- |
+| `doctor` | Local read-only diagnostics | No | Implemented as the first product-shell command; it diagnoses source-checkout, build-artifact, config, and package readiness without mutating runtime state. |
 | `run` | `startRun` | Yes | Keep name. Public behavior must expand from start-only to full lifecycle when the orchestrator exists. |
 | `status` | `getRun` | No | Keep name. |
 | `events` | `getEvents` | No | Keep name with bounded output and redaction profile rules. |
@@ -144,7 +146,7 @@ No command is public-product complete until a later implementation packet adds o
 | Work | Owner |
 | --- | --- |
 | Public CLI package and installed command | `FEAT-001A` implementation packets |
-| Command implementation for `init`, `doctor`, `config`, and command reference docs | `FEAT-002B` or CLI implementation packet |
+| Command implementation for `init`, `config`, and command reference docs | `FEAT-002C` or CLI implementation packet |
 | Full-lifecycle `run` | `FEAT-003A` lifecycle orchestrator packets |
 | Runtime-owned approval/question APIs | `FEAT-004A`, building on `AUD-004A` |
 | MCP server command relationship | `FEAT-005A` |
@@ -163,7 +165,7 @@ No command is public-product complete until a later implementation packet adds o
 | Claim | Source |
 | --- | --- |
 | CLI must become a stable product surface for project chat, terminals, and agent command surfaces | raw features log `F2`, `FEAT-EPIC-002` |
-| Current commands are `run`, `status`, `events`, `replay`, `report`, `approve`, `reject`, and `answer` | `packages/adapters-cli/src/index.ts`, CLI tests |
+| Current commands are `doctor`, `run`, `status`, `events`, `replay`, `report`, `approve`, `reject`, and `answer` | `packages/adapters-cli/src/index.ts`, CLI tests |
 | Current output envelopes cover the runtime command union and outcome classes | `packages/adapters-cli/src/output-contract.ts`, `packages/adapters-cli/src/outcome.ts` |
 | Current stacked CLI maps approval commands to `recordApproval` | `packages/adapters-cli/src/index.ts`, `packages/adapters-cli/src/index.test.ts`, upstream `AUD-004A` stack |
 | Runtime exposes tool, eval, artifact, gate, and report APIs that lack first-class CLI command families | `packages/runtime/src/index.ts` |

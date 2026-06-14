@@ -234,6 +234,7 @@ After building, run the local CLI entry point directly:
 
 ```bash
 bun packages/adapters-cli/dist/bin.js help
+bun packages/adapters-cli/dist/bin.js doctor --root . --json
 ```
 
 Start a source-bound run against the included fixture:
@@ -254,7 +255,7 @@ bun packages/adapters-cli/dist/bin.js replay <run-id> --root fixtures/simple-app
 bun packages/adapters-cli/dist/bin.js report <run-id> --root fixtures/simple-app
 ```
 
-CLI commands support `--json`, `--ci`, and `--deadline <ms>`. Read commands enforce bounded output and redaction profiles. `answer` records a clarification answer through runtime evidence. `approve` and `reject` are contract-reserved and fail closed until the runtime exports an approval-decision API.
+CLI commands support `--json`, `--ci`, and `--deadline <ms>`. Read commands enforce bounded output and redaction profiles. `doctor` runs read-only source-checkout diagnostics. `answer` records a clarification answer through runtime evidence. `approve` and `reject` record runtime-owned approval decisions and fail closed for stale, missing, or already resolved approvals.
 
 The intended installed command name is `specwright`; the direct `bun packages/adapters-cli/dist/bin.js` form is the simplest local workspace path today.
 

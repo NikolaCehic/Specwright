@@ -11,6 +11,7 @@ import type { CliErrorRecord } from "./errors";
 import type { OutcomeClass } from "./outcome";
 
 export type CliCommandName =
+  | "doctor"
   | "run"
   | "status"
   | "events"
@@ -88,6 +89,33 @@ const approvalDecisionResultSchema = z
   })
   .strict();
 
+const doctorCheckSchema = z
+  .object({
+    id: z.string(),
+    status: z.enum(["pass", "warn", "fail"]),
+    message: z.string(),
+    path: z.string().optional(),
+    operatorAction: z.string().optional()
+  })
+  .strict();
+
+const doctorReportSchema = z
+  .object({
+    rootDir: z.string(),
+    mode: z.literal("source-checkout"),
+    cliVersion: z.string(),
+    configDir: z.string(),
+    summary: z
+      .object({
+        pass: z.number().int().nonnegative(),
+        warn: z.number().int().nonnegative(),
+        fail: z.number().int().nonnegative()
+      })
+      .strict(),
+    checks: z.array(doctorCheckSchema)
+  })
+  .strict();
+
 function envelopeSchema(command: CliCommandName, data: z.ZodTypeAny) {
   return z
     .object({
@@ -115,6 +143,7 @@ function envelopeSchema(command: CliCommandName, data: z.ZodTypeAny) {
     .strict();
 }
 
+export const doctorOutputSchema = envelopeSchema("doctor", doctorReportSchema);
 export const runOutputSchema = envelopeSchema("run", z.unknown());
 export const statusOutputSchema = envelopeSchema("status", RunStateSchema);
 export const eventsOutputSchema = envelopeSchema(
@@ -152,6 +181,7 @@ export const rejectOutputSchema = envelopeSchema(
 export const answerOutputSchema = envelopeSchema("answer", z.unknown());
 
 export const outputSchemas = Object.freeze({
+  doctor: doctorOutputSchema,
   run: runOutputSchema,
   status: statusOutputSchema,
   events: eventsOutputSchema,

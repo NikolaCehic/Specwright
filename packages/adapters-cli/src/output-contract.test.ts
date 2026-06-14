@@ -7,6 +7,7 @@ const fixtureDir = fileURLToPath(
   new URL("../fixtures/output-contract", import.meta.url)
 );
 const fixtureNames = [
+  "doctor-ok.json",
   "run-ok.json",
   "status-ok.json",
   "events-ok.json",
@@ -51,6 +52,9 @@ describe("cli output contract fixtures", () => {
       changes: [
         {
           classification: "additive-compatible"
+        },
+        {
+          classification: "additive-compatible"
         }
       ]
     });
@@ -89,7 +93,9 @@ describe("cli output contract fixtures", () => {
 
 async function liveEnvelopes(): Promise<Record<string, Record<string, unknown>>> {
   const runtime = contractRuntime();
+  const repoRoot = join(fixtureDir, "../../../..");
   const commands: Record<string, string[]> = {
+    "doctor-ok.json": ["doctor", "--root", repoRoot, "--json"],
     "run-ok.json": [
       "run",
       "--cwd",
@@ -119,7 +125,16 @@ async function liveEnvelopes(): Promise<Record<string, Record<string, unknown>>>
 
   for (const [fixtureName, argv] of Object.entries(commands)) {
     const result = await executeCli(argv, runtime, {
-      context: authenticatedContext,
+      context:
+        fixtureName === "doctor-ok.json"
+          ? {
+              ...authenticatedContext,
+              tenant: {
+                id: "contract",
+                allowedRoots: [repoRoot]
+              }
+            }
+          : authenticatedContext,
       invocationId: `contract-${fixtureName}`,
       now: fixedClock([0, 1])
     });
