@@ -7,7 +7,7 @@ import {
   outcomeForExitCode,
   type CliExecution,
   type OutcomeClass
-} from "@specwright/adapters-cli";
+} from "@specwright/cli";
 import { materializeRunState, readEvents } from "@specwright/run-store";
 import { createRuntime } from "@specwright/runtime";
 
