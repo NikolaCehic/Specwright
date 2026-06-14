@@ -7,7 +7,8 @@ import {
   GateVerdictSchema,
   HumanQuestionSchema,
   RuntimeEventSchema,
-  RunStateSchema
+  RunStateSchema,
+  ToolCallResultSchema
 } from "@specwright/schemas";
 import { OUTPUT_API_VERSION } from "./constants";
 import type { CliErrorRecord } from "./errors";
@@ -20,6 +21,7 @@ export type CliCommandName =
   | "events"
   | "replay"
   | "report"
+  | "tool.call"
   | "eval.run"
   | "gate.evaluate"
   | "approve"
@@ -182,6 +184,10 @@ export const reportOutputSchema = envelopeSchema(
     })
     .strict()
 );
+export const toolCallOutputSchema = envelopeSchema(
+  "tool.call",
+  ToolCallResultSchema
+);
 export const evalRunOutputSchema = envelopeSchema(
   "eval.run",
   EvalVerdictSchema
@@ -207,6 +213,7 @@ export const outputSchemas = Object.freeze({
   events: eventsOutputSchema,
   replay: replayOutputSchema,
   report: reportOutputSchema,
+  "tool.call": toolCallOutputSchema,
   "eval.run": evalRunOutputSchema,
   "gate.evaluate": gateEvaluateOutputSchema,
   approve: approveOutputSchema,
