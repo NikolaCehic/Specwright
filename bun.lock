@@ -11,13 +11,13 @@
       "name": "@specwright/adapter-parity",
       "version": "0.0.0",
       "dependencies": {
-        "@specwright/adapters-cli": "workspace:*",
+        "@specwright/cli": "workspace:*",
         "@specwright/run-store": "workspace:*",
         "@specwright/runtime": "workspace:*",
       },
     },
     "packages/adapters-cli": {
-      "name": "@specwright/adapters-cli",
+      "name": "@specwright/cli",
       "version": "0.0.0",
       "bin": {
         "specwright": "./dist/bin.js",
@@ -40,7 +40,7 @@
         "zod": "^3.22.4",
       },
       "devDependencies": {
-        "@specwright/adapters-cli": "workspace:*",
+        "@specwright/cli": "workspace:*",
       },
     },
     "packages/artifact-store": {
@@ -185,11 +185,11 @@
   "packages": {
     "@specwright/adapter-parity": ["@specwright/adapter-parity@workspace:packages/adapter-parity"],
 
-    "@specwright/adapters-cli": ["@specwright/adapters-cli@workspace:packages/adapters-cli"],
-
     "@specwright/adapters-mcp": ["@specwright/adapters-mcp@workspace:packages/adapters-mcp"],
 
     "@specwright/artifact-store": ["@specwright/artifact-store@workspace:packages/artifact-store"],
+
+    "@specwright/cli": ["@specwright/cli@workspace:packages/adapters-cli"],
 
     "@specwright/eval-runner": ["@specwright/eval-runner@workspace:packages/eval-runner"],
 
