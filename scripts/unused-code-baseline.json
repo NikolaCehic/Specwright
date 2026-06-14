@@ -5,7 +5,7 @@
       "code": "TS6133",
       "column": 8,
       "file": "packages/adapters-mcp/src/index.ts",
-      "line": 27,
+      "line": 29,
       "message": "'McpAuditRecord' is declared but its value is never read.",
       "package": "@specwright/adapters-mcp"
     },
@@ -13,7 +13,7 @@
       "code": "TS6133",
       "column": 3,
       "file": "packages/adapters-mcp/src/index.ts",
-      "line": 55,
+      "line": 57,
       "message": "'MCP_PROVENANCE_GAP_CODE' is declared but its value is never read.",
       "package": "@specwright/adapters-mcp"
     },
@@ -261,7 +261,7 @@
       "code": "TS6133",
       "column": 10,
       "file": "packages/runtime/src/index.ts",
-      "line": 1315,
+      "line": 1528,
       "message": "'artifactsForGateInput' is declared but its value is never read.",
       "package": "@specwright/runtime"
     },

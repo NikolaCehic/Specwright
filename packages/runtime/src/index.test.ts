@@ -10,19 +10,16 @@ import type {
   ApprovalRequest,
   EvidenceRecord,
   EvalVerdict,
+  HumanQuestion,
   RunInput,
   RuntimeEvent,
   ToolCallRequest,
   ToolCallResult
 } from "@specwright/schemas";
 import {
-  RUN_STATE_CHECKPOINT_VERSION,
   appendEvent,
   getRunStorePaths,
-  projectRunState,
-  readEvents,
-  writeCheckpoint,
-  type RunStateCheckpoint
+  readEvents
 } from "@specwright/run-store";
 import { readRunSummary } from "@specwright/run-reports";
 import { readTrace } from "@specwright/trace-recorder";
@@ -41,11 +38,16 @@ const runtimeOperationBaseline = [
   { name: "evaluateGate", mutates: true, durable: true, brokeredCapability: false },
   { name: "generateReport", mutates: false, durable: false, brokeredCapability: false },
   { name: "getEvents", mutates: false, durable: false, brokeredCapability: false },
+  { name: "getNextAction", mutates: false, durable: false, brokeredCapability: false },
   { name: "getRun", mutates: false, durable: false, brokeredCapability: false },
+  { name: "listPendingApprovals", mutates: false, durable: false, brokeredCapability: false },
+  { name: "listPendingQuestions", mutates: false, durable: false, brokeredCapability: false },
   { name: "recordApproval", mutates: true, durable: true, brokeredCapability: false },
   { name: "recordArtifact", mutates: true, durable: true, brokeredCapability: false },
   { name: "recordEvidence", mutates: true, durable: true, brokeredCapability: false },
+  { name: "recordHumanAnswer", mutates: true, durable: true, brokeredCapability: false },
   { name: "replay", mutates: false, durable: false, brokeredCapability: false },
+  { name: "resolveApprovalState", mutates: false, durable: false, brokeredCapability: false },
   { name: "runEval", mutates: true, durable: true, brokeredCapability: false },
   { name: "startRun", mutates: true, durable: true, brokeredCapability: false },
   { name: "writeRunReport", mutates: true, durable: true, brokeredCapability: false }
@@ -88,6 +90,7 @@ describe("runtime facade", () => {
       "recordApproval",
       "recordArtifact",
       "recordEvidence",
+      "recordHumanAnswer",
       "runEval",
       "startRun",
       "writeRunReport"
@@ -469,6 +472,149 @@ describe("runtime facade", () => {
     );
 
     expect(decisionEvents).toHaveLength(1);
+  });
+
+  test("human-loop APIs expose pending work and durably record answers", async () => {
+    const runtime = runtimeForTests();
+    const handle = await runtime.startRun(runInput);
+    const approval: ApprovalRequest = {
+      approvalId: "approval-1",
+      reason: "Policy requires approval.",
+      subjectRef: "tool:fs.read"
+    };
+    const question: HumanQuestion = {
+      questionId: "question-1",
+      prompt: "Which README should ground the next step?",
+      subjectRef: "gate:intake.exit"
+    };
+
+    await seedPendingApprovals(handle.runId, [approval]);
+    await seedPendingQuestions(handle.runId, [question]);
+
+    await expect(runtime.listPendingApprovals(handle.runId)).resolves.toEqual([
+      approval
+    ]);
+    await expect(runtime.listPendingQuestions(handle.runId)).resolves.toEqual([
+      question
+    ]);
+    await expect(runtime.getNextAction(handle.runId)).resolves.toEqual({
+      kind: "approval",
+      runId: handle.runId,
+      approval
+    });
+    await expect(runtime.resolveApprovalState(handle.runId)).resolves.toMatchObject(
+      {
+        runId: handle.runId,
+        status: "blocked",
+        pendingApprovals: [approval],
+        pendingQuestions: [question],
+        nextAction: {
+          kind: "approval",
+          approval
+        },
+        blocked: true,
+        resolved: false
+      }
+    );
+
+    await runtime.recordApproval(handle.runId, {
+      approvalId: "approval-1",
+      decision: "approved"
+    });
+    await expect(runtime.getNextAction(handle.runId)).resolves.toEqual({
+      kind: "question",
+      runId: handle.runId,
+      question
+    });
+
+    const answered = await runtime.recordHumanAnswer(handle.runId, {
+      questionId: "question-1",
+      answer: "Use the repository README.",
+      answeredBy: "operator-1",
+      metadata: {
+        channel: "cli"
+      }
+    });
+    const events = await runtime.getEvents(handle.runId);
+
+    expect(answered.event.type).toBe("human.answer_recorded");
+    expect(answered.event).toEqual(events.at(-1));
+    expect(answered.answer).toEqual({
+      questionId: "question-1",
+      answer: "Use the repository README.",
+      answeredBy: "operator-1",
+      metadata: {
+        channel: "cli"
+      }
+    });
+    expect(answered.state.pendingQuestions).toEqual([]);
+    await expect(runtime.resolveApprovalState(handle.runId)).resolves.toMatchObject(
+      {
+        pendingApprovals: [],
+        pendingQuestions: [],
+        nextAction: {
+          kind: "none",
+          status: "running",
+          phase: "intake"
+        },
+        blocked: false,
+        resolved: true
+      }
+    );
+    await expect(runtime.replay(handle.runId)).resolves.toMatchObject({
+      state: {
+        pendingApprovals: [],
+        pendingQuestions: []
+      }
+    });
+  });
+
+  test("recordHumanAnswer fails closed for invalid, missing, and resolved questions", async () => {
+    const runtime = runtimeForTests();
+    const handle = await runtime.startRun(runInput);
+    const initialEvents = await runtime.getEvents(handle.runId);
+
+    await expect(
+      runtime.recordHumanAnswer(handle.runId, {
+        answer: "Missing question id."
+      } as never)
+    ).rejects.toThrow();
+    await expect(runtime.getEvents(handle.runId)).resolves.toHaveLength(
+      initialEvents.length
+    );
+
+    await expect(
+      runtime.recordHumanAnswer(handle.runId, {
+        questionId: "question-1",
+        answer: "Use the README."
+      })
+    ).rejects.toThrow("not currently pending");
+    await expect(runtime.getEvents(handle.runId)).resolves.toHaveLength(
+      initialEvents.length
+    );
+
+    await seedPendingQuestions(handle.runId, [
+      {
+        questionId: "question-1",
+        prompt: "Which source?"
+      }
+    ]);
+    await runtime.recordHumanAnswer(handle.runId, {
+      questionId: "question-1",
+      answer: "Use the README."
+    });
+    await expect(
+      runtime.recordHumanAnswer(handle.runId, {
+        questionId: "question-1",
+        answer: "Use the README again."
+      })
+    ).rejects.toThrow("not currently pending");
+
+    const answerEvents = (await runtime.getEvents(handle.runId)).filter(
+      (event) => event.type === "human.answer_recorded"
+    );
+
+    expect(answerEvents).toHaveLength(1);
   });
 
   test("runEval delegates to EvalRunner and records eval.completed", async () => {
@@ -930,45 +1076,34 @@ async function seedPendingApprovals(
   runId: string,
   pendingApprovals: ApprovalRequest[]
 ) {
-  const paths = getRunStorePaths(rootDir, runId);
-  const events = await readEvents({
-    rootDir,
-    runId
-  });
-  const checkpoint = buildCheckpoint(runId, events, events.length - 1);
-
-  await writeCheckpoint(paths, {
-    ...checkpoint,
-    state: {
-      ...checkpoint.state,
-      pendingApprovals
-    }
-  });
+  for (const approvalRequest of pendingApprovals) {
+    await appendEvent({
+      rootDir,
+      runId,
+      type: "approval.requested",
+      timestamp: "2026-05-29T00:00:00.000Z",
+      payload: {
+        approvalRequest
+      }
+    });
+  }
 }
 
-function buildCheckpoint(
+async function seedPendingQuestions(
   runId: string,
-  events: readonly RuntimeEvent[],
-  coveredSequence: number
-): RunStateCheckpoint {
-  const coveredEvent = events[coveredSequence];
-
-  if (coveredEvent === undefined) {
-    throw new Error(`Missing event at sequence ${coveredSequence}`);
+  pendingQuestions: HumanQuestion[]
+) {
+  for (const question of pendingQuestions) {
+    await appendEvent({
+      rootDir,
+      runId,
+      type: "human.input_requested",
+      timestamp: "2026-05-29T00:00:00.000Z",
+      payload: {
+        question
+      }
+    });
   }
-
-  const state = projectRunState(events.slice(0, coveredSequence + 1));
-
-  return {
-    checkpointVersion: RUN_STATE_CHECKPOINT_VERSION,
-    runId,
-    coveredSequence,
-    coveredLastEventId: coveredEvent.id,
-    state,
-    ...(coveredEvent.integrity === undefined
-      ? {}
-      : { coveredHeadHash: coveredEvent.integrity.hash })
-  };
 }
 
 function gateResultForInstruction(
