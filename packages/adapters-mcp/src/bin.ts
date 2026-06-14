@@ -4,10 +4,12 @@ import { createRuntime } from "@specwright/runtime";
 import {
   createMcpAdapter,
   type McpAuthOptions,
+  type McpObservabilityOptions,
   type SubjectClaim
 } from "./index.js";
 import {
   MCP_STDIO_SERVER_NAME,
+  MCP_STDIO_PROTOCOL_VERSION,
   serveMcpStdio,
   type McpStdioRequestContext,
   type StdioStreamWriter
@@ -25,6 +27,7 @@ type BinOptions =
       rootDir: string;
       workspaceRoot?: string | undefined;
       auth: McpAuthOptions;
+      observability: McpObservabilityOptions;
       requestContext?: McpStdioRequestContext | undefined;
     }
   | {
@@ -53,7 +56,8 @@ if (!options.ok) {
     workspaceRoot: options.workspaceRoot ?? options.rootDir
   });
   const adapter = createMcpAdapter(runtime, {
-    auth: options.auth
+    auth: options.auth,
+    observability: options.observability
   });
 
   await serveMcpStdio({
@@ -100,7 +104,14 @@ function parseOptions(argv: readonly string[], cwd: string): BinOptions {
         : { workspaceRoot: rootValidation.workspaceRoot }),
       auth: {
         mode: "disabled"
-      }
+      },
+      observability: observabilityOptions(rootValidation.rootDir, flags, {
+        clientId: "local-stdio",
+        subjectId: "local-user",
+        tenantId: "local",
+        grantedScopes: [],
+        runMode: "assisted"
+      })
     };
   }
 
@@ -221,6 +232,13 @@ function ciProfileOptions(
         return tenantId;
       }
     },
+    observability: observabilityOptions(rootValidation.rootDir, flags, {
+      clientId,
+      subjectId,
+      tenantId,
+      grantedScopes,
+      runMode
+    }),
     requestContext: {
       credential,
       subject
@@ -371,6 +389,36 @@ type LaunchSpec = {
   args: string[];
   cwd: string;
 };
+
+type ObservabilityIdentity = {
+  clientId: string;
+  subjectId: string;
+  tenantId: string;
+  grantedScopes: readonly string[];
+  runMode: "autonomous" | "assisted" | "read_only";
+};
+
+function observabilityOptions(
+  rootDir: string,
+  flags: Record<string, string | true>,
+  identity: ObservabilityIdentity
+): McpObservabilityOptions {
+  return {
+    rootDir,
+    session: {
+      ...(stringFlag(flags, "session-id") === undefined
+        ? {}
+        : { sessionId: stringFlag(flags, "session-id") }),
+      clientId: identity.clientId,
+      subjectId: identity.subjectId,
+      tenantId: identity.tenantId,
+      grantedScopes: [...identity.grantedScopes],
+      runMode: identity.runMode,
+      transport: "stdio",
+      protocolVersion: MCP_STDIO_PROTOCOL_VERSION
+    }
+  };
+}
 
 function hostConfigTarget(value: string): HostConfigTarget | undefined {
   return value === "codex" ||

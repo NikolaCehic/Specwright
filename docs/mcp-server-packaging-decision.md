@@ -109,7 +109,9 @@ The executable server packet must define and test:
 - Redaction-safe errors for protocol and runtime failures.
 - No persistence of authority in process-local caches after restart.
 
-The current in-process adapter has strong dispatch, limits, auth, observability, and conformance substrate, but it does not by itself satisfy process lifecycle requirements.
+The current in-process adapter has strong dispatch, limits, auth, observability, and conformance substrate, but it does not by itself satisfy every process lifecycle requirement.
+
+Implementation update: the adapter-local stdio executable now enables the existing observability substrate for serving profiles. Local stdio sessions record local-only identity, CI sessions record configured client/tenant/subject/scope identity, and `serveMcpStdio` opens and closes the observed session so session audit records flush before process exit. Cancellation propagation, signal handling, remote queues, and enterprise network lifecycle controls remain deferred.
 
 ## Integration Test Posture
 

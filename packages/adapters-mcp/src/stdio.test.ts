@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { createMcpAdapter, createRealRuntimeConformanceHarness } from "./index";
+import {
+  createMcpAdapter,
+  createRealRuntimeConformanceHarness,
+  readMcpAuditRecords
+} from "./index";
 import {
   MCP_STDIO_PROTOCOL_VERSION,
   dispatchMcpJsonRpcMessage,
@@ -167,7 +171,9 @@ describe("MCP stdio transport", () => {
           "--profile",
           "local-stdio",
           "--root",
-          harness.appDir
+          harness.appDir,
+          "--session-id",
+          "stdio-local-test"
         ],
         {
           cwd: repoRoot,
@@ -210,6 +216,34 @@ describe("MCP stdio transport", () => {
           }
         }
       });
+
+      const audit = await readMcpAuditRecords({
+        rootDir: harness.appDir,
+        sessionId: "stdio-local-test",
+        includeIndex: true
+      });
+
+      expect(audit).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "mcp.session.opened",
+            sessionId: "stdio-local-test",
+            clientId: "local-stdio",
+            subjectId: "local-user",
+            tenantId: "local",
+            transport: "stdio",
+            protocolVersion: MCP_STDIO_PROTOCOL_VERSION
+          }),
+          expect.objectContaining({
+            type: "mcp.session.closed",
+            sessionId: "stdio-local-test",
+            clientId: "local-stdio",
+            subjectId: "local-user",
+            tenantId: "local",
+            requestCount: expect.any(Number)
+          })
+        ])
+      );
     } finally {
       await harness.cleanup();
     }
@@ -293,7 +327,9 @@ describe("MCP stdio transport", () => {
           "--tenant-id",
           "tenant-a",
           "--scopes",
-          "run:start,run:read"
+          "run:start,run:read",
+          "--session-id",
+          "stdio-ci-test"
         ],
         mcpStdioInput([
           initializeMessage(),
@@ -335,6 +371,36 @@ describe("MCP stdio transport", () => {
           }
         }
       });
+
+      const audit = await readMcpAuditRecords({
+        rootDir: harness.appDir,
+        sessionId: "stdio-ci-test",
+        includeIndex: true
+      });
+
+      expect(audit).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: "mcp.session.opened",
+            sessionId: "stdio-ci-test",
+            clientId: "ci-worker",
+            subjectId: "ci-worker",
+            tenantId: "tenant-a",
+            grantedScopes: ["run:start", "run:read"],
+            runMode: "assisted",
+            transport: "stdio",
+            protocolVersion: MCP_STDIO_PROTOCOL_VERSION
+          }),
+          expect.objectContaining({
+            type: "mcp.session.closed",
+            sessionId: "stdio-ci-test",
+            clientId: "ci-worker",
+            subjectId: "ci-worker",
+            tenantId: "tenant-a",
+            requestCount: expect.any(Number)
+          })
+        ])
+      );
     } finally {
       await harness.cleanup();
     }

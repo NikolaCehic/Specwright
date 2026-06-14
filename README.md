@@ -272,7 +272,7 @@ For local MCP stdio smoke tests and host wiring, launch the adapter-scoped execu
 bun packages/adapters-mcp/dist/bin.js --profile local-stdio --root fixtures/simple-app
 ```
 
-The process reads newline-delimited JSON-RPC messages from stdin and writes only MCP messages to stdout. For CI smoke wiring, use the authenticated profile with explicit client, tenant, and scope inputs:
+The process reads newline-delimited JSON-RPC messages from stdin, writes only MCP messages to stdout while serving, and records MCP session open/close audit records under the configured run root. For CI smoke wiring, use the authenticated profile with explicit client, tenant, and scope inputs:
 
 ```bash
 bun packages/adapters-mcp/dist/bin.js --profile ci --root fixtures/simple-app --client-id ci-worker --tenant-id tenant-a --scopes run:read
