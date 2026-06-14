@@ -24,6 +24,7 @@
     "@specwright/evidence-store": "workspace:*",
     "@specwright/run-store": "workspace:*",
     "@specwright/schemas": "workspace:*",
-    "@specwright/trace-recorder": "workspace:*"
+    "@specwright/trace-recorder": "workspace:*",
+    "zod": "^3.22.4"
   }
 }
