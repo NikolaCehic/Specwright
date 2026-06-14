@@ -20,7 +20,9 @@
     "test": "bun test src/index.test.ts"
   },
   "dependencies": {
+    "@specwright/run-store": "workspace:*",
     "@specwright/schemas": "workspace:*",
+    "@specwright/trace-recorder": "workspace:*",
     "zod": "^3.25.76"
   },
   "devDependencies": {
