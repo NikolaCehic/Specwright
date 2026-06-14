@@ -20,7 +20,43 @@ const authenticatedContext = {
   ci: false
 };
 
+const cliSurfaceBaseline = [
+  { command: "run", runtimeOperation: "startRun", mutates: true },
+  { command: "status", runtimeOperation: "getRun", mutates: false },
+  { command: "events", runtimeOperation: "getEvents", mutates: false },
+  { command: "replay", runtimeOperation: "replay", mutates: false },
+  { command: "report", runtimeOperation: "writeRunReport", mutates: true },
+  { command: "approve", runtimeOperation: "recordApproval", mutates: true },
+  { command: "reject", runtimeOperation: "recordApproval", mutates: true },
+  { command: "answer", runtimeOperation: "recordEvidence", mutates: true }
+] as const;
+
 describe("specwright cli adapter", () => {
+  test("AUD-012A CLI command surface remains a narrow RuntimeApi client", async () => {
+    const help = await executeCli(["help"], fakeRuntime());
+    const commands = help.stdout
+      .split("\n")
+      .filter((line) => line.startsWith("  specwright "))
+      .map((line) => line.trim().split(/\s+/)[1]);
+
+    expect(help.exitCode).toBe(0);
+    expect(commands).toEqual(cliSurfaceBaseline.map((row) => row.command));
+    expect(
+      cliSurfaceBaseline.filter((row) => row.mutates).map((row) => row.command)
+    ).toEqual(["run", "report", "approve", "reject", "answer"]);
+    expect(new Set(cliSurfaceBaseline.map((row) => row.runtimeOperation))).toEqual(
+      new Set([
+        "startRun",
+        "getRun",
+        "getEvents",
+        "replay",
+        "writeRunReport",
+        "recordApproval",
+        "recordEvidence"
+      ])
+    );
+  });
+
   test("run calls runtime.startRun with resolved actor context", async () => {
     const calls: unknown[] = [];
     const runtime = fakeRuntime({

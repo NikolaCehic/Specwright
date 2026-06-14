@@ -36,6 +36,21 @@ const runInput = {
   }
 } satisfies RunInput;
 
+const runtimeOperationBaseline = [
+  { name: "callTool", mutates: true, durable: true, brokeredCapability: true },
+  { name: "evaluateGate", mutates: true, durable: true, brokeredCapability: false },
+  { name: "generateReport", mutates: false, durable: false, brokeredCapability: false },
+  { name: "getEvents", mutates: false, durable: false, brokeredCapability: false },
+  { name: "getRun", mutates: false, durable: false, brokeredCapability: false },
+  { name: "recordApproval", mutates: true, durable: true, brokeredCapability: false },
+  { name: "recordArtifact", mutates: true, durable: true, brokeredCapability: false },
+  { name: "recordEvidence", mutates: true, durable: true, brokeredCapability: false },
+  { name: "replay", mutates: false, durable: false, brokeredCapability: false },
+  { name: "runEval", mutates: true, durable: true, brokeredCapability: false },
+  { name: "startRun", mutates: true, durable: true, brokeredCapability: false },
+  { name: "writeRunReport", mutates: true, durable: true, brokeredCapability: false }
+] as const;
+
 let rootDir: string;
 let harnessDir: string;
 
@@ -49,6 +64,36 @@ afterEach(async () => {
 });
 
 describe("runtime facade", () => {
+  test("AUD-012A runtime operations are inventoried separately from broker defaults", () => {
+    const runtime = runtimeForTests();
+
+    expect(Object.keys(runtime).sort()).toEqual(
+      runtimeOperationBaseline
+        .map((operation) => operation.name)
+        .sort((left, right) => left.localeCompare(right))
+    );
+    expect(
+      runtimeOperationBaseline
+        .filter((operation) => operation.brokeredCapability)
+        .map((operation) => operation.name)
+    ).toEqual(["callTool"]);
+    expect(
+      runtimeOperationBaseline
+        .filter((operation) => operation.mutates)
+        .map((operation) => operation.name)
+        .sort()
+    ).toEqual([
+      "callTool",
+      "evaluateGate",
+      "recordApproval",
+      "recordArtifact",
+      "recordEvidence",
+      "runEval",
+      "startRun",
+      "writeRunReport"
+    ]);
+  });
+
   test("startRun creates a run package and records initial runtime events", async () => {
     const runtime = createRuntime({
       rootDir,
@@ -138,8 +183,34 @@ describe("runtime facade", () => {
         kind: "cli"
       }
     });
+    const defaultHarnessYaml = await readFile(
+      join(import.meta.dir, "../../../harnesses/default/harness.yaml"),
+      "utf8"
+    );
 
     expect(handle.harness.id).toBe("specwright.default");
+    expect(extractHarnessToolAllowList(defaultHarnessYaml)).toEqual([
+      "fs.list",
+      "fs.read",
+      "eval.run"
+    ]);
+    expect(handle.harness.tools.map((tool) => tool.id).sort()).toEqual([
+      "eval.run",
+      "fs.list",
+      "fs.read",
+      "model.review"
+    ]);
+    expect(handle.harness.metadata).toMatchObject({
+      deniedByOmission: [
+        "shell.exec",
+        "fs.write",
+        "git.branch",
+        "git.commit",
+        "git.push",
+        "network.request",
+        "network.write"
+      ]
+    });
     expect(handle.state.phase).toBe("intake");
     expect(await listArtifacts({ rootDir, runId: handle.runId }))
       .toContainEqual(
@@ -1022,4 +1093,35 @@ async function readJsonLines(path: string): Promise<RuntimeEvent[]> {
     .split("\n")
     .filter((line) => line.length > 0)
     .map((line) => JSON.parse(line) as RuntimeEvent);
+}
+
+function extractHarnessToolAllowList(harnessYaml: string) {
+  const tools: string[] = [];
+  let inToolsBlock = false;
+  let inAllowBlock = false;
+
+  for (const line of harnessYaml.split(/\r?\n/)) {
+    if (/^\S/.test(line)) {
+      inToolsBlock = line.trim() === "tools:";
+      inAllowBlock = false;
+      continue;
+    }
+
+    if (inToolsBlock && line.trim() === "allow:") {
+      inAllowBlock = true;
+      continue;
+    }
+
+    if (inAllowBlock) {
+      const match = /^    - (.+)$/.exec(line);
+
+      if (match === null) {
+        break;
+      }
+
+      tools.push(match[1]);
+    }
+  }
+
+  return tools;
 }

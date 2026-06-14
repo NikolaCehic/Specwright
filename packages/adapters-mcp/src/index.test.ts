@@ -52,20 +52,33 @@ describe("specwright mcp adapter", () => {
     expect(
       defaultMcpCatalog.enabledBindings.map((binding) => [
         binding.name,
-        binding.runtimeOperation
+        binding.runtimeOperation,
+        binding.mutates,
+        binding.requiredScopes
       ])
     ).toEqual([
-      ["specwright_call_tool", "callTool"],
-      ["specwright_evaluate_gate", "evaluateGate"],
-      ["specwright_generate_report", "generateReport"],
-      ["specwright_get_events", "getEvents"],
-      ["specwright_get_run", "getRun"],
-      ["specwright_record_artifact", "recordArtifact"],
-      ["specwright_record_evidence", "recordEvidence"],
-      ["specwright_replay", "replay"],
-      ["specwright_run_eval", "runEval"],
-      ["specwright_start_run", "startRun"],
-      ["specwright_write_report", "writeRunReport"]
+      ["specwright_call_tool", "callTool", true, ["tool:call"]],
+      ["specwright_evaluate_gate", "evaluateGate", true, ["gate:evaluate"]],
+      ["specwright_generate_report", "generateReport", false, ["report:read"]],
+      ["specwright_get_events", "getEvents", false, ["run:read"]],
+      ["specwright_get_run", "getRun", false, ["run:read"]],
+      ["specwright_record_artifact", "recordArtifact", true, ["artifact:write"]],
+      ["specwright_record_evidence", "recordEvidence", true, ["evidence:write"]],
+      ["specwright_replay", "replay", false, ["run:read"]],
+      ["specwright_run_eval", "runEval", true, ["eval:run"]],
+      ["specwright_start_run", "startRun", true, ["run:start"]],
+      ["specwright_write_report", "writeRunReport", true, ["report:write"]]
+    ]);
+    expect(
+      defaultMcpCatalog.disabledBindings.map((binding) => [
+        binding.name,
+        binding.runtimeOperation,
+        binding.mutates
+      ])
+    ).toEqual([
+      ["specwright_answer_question", "recordHumanAnswer", true],
+      ["specwright_get_next_action", "getNextAction", false],
+      ["specwright_record_approval", "recordApproval", true]
     ]);
   });
 
