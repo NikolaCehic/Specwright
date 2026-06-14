@@ -295,6 +295,7 @@ describe("MCP stdio transport", () => {
 
       expect(toolNames).toEqual([
         "specwright_get_events",
+        "specwright_get_next_action",
         "specwright_get_run",
         "specwright_replay"
       ]);
