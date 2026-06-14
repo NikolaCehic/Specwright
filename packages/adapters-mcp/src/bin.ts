@@ -1,10 +1,15 @@
 #!/usr/bin/env bun
 import { resolve } from "node:path";
 import { createRuntime } from "@specwright/runtime";
-import { createMcpAdapter } from "./index.js";
+import {
+  createMcpAdapter,
+  type McpAuthOptions,
+  type SubjectClaim
+} from "./index.js";
 import {
   MCP_STDIO_SERVER_NAME,
   serveMcpStdio,
+  type McpStdioRequestContext,
   type StdioStreamWriter
 } from "./stdio.js";
 
@@ -17,6 +22,8 @@ type BinOptions =
       ok: true;
       rootDir: string;
       workspaceRoot?: string | undefined;
+      auth: McpAuthOptions;
+      requestContext?: McpStdioRequestContext | undefined;
     }
   | {
       ok: false;
@@ -35,16 +42,15 @@ if (!options.ok) {
     workspaceRoot: options.workspaceRoot ?? options.rootDir
   });
   const adapter = createMcpAdapter(runtime, {
-    auth: {
-      mode: "disabled"
-    }
+    auth: options.auth
   });
 
   await serveMcpStdio({
     adapter,
     stdin: stdioProcess.stdin,
     stdout: process.stdout as StdioStreamWriter,
-    stderr: process.stderr as StdioStreamWriter
+    stderr: process.stderr as StdioStreamWriter,
+    requestContext: options.requestContext
   });
 }
 
@@ -61,16 +67,47 @@ function parseOptions(argv: readonly string[]): BinOptions {
   const profile = flags.profile;
   const root = flags.root;
   const workspaceRoot = flags["workspace-root"];
+  const rootValidation = validateRoot(root, workspaceRoot);
 
-  if (profile !== "local-stdio") {
+  if (!rootValidation.ok) {
+    return rootValidation;
+  }
+
+  if (profile === "local-stdio") {
     return {
-      ok: false,
-      exitCode: 2,
-      message:
-        "Missing explicit MCP profile. Use --profile local-stdio for the local stdio server."
+      ok: true,
+      rootDir: rootValidation.rootDir,
+      ...(rootValidation.workspaceRoot === undefined
+        ? {}
+        : { workspaceRoot: rootValidation.workspaceRoot }),
+      auth: {
+        mode: "disabled"
+      }
     };
   }
 
+  if (profile === "ci") {
+    return ciProfileOptions(flags, rootValidation);
+  }
+
+  return {
+    ok: false,
+    exitCode: 2,
+    message:
+      "Missing explicit MCP profile. Use --profile local-stdio or --profile ci."
+  };
+}
+
+function validateRoot(
+  root: string | true | undefined,
+  workspaceRoot: string | true | undefined
+):
+  | {
+      ok: true;
+      rootDir: string;
+      workspaceRoot?: string | undefined;
+    }
+  | Extract<BinOptions, { ok: false }> {
   if (typeof root !== "string") {
     return {
       ok: false,
@@ -95,6 +132,146 @@ function parseOptions(argv: readonly string[]): BinOptions {
       : {
           workspaceRoot: resolve(workspaceRoot)
         })
+  };
+}
+
+function ciProfileOptions(
+  flags: Record<string, string | true>,
+  rootValidation: Extract<ReturnType<typeof validateRoot>, { ok: true }>
+): BinOptions {
+  const clientId = stringFlag(flags, "client-id");
+  const tenantId = stringFlag(flags, "tenant-id");
+  const scopes = listFlag(flags, "scopes");
+  const subjectScopes = listFlag(flags, "subject-scopes") ?? scopes;
+  const runMode = runModeFlag(flags);
+
+  if (clientId === undefined) {
+    return missingCiFlag("--client-id <id>");
+  }
+
+  if (tenantId === undefined) {
+    return missingCiFlag("--tenant-id <id>");
+  }
+
+  if (scopes === undefined || scopes.length === 0) {
+    return missingCiFlag("--scopes <comma-separated-scopes>");
+  }
+
+  if (runMode === undefined) {
+    return {
+      ok: false,
+      exitCode: 2,
+      message: "--run-mode must be autonomous, assisted, or read_only."
+    };
+  }
+
+  const grantedScopes = scopes;
+  const subjectId = stringFlag(flags, "subject-id") ?? clientId;
+  const effectiveSubjectScopes = subjectScopes ?? grantedScopes;
+  const credential = {
+    profile: "ci",
+    clientId,
+    tenantId,
+    scopes: grantedScopes,
+    runMode
+  };
+  const principal = {
+    clientId,
+    tenantId,
+    grantedScopes,
+    runMode
+  };
+  const subject = {
+    subjectId,
+    tenantId,
+    claimRef: `ci:${clientId}`,
+    issuedBy: MCP_STDIO_SERVER_NAME
+  };
+
+  return {
+    ok: true,
+    rootDir: rootValidation.rootDir,
+    ...(rootValidation.workspaceRoot === undefined
+      ? {}
+      : { workspaceRoot: rootValidation.workspaceRoot }),
+    auth: {
+      mode: "authenticated",
+      credentialVerifier(candidate) {
+        return sameCredential(candidate, credential) ? principal : null;
+      },
+      requireSubject: true,
+      subjectVerifier(claim: SubjectClaim) {
+        return claim.subjectId === subject.subjectId &&
+          claim.tenantId === subject.tenantId
+          ? {
+              subjectId: subject.subjectId,
+              tenantId: subject.tenantId,
+              scopes: effectiveSubjectScopes,
+              sourceTrust: {
+                profile: "ci"
+              }
+            }
+          : false;
+      },
+      tenantResolver() {
+        return tenantId;
+      }
+    },
+    requestContext: {
+      credential,
+      subject
+    }
+  };
+}
+
+function stringFlag(flags: Record<string, string | true>, name: string) {
+  const value = flags[name];
+
+  return typeof value === "string" && value.trim().length > 0
+    ? value.trim()
+    : undefined;
+}
+
+function listFlag(flags: Record<string, string | true>, name: string) {
+  const value = stringFlag(flags, name);
+
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return value
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter((entry) => entry.length > 0);
+}
+
+function runModeFlag(flags: Record<string, string | true>) {
+  const value = stringFlag(flags, "run-mode") ?? "assisted";
+
+  if (value === "autonomous" || value === "assisted" || value === "read_only") {
+    return value;
+  }
+
+  return undefined;
+}
+
+function sameCredential(candidate: unknown, expected: Record<string, unknown>) {
+  if (
+    typeof candidate !== "object" ||
+    candidate === null ||
+    Array.isArray(candidate)
+  ) {
+    return false;
+  }
+
+  return JSON.stringify(candidate) === JSON.stringify(expected);
+}
+
+function missingCiFlag(flag: string): BinOptions {
+  return {
+    ok: false,
+    exitCode: 2,
+    message: `Missing required ${flag} for --profile ci.`
   };
 }
 
@@ -128,6 +305,7 @@ function usage() {
     "",
     "Usage:",
     `  ${MCP_STDIO_SERVER_NAME} --profile local-stdio --root <path> [--workspace-root <path>]`,
+    `  ${MCP_STDIO_SERVER_NAME} --profile ci --root <path> --client-id <id> --tenant-id <id> --scopes <scopes>`,
     "",
     "This executable speaks MCP JSON-RPC over stdio. Stdout is reserved for MCP messages."
   ].join("\n");

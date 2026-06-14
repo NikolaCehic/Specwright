@@ -52,6 +52,13 @@ export type ServeMcpStdioOptions = {
   stdin: AsyncIterable<string | Uint8Array>;
   stdout: StdioStreamWriter;
   stderr?: StdioStreamWriter | undefined;
+  requestContext?: McpStdioRequestContext | undefined;
+};
+
+export type McpStdioRequestContext = {
+  credential?: unknown;
+  subject?: unknown;
+  requestedScopes?: readonly string[] | undefined;
 };
 
 export async function serveMcpStdio(options: ServeMcpStdioOptions) {
@@ -64,13 +71,23 @@ export async function serveMcpStdio(options: ServeMcpStdioOptions) {
     for await (const chunk of options.stdin) {
       buffer +=
         typeof chunk === "string" ? chunk : decoder.decode(chunk, { stream: true });
-      buffer = await drainInputBuffer(buffer, options.adapter, options.stdout);
+      buffer = await drainInputBuffer(
+        buffer,
+        options.adapter,
+        options.stdout,
+        options.requestContext
+      );
     }
 
     buffer += decoder.decode();
 
     if (buffer.trim().length > 0) {
-      await writeLineResponse(buffer.trimEnd(), options.adapter, options.stdout);
+      await writeLineResponse(
+        buffer.trimEnd(),
+        options.adapter,
+        options.stdout,
+        options.requestContext
+      );
     }
   } finally {
     await options.adapter.observability?.closeSession();
@@ -79,7 +96,8 @@ export async function serveMcpStdio(options: ServeMcpStdioOptions) {
 
 export async function handleMcpJsonRpcLine(
   adapter: McpAdapter,
-  line: string
+  line: string,
+  requestContext?: McpStdioRequestContext | undefined
 ): Promise<string | undefined> {
   const trimmed = line.trim();
 
@@ -100,14 +118,19 @@ export async function handleMcpJsonRpcLine(
     );
   }
 
-  const response = await dispatchMcpJsonRpcMessage(adapter, message);
+  const response = await dispatchMcpJsonRpcMessage(
+    adapter,
+    message,
+    requestContext
+  );
 
   return response === undefined ? undefined : JSON.stringify(response);
 }
 
 export async function dispatchMcpJsonRpcMessage(
   adapter: McpAdapter,
-  message: unknown
+  message: unknown,
+  requestContext?: McpStdioRequestContext | undefined
 ): Promise<JsonRpcResponse | JsonRpcResponse[] | undefined> {
   if (Array.isArray(message)) {
     if (message.length === 0) {
@@ -120,7 +143,11 @@ export async function dispatchMcpJsonRpcMessage(
     const responses: JsonRpcResponse[] = [];
 
     for (const entry of message) {
-      const response = await dispatchSingleJsonRpcMessage(adapter, entry);
+      const response = await dispatchSingleJsonRpcMessage(
+        adapter,
+        entry,
+        requestContext
+      );
 
       if (response !== undefined) {
         responses.push(response);
@@ -130,13 +157,14 @@ export async function dispatchMcpJsonRpcMessage(
     return responses.length === 0 ? undefined : responses;
   }
 
-  return dispatchSingleJsonRpcMessage(adapter, message);
+  return dispatchSingleJsonRpcMessage(adapter, message, requestContext);
 }
 
 async function drainInputBuffer(
   buffer: string,
   adapter: McpAdapter,
-  stdout: StdioStreamWriter
+  stdout: StdioStreamWriter,
+  requestContext?: McpStdioRequestContext | undefined
 ) {
   let nextBuffer = buffer;
   let newlineIndex = nextBuffer.indexOf("\n");
@@ -144,7 +172,7 @@ async function drainInputBuffer(
   while (newlineIndex >= 0) {
     const line = nextBuffer.slice(0, newlineIndex).trimEnd();
     nextBuffer = nextBuffer.slice(newlineIndex + 1);
-    await writeLineResponse(line, adapter, stdout);
+    await writeLineResponse(line, adapter, stdout, requestContext);
     newlineIndex = nextBuffer.indexOf("\n");
   }
 
@@ -154,9 +182,10 @@ async function drainInputBuffer(
 async function writeLineResponse(
   line: string,
   adapter: McpAdapter,
-  stdout: StdioStreamWriter
+  stdout: StdioStreamWriter,
+  requestContext?: McpStdioRequestContext | undefined
 ) {
-  const response = await handleMcpJsonRpcLine(adapter, line);
+  const response = await handleMcpJsonRpcLine(adapter, line, requestContext);
 
   if (response !== undefined) {
     stdout.write(`${response}\n`);
@@ -165,7 +194,8 @@ async function writeLineResponse(
 
 async function dispatchSingleJsonRpcMessage(
   adapter: McpAdapter,
-  message: unknown
+  message: unknown,
+  requestContext?: McpStdioRequestContext | undefined
 ): Promise<JsonRpcResponse | undefined> {
   if (!isRecord(message)) {
     return jsonRpcError(null, INVALID_REQUEST, "Invalid Request.", {
@@ -218,8 +248,10 @@ async function dispatchSingleJsonRpcMessage(
     const dispatchResponse = await adapter.dispatch({
       method: message.method,
       ...(Object.prototype.hasOwnProperty.call(message, "params")
-        ? { params: message.params }
-        : {})
+        ? { params: paramsWithRequestContext(message.params, requestContext) }
+        : requestContext === undefined
+          ? {}
+          : { params: paramsWithRequestContext(undefined, requestContext) })
     });
 
     if (isMcpErrorResponse(dispatchResponse) && message.method !== "tools/call") {
@@ -236,6 +268,59 @@ async function dispatchSingleJsonRpcMessage(
       message: safeErrorMessage(error)
     });
   }
+}
+
+function paramsWithRequestContext(
+  params: unknown,
+  requestContext?: McpStdioRequestContext | undefined
+) {
+  if (requestContext === undefined || requestContextIsEmpty(requestContext)) {
+    return params;
+  }
+
+  if (params !== undefined && !isRecord(params)) {
+    return params;
+  }
+
+  const paramsRecord = isRecord(params) ? params : {};
+
+  return {
+    ...paramsRecord,
+    ...(requestContext.credential === undefined
+      ? {}
+      : { credential: requestContext.credential }),
+    ...(requestContext.subject === undefined
+      ? {}
+      : { subject: requestContext.subject }),
+    ...mergedRequestedScopes(params, requestContext)
+  };
+}
+
+function requestContextIsEmpty(requestContext: McpStdioRequestContext) {
+  return (
+    requestContext.credential === undefined &&
+    requestContext.subject === undefined &&
+    (requestContext.requestedScopes?.length ?? 0) === 0
+  );
+}
+
+function mergedRequestedScopes(
+  params: unknown,
+  requestContext: McpStdioRequestContext
+) {
+  const paramScopes = isRecord(params) ? params.requestedScopes : undefined;
+  const scopes = [
+    ...(Array.isArray(paramScopes)
+      ? paramScopes.filter((scope): scope is string => typeof scope === "string")
+      : []),
+    ...(requestContext.requestedScopes ?? [])
+  ];
+
+  return scopes.length === 0
+    ? {}
+    : {
+        requestedScopes: [...new Set(scopes)].sort()
+      };
 }
 
 function initializeResponse(id: JsonRpcId, params: unknown): JsonRpcResponse {
