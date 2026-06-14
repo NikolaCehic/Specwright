@@ -272,7 +272,22 @@ For local MCP stdio smoke tests and host wiring, launch the adapter-scoped execu
 bun packages/adapters-mcp/dist/bin.js --profile local-stdio --root fixtures/simple-app
 ```
 
-The process reads newline-delimited JSON-RPC messages from stdin and writes only MCP messages to stdout. The adapter-local binary is not the final public `@specwright/mcp-server` package; that package remains the later release target for host setup, package metadata, and remote/authenticated profiles.
+The process reads newline-delimited JSON-RPC messages from stdin, writes only MCP messages to stdout while serving, and records MCP session open/close audit records under the configured run root. For CI smoke wiring, use the authenticated profile with explicit client, tenant, and scope inputs:
+
+```bash
+bun packages/adapters-mcp/dist/bin.js --profile ci --root fixtures/simple-app --client-id ci-worker --tenant-id tenant-a --scopes run:read
+```
+
+The adapter binary can also print local stdio host snippets without starting a server:
+
+```bash
+bun packages/adapters-mcp/dist/bin.js --print-host-config codex --profile local-stdio --root fixtures/simple-app
+bun packages/adapters-mcp/dist/bin.js --print-host-config claude-code --profile local-stdio --root fixtures/simple-app
+bun packages/adapters-mcp/dist/bin.js --print-host-config opencode --profile local-stdio --root fixtures/simple-app
+bun packages/adapters-mcp/dist/bin.js --print-host-config generic --profile local-stdio --root fixtures/simple-app
+```
+
+Supported snippet targets are `codex`, `claude-code`, `opencode`, and `generic`. The helper emits source-checkout commands for the adapter-local stdio executable and keeps network/remote transports deferred. The adapter-local binary is not the final public `@specwright/mcp-server` package; that package remains the later release target for host setup, package metadata, and enterprise remote/authenticated profiles.
 
 ```ts
 import { createRuntime } from "@specwright/runtime";

@@ -10,19 +10,29 @@ const workflowRows = [
     file: ".github/workflows/eval-runner-conformance.yml",
     name: "Eval Runner Conformance",
     jobName: "Eval runner conformance gate",
-    requiredByBranchProtection: false
+    requiredByBranchProtection: false,
+    pathFiltered: true
   },
   {
     file: ".github/workflows/policy-validation.yml",
     name: "Policy Validation",
     jobName: "Policy validation",
-    requiredByBranchProtection: true
+    requiredByBranchProtection: true,
+    pathFiltered: true
+  },
+  {
+    file: ".github/workflows/specwright-ci.yml",
+    name: "Specwright CI",
+    jobName: "Root gates",
+    requiredByBranchProtection: false,
+    pathFiltered: false
   },
   {
     file: ".github/workflows/tool-broker-conformance.yml",
     name: "Tool Broker Conformance",
     jobName: "Broker conformance gate",
-    requiredByBranchProtection: false
+    requiredByBranchProtection: false,
+    pathFiltered: true
   }
 ] as const;
 
@@ -131,11 +141,13 @@ describe("AUD-016A repository release readiness", () => {
       "check:deps",
       "check:pack",
       "check:unused",
+      "ci",
       "proof:v0",
       "test",
       "test:all",
       "test:core",
-      "typecheck"
+      "typecheck",
+      "typecheck:packages"
     ]);
     expect(localGitTags()).toEqual([]);
     expect(releaseDocumentCandidates()).toEqual([]);
@@ -154,7 +166,11 @@ describe("AUD-016A repository release readiness", () => {
       expect(workflow).toContain("push:");
       expect(workflow).toContain("branches:");
       expect(workflow).toContain("- main");
-      expect(workflow).toContain("paths:");
+      if (row.pathFiltered) {
+        expect(workflow).toContain("paths:");
+      } else {
+        expect(workflow).not.toContain("paths:");
+      }
       expect(workflow).toContain("bun run build");
       expect(workflow).toContain("bun run typecheck");
     }

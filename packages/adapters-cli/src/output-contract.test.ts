@@ -257,6 +257,37 @@ function contractRuntime(): CliRuntime {
     },
     async recordEvidence(_runId, record) {
       return record;
+    },
+    async recordApproval(runId, decision) {
+      return {
+        decision,
+        event: {
+          ...fakeEvent(runId, 1),
+          type: "decision.recorded",
+          payload: {
+            approvalId: decision.approvalId,
+            decision
+          }
+        },
+        state: fakeState({
+          runId,
+          pendingApprovals: []
+        })
+      };
+    },
+    async recordHumanAnswer(runId, answer) {
+      return {
+        answer,
+        event: {
+          ...fakeEvent(runId, 1),
+          type: "human.answer_recorded",
+          payload: answer
+        },
+        state: fakeState({
+          runId,
+          pendingQuestions: []
+        })
+      };
     }
   };
 }
@@ -320,6 +351,7 @@ function fakeState(
     phase?: string;
     pendingApprovals?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingApprovals"];
     pendingQuestions?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingQuestions"];
+    pendingRepairTasks?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingRepairTasks"];
   }
 ): Awaited<ReturnType<CliRuntime["getRun"]>> {
   return {
@@ -334,6 +366,7 @@ function fakeState(
     budgets: {},
     pendingApprovals: overrides.pendingApprovals ?? [],
     pendingQuestions: overrides.pendingQuestions ?? [],
+    pendingRepairTasks: overrides.pendingRepairTasks ?? [],
     artifacts: [],
     lastEventId: "event-1"
   };

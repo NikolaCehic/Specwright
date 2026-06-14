@@ -8,6 +8,7 @@
   "lastEventId": "event:0",
   "pendingApprovals": [],
   "pendingQuestions": [],
+  "pendingRepairTasks": [],
   "phase": "shared-schemas",
   "runId": "run:contract-registry",
   "status": "running"

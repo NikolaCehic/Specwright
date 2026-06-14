@@ -13,3 +13,14 @@ declare class TextDecoder {
 declare module "node:path" {
   export function resolve(...paths: string[]): string;
 }
+
+declare module "node:readline" {
+  export type Interface = AsyncIterable<string> & {
+    close(): void;
+  };
+
+  export function createInterface(options: {
+    input: unknown;
+    crlfDelay?: number;
+  }): Interface;
+}
