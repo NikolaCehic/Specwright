@@ -254,9 +254,10 @@ bun packages/adapters-cli/dist/bin.js events <run-id> --root fixtures/simple-app
 bun packages/adapters-cli/dist/bin.js replay <run-id> --root fixtures/simple-app
 bun packages/adapters-cli/dist/bin.js report <run-id> --root fixtures/simple-app
 bun packages/adapters-cli/dist/bin.js eval run <run-id> --eval <eval-id> --root fixtures/simple-app --json
+bun packages/adapters-cli/dist/bin.js gate evaluate <run-id> --gate <gate-id> --root fixtures/simple-app --json
 ```
 
-CLI commands support `--json`, `--ci`, and `--deadline <ms>`. Read commands enforce bounded output and redaction profiles. `doctor` runs read-only source-checkout diagnostics. `eval run` calls runtime-owned eval execution and returns a governed verdict envelope. `answer` records a clarification answer through runtime evidence. `approve` and `reject` record runtime-owned approval decisions and fail closed for stale, missing, or already resolved approvals.
+CLI commands support `--json`, `--ci`, and `--deadline <ms>`. Read commands enforce bounded output and redaction profiles. `doctor` runs read-only source-checkout diagnostics. `eval run` calls runtime-owned eval execution and returns a governed verdict envelope. `gate evaluate` calls runtime-owned lifecycle gate evaluation and returns the gate verdict plus instruction envelope. `answer` records a clarification answer through runtime evidence. `approve` and `reject` record runtime-owned approval decisions and fail closed for stale, missing, or already resolved approvals.
 
 The intended installed command name is `specwright`; the direct `bun packages/adapters-cli/dist/bin.js` form is the simplest local workspace path today.
 

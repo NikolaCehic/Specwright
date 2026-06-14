@@ -3,6 +3,8 @@ import {
   ApprovalDecisionSchema,
   ApprovalRequestSchema,
   EvalVerdictSchema,
+  GateLifecycleInstructionSchema,
+  GateVerdictSchema,
   HumanQuestionSchema,
   RuntimeEventSchema,
   RunStateSchema
@@ -19,6 +21,7 @@ export type CliCommandName =
   | "replay"
   | "report"
   | "eval.run"
+  | "gate.evaluate"
   | "approve"
   | "reject"
   | "answer";
@@ -118,6 +121,13 @@ const doctorReportSchema = z
   })
   .strict();
 
+const gateEvaluationResultSchema = z
+  .object({
+    verdict: GateVerdictSchema,
+    instruction: GateLifecycleInstructionSchema
+  })
+  .strict();
+
 function envelopeSchema(command: CliCommandName, data: z.ZodTypeAny) {
   return z
     .object({
@@ -176,6 +186,10 @@ export const evalRunOutputSchema = envelopeSchema(
   "eval.run",
   EvalVerdictSchema
 );
+export const gateEvaluateOutputSchema = envelopeSchema(
+  "gate.evaluate",
+  gateEvaluationResultSchema
+);
 export const approveOutputSchema = envelopeSchema(
   "approve",
   approvalDecisionResultSchema
@@ -194,6 +208,7 @@ export const outputSchemas = Object.freeze({
   replay: replayOutputSchema,
   report: reportOutputSchema,
   "eval.run": evalRunOutputSchema,
+  "gate.evaluate": gateEvaluateOutputSchema,
   approve: approveOutputSchema,
   reject: rejectOutputSchema,
   answer: answerOutputSchema

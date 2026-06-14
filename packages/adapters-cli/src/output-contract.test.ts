@@ -13,7 +13,8 @@ const fixtureNames = [
   "events-ok.json",
   "replay-ok.json",
   "report-ok.json",
-  "eval-run-ok.json"
+  "eval-run-ok.json",
+  "gate-evaluate-ok.json"
 ] as const;
 const authenticatedContext = {
   principal: {
@@ -51,6 +52,9 @@ describe("cli output contract fixtures", () => {
     expect(classifications).toMatchObject({
       apiVersion: 1,
       changes: [
+        {
+          classification: "additive-compatible"
+        },
         {
           classification: "additive-compatible"
         },
@@ -130,6 +134,14 @@ async function liveEnvelopes(): Promise<Record<string, Record<string, unknown>>>
       "run-contract",
       "--eval",
       "eval.required",
+      "--json"
+    ],
+    "gate-evaluate-ok.json": [
+      "gate",
+      "evaluate",
+      "run-contract",
+      "--gate",
+      "intake.exit",
       "--json"
     ]
   };
@@ -216,6 +228,9 @@ function contractRuntime(): CliRuntime {
     },
     async runEval() {
       return fakeEvalVerdict();
+    },
+    async evaluateGate() {
+      return fakeGateEvaluation();
     },
     async recordEvidence(_runId, record) {
       return record;
@@ -346,6 +361,31 @@ function fakeEvalVerdict(): Awaited<ReturnType<CliRuntime["runEval"]>> {
     producedBy: {
       kind: "deterministic",
       ref: "contract-eval-runner"
+    }
+  };
+}
+
+function fakeGateEvaluation(): Awaited<ReturnType<CliRuntime["evaluateGate"]>> {
+  return {
+    verdict: {
+      gateId: "intake.exit",
+      phase: "intake",
+      status: "pass",
+      severity: "blocking",
+      reasons: ["Gate passed"],
+      findings: [],
+      evidenceRefs: ["evidence:1"],
+      obligations: [],
+      evaluatedAt: "2026-05-29T00:00:00.000Z",
+      evaluator: {
+        kind: "deterministic",
+        ref: "contract-gate-engine"
+      },
+      decisionHash: "sha256:gate"
+    },
+    instruction: {
+      kind: "continue",
+      gateId: "intake.exit"
     }
   };
 }

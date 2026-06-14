@@ -67,6 +67,7 @@ export type CliRuntime = Pick<
   | "recordEvidence"
   | "recordApproval"
   | "runEval"
+  | "evaluateGate"
 >;
 
 export type CliExecution = {
@@ -121,6 +122,15 @@ type ParsedCommand =
       kind: "eval.run";
       runId: string;
       evalId: string;
+      rootDir?: string | undefined;
+      json: boolean;
+      ci: boolean;
+      deadlineMs?: number | undefined;
+    }
+  | {
+      kind: "gate.evaluate";
+      runId: string;
+      gateId: string;
       rootDir?: string | undefined;
       json: boolean;
       ci: boolean;
@@ -459,6 +469,41 @@ async function executeCommand(
       };
     }
 
+    case "gate.evaluate": {
+      const rootDir = canonicalizeAllowedPath({
+        value: command.rootDir,
+        flagName: "root",
+        context
+      });
+      const result = await withDeadline(
+        runtime.evaluateGate(
+          command.runId,
+          command.gateId,
+          lookupOptions(rootDir)
+        ),
+        deadlineMs,
+        "evaluateGate exceeded the invocation deadline"
+      );
+      const outcome = outcomeForGateEvaluation(result);
+
+      return {
+        command: "gate.evaluate",
+        outcome,
+        runId: command.runId,
+        data: result,
+        stdout: renderGateEvaluation(command.runId, result),
+        errorMessage:
+          outcome === "ok"
+            ? undefined
+            : `Gate ${result.verdict.gateId} completed with status ${result.verdict.status}`,
+        operatorAction:
+          outcome === "ok"
+            ? undefined
+            : "Inspect the gate verdict and lifecycle instruction, repair or resolve the blocking condition, and rerun the gate before continuing.",
+        jsonEnvelopeOnError: true
+      };
+    }
+
     case "answer": {
       const rootDir = canonicalizeAllowedPath({
         value: command.rootDir,
@@ -655,6 +700,8 @@ function parseCommand(
       return parseRunLookup(command, rest, options.defaultDeadlineMs);
     case "eval":
       return parseEval(rest, options.defaultDeadlineMs);
+    case "gate":
+      return parseGate(rest, options.defaultDeadlineMs);
     case "approve":
     case "reject":
       return parseApprovalDecision(command, rest, options.defaultDeadlineMs);
@@ -801,6 +848,54 @@ function parseEval(
     kind: "eval.run",
     runId,
     evalId,
+    rootDir: stringFlag(parsed, "root"),
+    json: parsed.flags.json === true,
+    ci: parsed.flags.ci === true,
+    deadlineMs: deadlineFromParsed(parsed, defaultDeadlineMs)
+  };
+}
+
+function parseGate(
+  argv: readonly string[],
+  defaultDeadlineMs: number
+): ParsedCommand {
+  const [subcommand, ...rest] = argv;
+
+  if (subcommand !== "evaluate") {
+    throw new CliUsageError("gate requires subcommand evaluate");
+  }
+
+  const parsed = parseArguments(rest, {
+    valueFlags: ["gate", "root", "deadline"],
+    booleanFlags: ["json", "ci"]
+  });
+
+  if (parsed.positionals.length !== 1) {
+    throw new CliUsageError("gate evaluate requires exactly one <run-id>");
+  }
+
+  const runId = parsed.positionals[0];
+  const gateId = stringFlag(parsed, "gate");
+
+  if (runId === undefined) {
+    throw new CliUsageError("gate evaluate requires exactly one <run-id>");
+  }
+
+  if (gateId === undefined) {
+    throw new CliUsageError("gate evaluate requires --gate <gate-id>");
+  }
+
+  if (gateId.trim().length === 0 || containsUnsafeControl(gateId)) {
+    throw new CliInputError(
+      "--gate must be non-empty text without control characters",
+      { runId }
+    );
+  }
+
+  return {
+    kind: "gate.evaluate",
+    runId,
+    gateId,
     rootDir: stringFlag(parsed, "root"),
     json: parsed.flags.json === true,
     ci: parsed.flags.ci === true,
@@ -1094,6 +1189,29 @@ function renderEvalVerdict(runId: string, verdict: EvalVerdict) {
   ]);
 }
 
+function renderGateEvaluation(
+  runId: string,
+  result: Awaited<ReturnType<CliRuntime["evaluateGate"]>>
+) {
+  return lines([
+    "Gate evaluated",
+    `Run: ${runId}`,
+    `Gate: ${sanitizeText(result.verdict.gateId)}`,
+    `Status: ${result.verdict.status}`,
+    `Severity: ${result.verdict.severity}`,
+    `Phase: ${sanitizeText(result.verdict.phase)}`,
+    `Instruction: ${result.instruction.kind}`,
+    `Findings: ${result.verdict.findings.length}`,
+    ...result.verdict.findings.slice(0, 3).map((finding) =>
+      [
+        "-",
+        sanitizeText(finding.code ?? finding.id),
+        sanitizeText(finding.message)
+      ].join(" ")
+    )
+  ]);
+}
+
 function renderAnswerResult(evidence: EvidenceRecord) {
   return lines([
     "Answer recorded",
@@ -1145,6 +1263,7 @@ function usage() {
     "  specwright replay <run-id> [--root <path>] [--limit <n>] [--json] [--ci] [--deadline <ms>]",
     "  specwright report <run-id> [--root <path>] [--redaction-profile <shared-log|operator>] [--json] [--ci] [--deadline <ms>]",
     "  specwright eval run <run-id> --eval <eval-id> [--root <path>] [--json] [--ci] [--deadline <ms>]",
+    "  specwright gate evaluate <run-id> --gate <gate-id> [--root <path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright approve <run-id> --approval <approval-id> --decision-hash <hash> [--message <text>] [--root <path>] [--json]",
     "  specwright reject <run-id> --approval <approval-id> --decision-hash <hash> [--message <text>] [--root <path>] [--json]",
     "  specwright answer <run-id> --question <question-id> --answer <text> [--root <path>] [--json]"
@@ -1174,6 +1293,10 @@ function commandNameFromArgv(argv: readonly string[]): string {
     return "eval.run";
   }
 
+  if (argv[0] === "gate" && argv[1] === "evaluate") {
+    return "gate.evaluate";
+  }
+
   return argv[0] ?? "help";
 }
 
@@ -1184,6 +1307,7 @@ function authorityForCommand(command: RuntimeCommand["kind"]): CommandAuthority 
     case "run":
     case "report":
     case "eval.run":
+    case "gate.evaluate":
       return "privileged";
     case "approve":
     case "reject":
@@ -1200,6 +1324,19 @@ function outcomeForEvalVerdict(verdict: EvalVerdict): OutcomeClass {
   switch (verdict.status) {
     case "pass":
     case "skipped":
+      return "ok";
+    case "needs_review":
+      return "blocked";
+    case "fail":
+      return "gate_failure";
+  }
+}
+
+function outcomeForGateEvaluation(
+  result: Awaited<ReturnType<CliRuntime["evaluateGate"]>>
+): OutcomeClass {
+  switch (result.verdict.status) {
+    case "pass":
       return "ok";
     case "needs_review":
       return "blocked";

@@ -1,0 +1,32 @@
+{
+  "apiVersion": 1,
+  "command": "gate.evaluate",
+  "outcome": "ok",
+  "runId": "run-contract",
+  "data": {
+    "verdict": {
+      "gateId": "intake.exit",
+      "phase": "intake",
+      "status": "pass",
+      "severity": "blocking",
+      "reasons": [
+        "Gate passed"
+      ],
+      "findings": [],
+      "evidenceRefs": [
+        "evidence:1"
+      ],
+      "obligations": [],
+      "evaluatedAt": "2026-05-29T00:00:00.000Z",
+      "evaluator": {
+        "kind": "deterministic",
+        "ref": "contract-gate-engine"
+      },
+      "decisionHash": "sha256:gate"
+    },
+    "instruction": {
+      "kind": "continue",
+      "gateId": "intake.exit"
+    }
+  }
+}

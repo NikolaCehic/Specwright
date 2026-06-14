@@ -31,6 +31,7 @@ const cliSurfaceBaseline = [
   { command: "replay", runtimeOperation: "replay", mutates: false },
   { command: "report", runtimeOperation: "writeRunReport", mutates: true },
   { command: "eval.run", runtimeOperation: "runEval", mutates: true },
+  { command: "gate.evaluate", runtimeOperation: "evaluateGate", mutates: true },
   { command: "approve", runtimeOperation: "recordApproval", mutates: true },
   { command: "reject", runtimeOperation: "recordApproval", mutates: true },
   { command: "answer", runtimeOperation: "recordEvidence", mutates: true }
@@ -47,6 +48,8 @@ describe("specwright cli adapter", () => {
 
         return parts[1] === "eval" && parts[2] === "run"
           ? "eval.run"
+          : parts[1] === "gate" && parts[2] === "evaluate"
+            ? "gate.evaluate"
           : parts[1];
       });
 
@@ -54,7 +57,15 @@ describe("specwright cli adapter", () => {
     expect(commands).toEqual(cliSurfaceBaseline.map((row) => row.command));
     expect(
       cliSurfaceBaseline.filter((row) => row.mutates).map((row) => row.command)
-    ).toEqual(["run", "report", "eval.run", "approve", "reject", "answer"]);
+    ).toEqual([
+      "run",
+      "report",
+      "eval.run",
+      "gate.evaluate",
+      "approve",
+      "reject",
+      "answer"
+    ]);
     expect(new Set(cliSurfaceBaseline.map((row) => row.runtimeOperation))).toEqual(
       new Set([
         "startRun",
@@ -63,6 +74,7 @@ describe("specwright cli adapter", () => {
         "replay",
         "writeRunReport",
         "runEval",
+        "evaluateGate",
         "recordApproval",
         "diagnose",
         "recordEvidence"
@@ -534,6 +546,170 @@ describe("specwright cli adapter", () => {
     });
   });
 
+  test("gate evaluate calls runtime.evaluateGate and envelopes the result", async () => {
+    const calls: unknown[] = [];
+    const runtime = fakeRuntime({
+      async evaluateGate(runId, request, options) {
+        calls.push([runId, request, options]);
+
+        return fakeGateEvaluation({
+          gateId: String(request),
+          status: "pass",
+          instruction: {
+            kind: "continue",
+            gateId: String(request)
+          }
+        });
+      }
+    });
+
+    const result = await executeCli(
+      [
+        "gate",
+        "evaluate",
+        "run-gate",
+        "--gate",
+        "intake.exit",
+        "--root",
+        "/runs-root",
+        "--json"
+      ],
+      runtime,
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(calls).toEqual([
+      ["run-gate", "intake.exit", { rootDir: "/runs-root" }]
+    ]);
+    expect(envelope).toMatchObject({
+      command: "gate.evaluate",
+      outcome: "ok",
+      runId: "run-gate",
+      data: {
+        verdict: {
+          gateId: "intake.exit",
+          status: "pass"
+        },
+        instruction: {
+          kind: "continue",
+          gateId: "intake.exit"
+        }
+      }
+    });
+    outputSchemas["gate.evaluate"].parse(envelope);
+  });
+
+  test("gate evaluate returns failing verdict data with a classified nonzero outcome", async () => {
+    const result = await executeCli(
+      [
+        "gate",
+        "evaluate",
+        "run-gate",
+        "--gate",
+        "intake.exit",
+        "--json"
+      ],
+      fakeRuntime({
+        async evaluateGate() {
+          return fakeGateEvaluation({
+            status: "fail",
+            reasons: ["Required artifact missing"],
+            findings: [
+              {
+                id: "finding-1",
+                code: "missing_artifact",
+                message: "Required artifact was not produced.",
+                severity: "blocking",
+                evidenceRefs: []
+              }
+            ],
+            instruction: {
+              kind: "fail_run",
+              gateId: "intake.exit",
+              reason: "Required artifact missing"
+            }
+          });
+        }
+      }),
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(6);
+    expect(result.stderr).toBe("");
+    expect(envelope).toMatchObject({
+      command: "gate.evaluate",
+      outcome: "gate_failure",
+      runId: "run-gate",
+      data: {
+        verdict: {
+          status: "fail",
+          findings: [
+            {
+              code: "missing_artifact"
+            }
+          ]
+        },
+        instruction: {
+          kind: "fail_run"
+        }
+      },
+      error: {
+        errorClass: "gate_failure",
+        code: 6
+      }
+    });
+    outputSchemas["gate.evaluate"].parse(envelope);
+  });
+
+  test("gate evaluate requires an authenticated actor before runtime mutation", async () => {
+    const calls: unknown[] = [];
+    const result = await executeCli(
+      [
+        "gate",
+        "evaluate",
+        "run-gate",
+        "--gate",
+        "intake.exit",
+        "--json"
+      ],
+      fakeRuntime({
+        async evaluateGate(runId, request, options) {
+          calls.push([runId, request, options]);
+
+          return fakeGateEvaluation();
+        }
+      }),
+      {
+        context: {
+          principal: {
+            id: "anonymous",
+            source: "anonymous",
+            assuranceLevel: "anonymous",
+            roles: []
+          },
+          tenant: {
+            id: "tenant-a",
+            allowedRoots: ["/runs-root"]
+          },
+          ci: true
+        }
+      }
+    );
+
+    expect(result.exitCode).toBe(11);
+    expect(calls).toEqual([]);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      errorClass: "auth",
+      code: 11,
+      runId: "run-gate"
+    });
+  });
+
   test("usage and input validation failures are classified", async () => {
     const usage = await executeCli(["wat", "--json"], fakeRuntime());
     const input = await executeCli(
@@ -953,6 +1129,9 @@ function fakeRuntime(overrides: Partial<CliRuntime> = {}): CliRuntime {
     async runEval() {
       return fakeEvalVerdict();
     },
+    async evaluateGate() {
+      return fakeGateEvaluation();
+    },
     ...overrides
   };
 }
@@ -1090,6 +1269,43 @@ function fakeEvalVerdict(
     ...(overrides.provenance === undefined
       ? {}
       : { provenance: overrides.provenance })
+  };
+}
+
+function fakeGateEvaluation(
+  overrides: Partial<Awaited<ReturnType<CliRuntime["evaluateGate"]>>["verdict"]> & {
+    instruction?: Awaited<ReturnType<CliRuntime["evaluateGate"]>>["instruction"];
+  } = {}
+): Awaited<ReturnType<CliRuntime["evaluateGate"]>> {
+  const gateId = overrides.gateId ?? "intake.exit";
+
+  return {
+    verdict: {
+      gateId,
+      phase: overrides.phase ?? "intake",
+      status: overrides.status ?? "pass",
+      severity: overrides.severity ?? "blocking",
+      reasons: overrides.reasons ?? ["Gate passed"],
+      findings: overrides.findings ?? [],
+      evidenceRefs: overrides.evidenceRefs ?? ["evidence:1"],
+      obligations: overrides.obligations ?? [],
+      evaluatedAt: overrides.evaluatedAt ?? "2026-05-29T00:00:00.000Z",
+      evaluator: overrides.evaluator ?? {
+        kind: "deterministic",
+        ref: "test-gate-engine"
+      },
+      decisionHash: overrides.decisionHash ?? "sha256:gate",
+      ...(overrides.requiredAction === undefined
+        ? {}
+        : { requiredAction: overrides.requiredAction }),
+      ...(overrides.provenance === undefined
+        ? {}
+        : { provenance: overrides.provenance })
+    },
+    instruction: overrides.instruction ?? {
+      kind: "continue",
+      gateId
+    }
   };
 }
 
