@@ -1,7 +1,34 @@
 {
-  "name": "@specwright/adapters-cli",
+  "name": "@specwright/cli",
   "version": "0.0.0",
   "private": true,
+  "description": "Specwright command line interface for governed agent workflow runs.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/NikolaCehic/Specwright.git",
+    "directory": "packages/adapters-cli"
+  },
+  "homepage": "https://github.com/NikolaCehic/Specwright#readme",
+  "bugs": {
+    "url": "https://github.com/NikolaCehic/Specwright/issues"
+  },
+  "keywords": [
+    "specwright",
+    "agent-workflows",
+    "governed-runtime",
+    "cli"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "bun": ">=1.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "latest",
+    "provenance": true
+  },
   "type": "module",
   "bin": {
     "specwright": "./dist/bin.js"

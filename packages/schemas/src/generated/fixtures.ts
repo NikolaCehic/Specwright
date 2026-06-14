@@ -88,6 +88,12 @@ export const contractFixtures = [
     "positive": "fixtures/conformance/metadata.positive.json"
   },
   {
+    "id": "specwright.event.approval.requested",
+    "negative": "fixtures/negative/approval-requested-event-payload.negative.json",
+    "positive": "fixtures/conformance/approval-requested-event-payload.positive.json",
+    "replay": "fixtures/replay/approval-requested-event-payload.replay.json"
+  },
+  {
     "id": "specwright.event.artifact.recorded",
     "negative": "fixtures/negative/artifact-recorded-event-payload.negative.json",
     "positive": "fixtures/conformance/artifact-recorded-event-payload.positive.json",
@@ -157,6 +163,18 @@ export const contractFixtures = [
     "negative": "fixtures/negative/policy-evaluated-event-payload.negative.json",
     "positive": "fixtures/conformance/policy-evaluated-event-payload.positive.json",
     "replay": "fixtures/replay/policy-evaluated-event-payload.replay.json"
+  },
+  {
+    "id": "specwright.event.repair.task_created",
+    "negative": "fixtures/negative/repair-task-created-event-payload.negative.json",
+    "positive": "fixtures/conformance/repair-task-created-event-payload.positive.json",
+    "replay": "fixtures/replay/repair-task-created-event-payload.replay.json"
+  },
+  {
+    "id": "specwright.event.run.blocked",
+    "negative": "fixtures/negative/run-blocked-event-payload.negative.json",
+    "positive": "fixtures/conformance/run-blocked-event-payload.positive.json",
+    "replay": "fixtures/replay/run-blocked-event-payload.replay.json"
   },
   {
     "id": "specwright.event.run.completed",
