@@ -97,11 +97,15 @@ Host setup docs must be generated from or checked against the public support mat
 
 The first CLI reference can cover only commands present in current CLI usage and tests:
 
+- `doctor`
 - `run`
 - `status`
 - `events`
 - `replay`
 - `report`
+- `tool call`
+- `eval run`
+- `gate evaluate`
 - `approve`
 - `reject`
 - `answer`
@@ -116,7 +120,7 @@ Reference docs must state current limitations:
 - MCP is an adapter library, not a deployable server package;
 - public server commands, host commands, SDK scaffolds, marketplace commands, and release/publish commands are deferred.
 
-The current code supports CLI approval and rejection through `RuntimeApi.recordApproval` on this stacked branch, while README still carries older wording that says approval resolution is reserved until runtime support exists. Public docs and README updates must reconcile that drift in the later docs implementation packet.
+The current code supports CLI approval and rejection through `RuntimeApi.recordApproval` on this stacked branch, and README source-checkout CLI guidance now reflects that fail-closed approval behavior. Full public command-reference docs remain a later docs implementation packet.
 
 Config/reference docs should wait for an approved project config, package manifest metadata, capability-pack schema, SDK schema, server config, and generated reference strategy.
 
@@ -163,7 +167,7 @@ Docs verification should become a release gate in waves.
 
 | Gate | First requirement |
 | --- | --- |
-| Source-checkout smoke | `bun install`, `bun run build`, `bun run proof:v0`, CLI help, first run, status, events, replay, report. |
+| Source-checkout smoke | `bun install`, `bun run build`, `bun run proof:v0`, CLI help, doctor, first run, status, events, replay, report. |
 | Package install smoke | Deferred until packages are publishable; run from a clean temp project without repo-relative paths. |
 | CLI reference check | Compare docs against `specwright help`, output schemas, and CLI tests. |
 | MCP reference check | Compare docs against MCP tool/resource/prompt lists, auth tests, and conformance rows. |
@@ -201,10 +205,10 @@ Live source on this stacked branch shows:
 
 - README is technically strong and primarily source-checkout oriented: clone, Bun install, build, test, proof, and direct local CLI adapter invocation.
 - README says the intended installed command is `specwright`, while the simplest path today is direct `bun packages/adapters-cli/dist/bin.js`.
-- README still contains stale wording about approval commands being reserved until runtime approval support exists; current CLI code and tests now route `approve` and `reject` to `RuntimeApi.recordApproval`.
+- README source-checkout CLI guidance includes `doctor`, `tool call`, `eval run`, `gate evaluate`, and now reflects that `approve` and `reject` route through `RuntimeApi.recordApproval` with fail-closed stale/missing approval behavior.
 - `docs/` contains decision records and the runtime hero image, not a complete public install/user guide set.
-- All 17 workspace packages are private `0.0.0`; only `@specwright/adapters-cli` declares a `specwright` bin.
-- CLI usage exposes `run`, `status`, `events`, `replay`, `report`, `approve`, `reject`, and `answer`.
+- All 17 workspace packages are private `0.0.0`; first-wave packages have npm-facing metadata; only `@specwright/cli` declares the `specwright` bin, while `@specwright/adapters-mcp` carries a separate adapter-scoped local stdio bin.
+- CLI usage exposes `doctor`, `run`, `status`, `events`, `replay`, `report`, `tool call`, `eval run`, `gate evaluate`, `approve`, `reject`, and `answer`.
 - CLI tests reject an unknown harness id before runtime start, so docs must not promise arbitrary harness selection yet.
 - The current runnable example inventory is `fixtures/simple-app`; no `examples/` directory, monorepo example, docs-repo example, TypeScript app example, host setup example, or harness extension example exists.
 - Package-level Markdown files such as schema contracts, tool-broker governance, policy governance, and gate versioning are internal governance/contract docs, not user install docs.

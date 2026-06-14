@@ -20,7 +20,7 @@
     "test": "bun test src/index.test.ts"
   },
   "dependencies": {
-    "@specwright/adapters-cli": "workspace:*",
+    "@specwright/cli": "workspace:*",
     "@specwright/run-store": "workspace:*",
     "@specwright/runtime": "workspace:*"
   }
