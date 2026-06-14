@@ -1,8 +1,8 @@
 import { createRuntime, type RuntimeApi } from "@specwright/runtime";
 import {
-  EvidenceRecordSchema,
   type EvalVerdict,
-  type EvidenceRecord
+  type ToolCallRequest,
+  type ToolCallResult
 } from "@specwright/schemas";
 import { CLI_VERSION, DEFAULT_HARNESS_ID } from "./constants";
 import {
@@ -63,9 +63,11 @@ export type CliRuntime = Pick<
   | "getRun"
   | "getEvents"
   | "replay"
+  | "callTool"
   | "writeRunReport"
   | "recordEvidence"
   | "recordApproval"
+  | "recordHumanAnswer"
   | "runEval"
   | "evaluateGate"
 >;
@@ -132,6 +134,24 @@ type ParsedCommand =
       runId: string;
       gateId: string;
       rootDir?: string | undefined;
+      json: boolean;
+      ci: boolean;
+      deadlineMs?: number | undefined;
+    }
+  | {
+      kind: "tool.call";
+      runId: string;
+      toolId: string;
+      args: unknown;
+      reason: string;
+      idempotencyKey: string;
+      phase: string;
+      gateId?: string | undefined;
+      evalId?: string | undefined;
+      modelCallId?: string | undefined;
+      rootDir?: string | undefined;
+      cwd?: string | undefined;
+      traceId?: string | undefined;
       json: boolean;
       ci: boolean;
       deadlineMs?: number | undefined;
@@ -504,25 +524,92 @@ async function executeCommand(
       };
     }
 
+    case "tool.call": {
+      const rootDir = canonicalizeAllowedPath({
+        value: command.rootDir,
+        flagName: "root",
+        context
+      });
+      const cwd = canonicalizeAllowedPath({
+        value: command.cwd,
+        flagName: "cwd",
+        context
+      });
+      const request = toolCallRequest(command);
+      const result = await withDeadline(
+        runtime.callTool(command.runId, request, {
+          ...lookupOptions(rootDir),
+          ...(cwd === undefined ? {} : { cwd }),
+          ...(command.traceId === undefined ? {} : { traceId: command.traceId })
+        }),
+        deadlineMs,
+        "callTool exceeded the invocation deadline"
+      );
+      const outcome = outcomeForToolCallResult(result);
+      const data = redactForEgress(result, "shared-log");
+
+      return {
+        command: "tool.call",
+        outcome,
+        runId: command.runId,
+        data,
+        stdout: renderToolCallResult(command.runId, data),
+        errorMessage:
+          outcome === "ok"
+            ? undefined
+            : result.error?.message ??
+              `Tool ${result.provenance.toolId} completed with status ${result.status}`,
+        operatorAction:
+          outcome === "ok"
+            ? undefined
+            : "Inspect the brokered tool result, satisfy any required approval, or repair the tool input before retrying.",
+        jsonEnvelopeOnError: true
+      };
+    }
+
     case "answer": {
       const rootDir = canonicalizeAllowedPath({
         value: command.rootDir,
         flagName: "root",
         context
       });
-      const record = answerEvidenceRecord(command, context);
-      const evidence = await withDeadline(
-        runtime.recordEvidence(command.runId, record, lookupOptions(rootDir)),
-        deadlineMs,
-        "recordEvidence exceeded the invocation deadline"
-      );
+      let recorded: Awaited<ReturnType<CliRuntime["recordHumanAnswer"]>>;
+
+      try {
+        recorded = await withDeadline(
+          runtime.recordHumanAnswer(
+            command.runId,
+            {
+              questionId: command.questionId,
+              answer: command.answer,
+              answeredBy: context.principal.id,
+              metadata: {
+                tenant: context.tenant.id
+              }
+            },
+            lookupOptions(rootDir)
+          ),
+          deadlineMs,
+          "recordHumanAnswer exceeded the invocation deadline"
+        );
+      } catch (error) {
+        if (messageForError(error).includes("not currently pending")) {
+          throw new CliIntegrityError(messageForError(error), {
+            runId: command.runId,
+            operatorAction:
+              "Resolve a currently pending question through the human-answer API; stale, missing, or already-resolved questions are refused."
+          });
+        }
+
+        throw error;
+      }
 
       return {
         command: "answer",
         outcome: "ok",
         runId: command.runId,
-        data: evidence,
-        stdout: renderAnswerResult(evidence)
+        data: recorded,
+        stdout: renderAnswerResult(recorded)
       };
     }
 
@@ -698,6 +785,8 @@ function parseCommand(
     case "replay":
     case "report":
       return parseRunLookup(command, rest, options.defaultDeadlineMs);
+    case "tool":
+      return parseTool(rest, options.defaultDeadlineMs);
     case "eval":
       return parseEval(rest, options.defaultDeadlineMs);
     case "gate":
@@ -804,6 +893,109 @@ function parseRunLookup(
         : undefined,
     deadlineMs: deadlineFromParsed(parsed, defaultDeadlineMs),
     redactionProfile: profile
+  };
+}
+
+function parseTool(
+  argv: readonly string[],
+  defaultDeadlineMs: number
+): ParsedCommand {
+  const [subcommand, ...rest] = argv;
+
+  if (subcommand !== "call") {
+    throw new CliUsageError("tool requires subcommand call");
+  }
+
+  const parsed = parseArguments(rest, {
+    valueFlags: [
+      "tool",
+      "args-json",
+      "reason",
+      "idempotency-key",
+      "phase",
+      "gate",
+      "eval",
+      "model-call",
+      "root",
+      "cwd",
+      "trace",
+      "deadline"
+    ],
+    booleanFlags: ["json", "ci"]
+  });
+
+  if (parsed.positionals.length !== 1) {
+    throw new CliUsageError("tool call requires exactly one <run-id>");
+  }
+
+  const runId = parsed.positionals[0];
+  const toolId = stringFlag(parsed, "tool");
+  const argsJson = stringFlag(parsed, "args-json");
+  const reason = stringFlag(parsed, "reason");
+  const idempotencyKey = stringFlag(parsed, "idempotency-key");
+  const phase = stringFlag(parsed, "phase");
+
+  if (runId === undefined) {
+    throw new CliUsageError("tool call requires exactly one <run-id>");
+  }
+
+  if (toolId === undefined) {
+    throw new CliUsageError("tool call requires --tool <tool-id>");
+  }
+
+  if (argsJson === undefined) {
+    throw new CliUsageError("tool call requires --args-json <json>");
+  }
+
+  if (reason === undefined) {
+    throw new CliUsageError("tool call requires --reason <text>");
+  }
+
+  if (idempotencyKey === undefined) {
+    throw new CliUsageError(
+      "tool call requires --idempotency-key <idempotency-key>"
+    );
+  }
+
+  if (phase === undefined) {
+    throw new CliUsageError("tool call requires --phase <phase>");
+  }
+
+  for (const [flagName, value] of [
+    ["tool", toolId],
+    ["reason", reason],
+    ["idempotency-key", idempotencyKey],
+    ["phase", phase],
+    ["gate", stringFlag(parsed, "gate")],
+    ["eval", stringFlag(parsed, "eval")],
+    ["model-call", stringFlag(parsed, "model-call")],
+    ["trace", stringFlag(parsed, "trace")]
+  ] as const) {
+    if (value !== undefined && (value.trim().length === 0 || containsUnsafeControl(value))) {
+      throw new CliInputError(
+        `--${flagName} must be non-empty text without control characters`,
+        { runId }
+      );
+    }
+  }
+
+  return {
+    kind: "tool.call",
+    runId,
+    toolId,
+    args: parseJsonFlag(argsJson, "args-json", runId),
+    reason,
+    idempotencyKey,
+    phase,
+    gateId: stringFlag(parsed, "gate"),
+    evalId: stringFlag(parsed, "eval"),
+    modelCallId: stringFlag(parsed, "model-call"),
+    rootDir: stringFlag(parsed, "root"),
+    cwd: stringFlag(parsed, "cwd"),
+    traceId: stringFlag(parsed, "trace"),
+    json: parsed.flags.json === true,
+    ci: parsed.flags.ci === true,
+    deadlineMs: deadlineFromParsed(parsed, defaultDeadlineMs)
   };
 }
 
@@ -1073,6 +1265,17 @@ function stringFlag(
   return typeof value === "string" ? value : undefined;
 }
 
+function parseJsonFlag(value: string, flagName: string, runId?: string): unknown {
+  try {
+    return JSON.parse(value);
+  } catch (error) {
+    throw new CliInputError(`--${flagName} must be valid JSON`, {
+      runId,
+      cause: error
+    });
+  }
+}
+
 function lookupOptions(rootDir: string | undefined) {
   return rootDir === undefined ? {} : { rootDir };
 }
@@ -1212,12 +1415,30 @@ function renderGateEvaluation(
   ]);
 }
 
-function renderAnswerResult(evidence: EvidenceRecord) {
+function renderToolCallResult(runId: string, result: ToolCallResult) {
+  return lines([
+    "Tool call completed",
+    `Run: ${runId}`,
+    `Tool: ${sanitizeText(result.provenance.toolId)}`,
+    `Status: ${result.status}`,
+    `Call: ${sanitizeText(result.toolCallId)}`,
+    `Cache: ${result.provenance.cacheStatus}`,
+    ...(result.error === undefined
+      ? []
+      : [`Error: ${sanitizeText(result.error.message)}`])
+  ]);
+}
+
+function renderAnswerResult(
+  result: Awaited<ReturnType<CliRuntime["recordHumanAnswer"]>>
+) {
+  const questionId = result.answer.questionId ?? result.answer.humanQuestionId;
+
   return lines([
     "Answer recorded",
-    `Evidence: ${evidence.id}`,
-    `Class: ${evidence.class}`,
-    `Authority: ${evidence.authority}`
+    `Question: ${sanitizeText(questionId ?? "unknown")}`,
+    `Event: ${result.event.id}`,
+    `Pending questions: ${result.state.pendingQuestions.length}`
   ]);
 }
 
@@ -1262,6 +1483,7 @@ function usage() {
     "  specwright events <run-id> [--root <path>] [--limit <n>] [--redaction-profile <shared-log|operator>] [--json] [--ci] [--deadline <ms>]",
     "  specwright replay <run-id> [--root <path>] [--limit <n>] [--json] [--ci] [--deadline <ms>]",
     "  specwright report <run-id> [--root <path>] [--redaction-profile <shared-log|operator>] [--json] [--ci] [--deadline <ms>]",
+    "  specwright tool call <run-id> --tool <tool-id> --args-json <json> --reason <text> --idempotency-key <key> --phase <phase> [--root <path>] [--cwd <path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright eval run <run-id> --eval <eval-id> [--root <path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright gate evaluate <run-id> --gate <gate-id> [--root <path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright approve <run-id> --approval <approval-id> --decision-hash <hash> [--message <text>] [--root <path>] [--json]",
@@ -1293,6 +1515,10 @@ function commandNameFromArgv(argv: readonly string[]): string {
     return "eval.run";
   }
 
+  if (argv[0] === "tool" && argv[1] === "call") {
+    return "tool.call";
+  }
+
   if (argv[0] === "gate" && argv[1] === "evaluate") {
     return "gate.evaluate";
   }
@@ -1308,6 +1534,7 @@ function authorityForCommand(command: RuntimeCommand["kind"]): CommandAuthority 
     case "report":
     case "eval.run":
     case "gate.evaluate":
+    case "tool.call":
       return "privileged";
     case "approve":
     case "reject":
@@ -1343,6 +1570,38 @@ function outcomeForGateEvaluation(
     case "fail":
       return "gate_failure";
   }
+}
+
+function outcomeForToolCallResult(result: ToolCallResult): OutcomeClass {
+  switch (result.status) {
+    case "success":
+      return "ok";
+    case "denied":
+      return "denied";
+    case "approval_required":
+      return "blocked";
+    case "failed":
+      return "runtime_error";
+  }
+}
+
+function toolCallRequest(
+  command: Extract<ParsedCommand, { kind: "tool.call" }>
+): ToolCallRequest {
+  return {
+    toolId: command.toolId,
+    args: command.args,
+    reason: sanitizeText(command.reason),
+    idempotencyKey: command.idempotencyKey,
+    requestedBy: {
+      phase: command.phase,
+      ...(command.gateId === undefined ? {} : { gateId: command.gateId }),
+      ...(command.evalId === undefined ? {} : { evalId: command.evalId }),
+      ...(command.modelCallId === undefined
+        ? {}
+        : { modelCallId: command.modelCallId })
+    }
+  };
 }
 
 function deadlineFromParsed(
@@ -1396,38 +1655,4 @@ function pendingFromPayload(data: unknown) {
   }
 
   return undefined;
-}
-
-function answerEvidenceRecord(
-  command: Extract<ParsedCommand, { kind: "answer" }>,
-  context: CliExecutionContext
-): EvidenceRecord {
-  return EvidenceRecordSchema.parse({
-    id: `cli:answer:${command.runId}:${command.questionId}`,
-    class: "human_decision",
-    claim: sanitizeText(command.answer),
-    sourceRefs: [
-      {
-        id: command.questionId,
-        authority: "user",
-        redactionClass: "operator",
-        metadata: {
-          questionId: command.questionId,
-          actor: context.principal.id
-        }
-      }
-    ],
-    confidence: "high",
-    authority: "user",
-    createdBy: {
-      phase: "cli",
-      actionId: "answer"
-    },
-    redactionPolicy: "operator",
-    metadata: {
-      questionId: command.questionId,
-      actor: context.principal.id,
-      tenant: context.tenant.id
-    }
-  });
 }

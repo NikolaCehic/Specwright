@@ -1,7 +1,7 @@
 {
   "name": "@specwright/schemas",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
+  "private": false,
   "description": "Shared TypeScript contracts and validation schemas for Specwright.",
   "license": "MIT",
   "repository": {
@@ -84,6 +84,6 @@
     "zod": "^3.22.4"
   },
   "devDependencies": {
-    "@specwright/policy-engine": "workspace:*"
+    "@specwright/policy-engine": "0.1.0"
   }
 }

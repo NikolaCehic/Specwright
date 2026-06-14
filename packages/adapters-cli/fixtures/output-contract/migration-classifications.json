@@ -16,6 +16,10 @@
     {
       "classification": "additive-compatible",
       "description": "Adds the gate.evaluate command envelope for governed gate verdicts and lifecycle instructions returned through RuntimeApi.evaluateGate."
+    },
+    {
+      "classification": "additive-compatible",
+      "description": "Adds the tool.call command envelope for brokered tool results returned through RuntimeApi.callTool."
     }
   ]
 }

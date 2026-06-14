@@ -4,11 +4,11 @@ import {
   normalizeHarnessLoaderLimits,
   type HarnessLoaderLimitsInput
 } from "./limits";
+import type { ResolvedDependency } from "./dependency-resolver";
 import type {
   HarnessLoadRecord,
-  ResolvedDependency,
   SourceFile
-} from "./index";
+} from "./types";
 import type { HarnessSnapshot } from "@specwright/schemas";
 
 export type SnapshotCacheComputeSpecHash = (
