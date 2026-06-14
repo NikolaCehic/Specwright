@@ -1096,11 +1096,21 @@ describe("run store", () => {
     );
     const state = projectRunState(events);
 
-    expect(events).toHaveLength(18);
+    expect(events).toHaveLength(21);
     expect(state).toMatchObject({
       runId: "fixture-run",
       status: "completed",
-      phase: "evidence"
+      phase: "evidence",
+      pendingApprovals: [
+        expect.objectContaining({
+          approvalId: "approval-2"
+        })
+      ],
+      pendingRepairTasks: [
+        expect.objectContaining({
+          id: "repair-1"
+        })
+      ]
     });
     expect(state.artifacts.map((artifact) => artifact.artifactId)).toContain(
       "artifact-1"

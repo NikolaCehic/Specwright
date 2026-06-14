@@ -161,10 +161,10 @@ Live source and GitHub state on this branch show:
 - The current open PR set is the draft stacked productization chain #74 through #90.
 - `main` is protected with strict required status checks, but only `Policy validation` is required.
 - Current `origin/main` is `b77c6b0be404e646d908d860409336a6d1f8c5e9` and has zero check runs and zero commit statuses.
-- Root scripts include build, test, typecheck, proof, dependency, cycle, unused-code, and core-test commands, but no root release, publish, changelog, package dry-run, or release-readiness command.
+- Root scripts include build, test, typecheck, proof, dependency, cycle, package packlist dry-run, unused-code, and core-test commands, but no root release, publish, changelog, full release dry-run, or release-readiness command.
 - The root package is private.
 - All 17 workspace packages are private and versioned `0.0.0`.
-- First-wave package manifests now have npm-facing metadata and provenance-oriented `publishConfig`, but all packages remain private and workspace dependency rewriting, package dry-run, and release approval remain unresolved.
+- First-wave package manifests now have npm-facing metadata and provenance-oriented `publishConfig`, and `check:pack` verifies their npm packlists; all packages remain private and workspace dependency rewriting, full release dry-run, install smoke, and release approval remain unresolved.
 - No top-level changelog, release notes, release checklist, package provenance policy, or product-level compatibility matrix was found.
 - Internal compatibility primitives exist in operations, schemas, harness-loader, gate-engine, and MCP adapter packages, but they do not yet form a public release discipline.
 
@@ -172,7 +172,7 @@ Live source and GitHub state on this branch show:
 
 | Work | Owner |
 | --- | --- |
-| Public package versions, metadata, dependency rewrites, package dry-run, and install smoke | Package implementation and release packets |
+| Public package versions, dependency rewrites, full package dry-run, and install smoke | Package implementation and release packets |
 | Authoritative required checks and release CI | CI decision and release automation packets |
 | Branch protection, release branch policy, and GitHub settings | GitHub/repository governance packets |
 | Product compatibility matrix docs | Release compatibility plus docs/install UX packets |
