@@ -261,7 +261,7 @@
       "code": "TS6133",
       "column": 10,
       "file": "packages/runtime/src/index.ts",
-      "line": 1127,
+      "line": 1315,
       "message": "'artifactsForGateInput' is declared but its value is never read.",
       "package": "@specwright/runtime"
     },
@@ -293,7 +293,7 @@
       "code": "TS6133",
       "column": 7,
       "file": "packages/schemas/src/index.ts",
-      "line": 1447,
+      "line": 1448,
       "message": "'PolicyRequestSchema' is declared but its value is never read.",
       "package": "@specwright/schemas"
     },

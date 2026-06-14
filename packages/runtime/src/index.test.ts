@@ -688,8 +688,8 @@ describe("runtime facade", () => {
       );
   });
 
-  for (const [kind, instruction] of deferredGateInstructions()) {
-    test(`evaluateGate stops for deferred ${kind} lifecycle instructions`, async () => {
+  for (const [kind, instruction] of blockingGateInstructions()) {
+    test(`evaluateGate applies blocking ${kind} lifecycle instructions`, async () => {
       const gateResult = gateResultForInstruction(instruction);
       const runtime = runtimeForTests({
         gateEngine() {
@@ -698,37 +698,111 @@ describe("runtime facade", () => {
       });
       const handle = await runtime.startRun(runInput);
 
-      await expect(runtime.evaluateGate(handle.runId, "intake.exit"))
-        .rejects.toThrow(
-          `Gate lifecycle instruction ${kind} for gate intake.exit is deferred`
-        );
-
+      await expect(runtime.evaluateGate(handle.runId, "intake.exit")).resolves
+        .toEqual(gateResult);
       const events = await runtime.getEvents(handle.runId);
+      const state = await runtime.getRun(handle.runId);
+      const replayed = await runtime.replay(handle.runId);
+      const evaluated = events.at(-3);
+      const lifecycleEvent = events.at(-2);
+      const blocked = events.at(-1);
 
-      expect(events.at(-1)?.type).toBe("gate.evaluated");
-      expect(events.at(-1)?.payload).toMatchObject({
+      expect(events.slice(-3).map((event) => event.type)).toEqual([
+        "gate.evaluated",
+        lifecycleEventTypeForInstruction(kind),
+        "run.blocked"
+      ]);
+      expect(evaluated?.payload).toMatchObject({
         instruction: {
           kind
+        }
+      });
+      expect(lifecycleEvent?.causationId).toBe(evaluated?.id);
+      expect(blocked?.causationId).toBe(evaluated?.id);
+      expect(blocked?.payload).toMatchObject({
+        blockedBy: lifecycleEventTypeForInstruction(kind),
+        metadata: {
+          gateId: "intake.exit",
+          instructionKind: kind
         }
       });
       expect(events.filter((event) => event.type === "phase.transitioned"))
         .toHaveLength(0);
       expect(events.filter((event) => event.type === "run.failed"))
         .toHaveLength(0);
-      expect(events.filter((event) => event.type === "human.input_requested"))
-        .toHaveLength(0);
-      expect(events.filter((event) => event.type === "policy.evaluated"))
-        .toHaveLength(0);
+      expect(state.status).toBe("blocked");
+      expect(replayed.state.status).toBe("blocked");
+
+      if (kind === "pause_for_human") {
+        expect(lifecycleEvent?.payload).toMatchObject({
+          question: {
+            questionId: "human-review-1",
+            prompt: "Confirm the gate result.",
+            requiredFor: "intake.exit",
+            metadata: {
+              gateId: "intake.exit",
+              phase: "intake"
+            }
+          }
+        });
+        expect(state.pendingQuestions).toEqual([
+          expect.objectContaining({
+            questionId: "human-review-1",
+            prompt: "Confirm the gate result."
+          })
+        ]);
+      }
+
+      if (kind === "request_approval") {
+        expect(lifecycleEvent?.payload).toMatchObject({
+          approvalRequest: {
+            approvalId: "approval-1",
+            reason: "Gate requires approval.",
+            subjectRef: "gate:intake.exit",
+            requestedAction: "gate.approval",
+            requiredFor: "intake.exit",
+            metadata: {
+              gateId: "intake.exit",
+              phase: "intake"
+            }
+          }
+        });
+        expect(state.pendingApprovals).toEqual([
+          expect.objectContaining({
+            approvalId: "approval-1",
+            reason: "Gate requires approval."
+          })
+        ]);
+      }
+
+      if (kind === "create_repair_task") {
+        expect(lifecycleEvent?.payload).toMatchObject({
+          repairTask: {
+            id: "repair-1",
+            gateId: "intake.exit",
+            failedPhase: "intake"
+          }
+        });
+        expect(state.pendingRepairTasks).toEqual([
+          expect.objectContaining({
+            id: "repair-1",
+            gateId: "intake.exit"
+          })
+        ]);
+      }
+
       expect((await readTrace({ rootDir, runId: handle.runId })).spans)
         .toContainEqual(
           expect.objectContaining({
             kind: "gate",
             name: "gate.intake.exit",
+            eventIds: [evaluated?.id, lifecycleEvent?.id, blocked?.id],
             metadata: expect.objectContaining({
-              lifecycleApplication: "stopped",
-              lifecycleError: expect.stringContaining(
-                `Gate lifecycle instruction ${kind}`
-              )
+              lifecycleApplication: "applied",
+              lifecycleEventTypes: [
+                lifecycleEventTypeForInstruction(kind),
+                "run.blocked"
+              ]
             })
           })
         );
@@ -922,7 +996,7 @@ function gateResultForInstruction(
   };
 }
 
-function deferredGateInstructions(): Array<
+function blockingGateInstructions(): Array<
   [string, GateEvaluationResult["instruction"]]
 > {
   return [
@@ -973,6 +1047,19 @@ function deferredGateInstructions(): Array<
       }
     ]
   ];
+}
+
+function lifecycleEventTypeForInstruction(kind: string) {
+  switch (kind) {
+    case "pause_for_human":
+      return "human.input_requested";
+    case "request_approval":
+      return "approval.requested";
+    case "create_repair_task":
+      return "repair.task_created";
+    default:
+      throw new Error(`Unexpected blocking instruction ${kind}`);
+  }
 }
 
 function toolRequest() {

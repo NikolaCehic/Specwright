@@ -139,6 +139,7 @@ export function fakeState(runId: string): Awaited<ReturnType<RuntimeApi["getRun"
     budgets: {},
     pendingApprovals: [],
     pendingQuestions: [],
+    pendingRepairTasks: [],
     artifacts: [],
     lastEventId: "event-1"
   };
