@@ -44,11 +44,35 @@ const futureInstallSmoke = [
   "reject workspace-only dependency leakage"
 ] as const;
 
+const firstWavePublicPackageNames = [
+  "@specwright/cli",
+  "@specwright/harness-loader",
+  "@specwright/runtime",
+  "@specwright/schemas"
+] as const;
+
+const firstWavePackageDirectories: Record<string, string> = {
+  "@specwright/cli": "packages/adapters-cli",
+  "@specwright/harness-loader": "packages/harness-loader",
+  "@specwright/runtime": "packages/runtime",
+  "@specwright/schemas": "packages/schemas"
+};
+
+const expectedPublishConfig = {
+  access: "public",
+  registry: "https://registry.npmjs.org/",
+  tag: "latest",
+  provenance: true
+} as const;
+
 describe("AUD-005A installability readiness", () => {
-  test("current package inventory remains a source-checkout baseline", async () => {
+  test("current package inventory tracks first-wave metadata and source-checkout blockers", async () => {
     const rootManifest = await readManifest(join(rootDir, "package.json"));
     const workspaceManifests = await readWorkspaceManifests();
     const packageManifests = workspaceManifests.map((entry) => entry.manifest);
+    const firstWaveManifests = packageManifests.filter((manifest) =>
+      firstWavePackageNameSet.has(manifest.name ?? "")
+    );
     const binManifests = workspaceManifests.filter(
       (entry) => entry.manifest.bin !== undefined
     );
@@ -61,23 +85,66 @@ describe("AUD-005A installability readiness", () => {
     await expect(stat(join(rootDir, "LICENSE"))).resolves.toBeDefined();
 
     expect(workspaceManifests).toHaveLength(17);
-    expect(packageManifests.every((manifest) => manifest.private === true)).toBe(
-      true
+    expect(
+      packageManifests
+        .filter((manifest) => manifest.private === false)
+        .map((manifest) => manifest.name)
+    ).toEqual(["@specwright/schemas"]);
+    expect(
+      packageManifests
+        .filter((manifest) => manifest.version === "0.1.0")
+        .map((manifest) => manifest.name)
+        .sort()
+    ).toEqual([
+      "@specwright/harness-loader",
+      "@specwright/policy-engine",
+      "@specwright/run-store",
+      "@specwright/schemas"
+    ]);
+    expect(firstWaveManifests.map((manifest) => manifest.name).sort()).toEqual(
+      [...firstWavePublicPackageNames]
     );
-    expect(
-      packageManifests.every((manifest) => manifest.version === "0.0.0")
-    ).toBe(true);
-    expect(
-      packageManifests.filter((manifest) => manifest.publishConfig !== undefined)
-    ).toEqual([]);
-    expect(packageManifests.filter((manifest) => manifest.license !== undefined))
-      .toEqual([]);
-    expect(
-      packageManifests.filter((manifest) => manifest.repository !== undefined)
-    ).toEqual([]);
+    expect(packageNamesWithField(packageManifests, "publishConfig")).toEqual(
+      [...firstWavePublicPackageNames]
+    );
+    expect(packageNamesWithField(packageManifests, "license")).toEqual([
+      ...firstWavePublicPackageNames
+    ]);
+    expect(packageNamesWithField(packageManifests, "repository")).toEqual([
+      ...firstWavePublicPackageNames
+    ]);
+    expect(packageNamesWithField(packageManifests, "engines")).toEqual([
+      ...firstWavePublicPackageNames
+    ]);
+    expect(packageNamesWithField(packageManifests, "keywords")).toEqual([
+      ...firstWavePublicPackageNames
+    ]);
+    for (const manifest of firstWaveManifests) {
+      expect(typeof manifest.description).toBe("string");
+      expect((manifest.description as string).length).toBeGreaterThan(0);
+      expect(manifest.license).toBe("MIT");
+      expect(manifest.repository).toEqual({
+        type: "git",
+        url: "git+https://github.com/NikolaCehic/Specwright.git",
+        directory: firstWavePackageDirectories[manifest.name ?? ""]
+      });
+      expect(manifest.homepage).toBe(
+        "https://github.com/NikolaCehic/Specwright#readme"
+      );
+      expect(manifest.bugs).toEqual({
+        url: "https://github.com/NikolaCehic/Specwright/issues"
+      });
+      expect(manifest.engines).toEqual({
+        node: ">=20.0.0",
+        bun: ">=1.1.0"
+      });
+      expect(manifest.publishConfig).toEqual(expectedPublishConfig);
+      expect(Array.isArray(manifest.keywords)).toBe(true);
+      expect((manifest.keywords as string[]).includes("specwright")).toBe(true);
+    }
     expect(workspaceManifests.filter(hasProductionWorkspaceDependency))
-      .toHaveLength(16);
-    expect(workspaceManifests.filter(hasAnyWorkspaceDependency)).toHaveLength(17);
+      .toHaveLength(14);
+    expect(workspaceManifests.filter(hasAnyWorkspaceDependency)).toHaveLength(14);
     expect(
       binManifests.map((entry) => ({
         name: entry.manifest.name,
@@ -88,6 +155,12 @@ describe("AUD-005A installability readiness", () => {
         name: "@specwright/cli",
         bin: {
           specwright: "./dist/bin.js"
+        }
+      },
+      {
+        name: "@specwright/adapters-mcp",
+        bin: {
+          "specwright-mcp-adapter": "./dist/bin.js"
         }
       }
     ]);
@@ -128,8 +201,13 @@ type PackageManifest = {
   name?: string;
   private?: boolean;
   version?: string;
+  description?: unknown;
   license?: unknown;
   repository?: unknown;
+  homepage?: unknown;
+  bugs?: unknown;
+  keywords?: unknown;
+  engines?: unknown;
   publishConfig?: unknown;
   bin?: unknown;
   dependencies?: Record<string, string>;
@@ -137,6 +215,8 @@ type PackageManifest = {
   peerDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
 };
+
+const firstWavePackageNameSet = new Set<string>(firstWavePublicPackageNames);
 
 async function readWorkspaceManifests() {
   const packagesDir = join(rootDir, "packages");
@@ -180,6 +260,16 @@ function dependencyBuckets(manifest: PackageManifest) {
     manifest.peerDependencies ?? {},
     manifest.optionalDependencies ?? {}
   ];
+}
+
+function packageNamesWithField(
+  manifests: PackageManifest[],
+  field: keyof PackageManifest
+) {
+  return manifests
+    .filter((manifest) => manifest[field] !== undefined)
+    .flatMap((manifest) => (manifest.name === undefined ? [] : [manifest.name]))
+    .sort();
 }
 
 function localGitTags() {

@@ -1,0 +1,61 @@
+{
+  "apiVersion": 1,
+  "command": "doctor",
+  "outcome": "ok",
+  "data": {
+    "rootDir": "/workspace",
+    "mode": "source-checkout",
+    "cliVersion": "0.0.0",
+    "configDir": ".specwright",
+    "summary": {
+      "pass": 6,
+      "warn": 1,
+      "fail": 0
+    },
+    "checks": [
+      {
+        "id": "root.exists",
+        "status": "pass",
+        "message": "Root directory is readable.",
+        "path": "/workspace"
+      },
+      {
+        "id": "package.root_manifest",
+        "status": "pass",
+        "message": "Root package manifest identifies the Specwright source checkout.",
+        "path": "/workspace/package.json"
+      },
+      {
+        "id": "package.cli_manifest",
+        "status": "pass",
+        "message": "CLI package manifest uses the public package identity.",
+        "path": "/workspace/packages/adapters-cli/package.json"
+      },
+      {
+        "id": "build.cli_bin",
+        "status": "pass",
+        "message": "CLI bin artifact is present.",
+        "path": "/workspace/packages/adapters-cli/dist/bin.js"
+      },
+      {
+        "id": "build.runtime_entrypoint",
+        "status": "pass",
+        "message": "Runtime entrypoint artifact is present.",
+        "path": "/workspace/packages/runtime/dist/index.js"
+      },
+      {
+        "id": "config.local_root",
+        "status": "warn",
+        "message": "Local Specwright config directory is not present yet.",
+        "path": "/workspace/.specwright",
+        "operatorAction": "Run init after the naming/config packet enables project config creation."
+      },
+      {
+        "id": "package.license",
+        "status": "pass",
+        "message": "Repository license file is present.",
+        "path": "/workspace/LICENSE"
+      }
+    ]
+  }
+}
