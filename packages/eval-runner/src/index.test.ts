@@ -126,6 +126,150 @@ const fixtureCases = discoverFullVerdictFixtureCases();
 
 const decisionHashPattern = /^sha256:[a-f0-9]{64}$/u;
 
+const acceptanceDebtTriageClassifications = [
+  "implement_now",
+  "convert_to_issue",
+  "remove",
+  "defer",
+  "document"
+] as const;
+
+type AcceptanceDebtClassification =
+  (typeof acceptanceDebtTriageClassifications)[number];
+
+type AcceptanceDebtTriageRow = {
+  id: string;
+  currentTitle: string;
+  sourceOwner: string;
+  classification: AcceptanceDebtClassification;
+  reason: string;
+  acceptanceGap: string;
+  nextVerificationTarget: string;
+};
+
+const acceptanceDebtTriageMatrix = [
+  {
+    id: "fail.review-timeout-no-promote",
+    currentTitle: "review timeout or rejection never auto-promotes",
+    sourceOwner: "Scope 05 GateEngine / Scope 07 human review",
+    classification: "convert_to_issue",
+    reason:
+      "Eval-runner returns verdicts; timeout and rejection promotion depend on review queue lifecycle state outside this package.",
+    acceptanceGap:
+      "No package-local input models a review timeout, rejection event, or lifecycle transition that could prove a needs_review verdict cannot become pass.",
+    nextVerificationTarget:
+      "GateEngine review-transition test: an expired or rejected review keeps lifecycle advancement blocked or escalated and never records a promoted pass without approval."
+  },
+  {
+    id: "observability.metrics",
+    currentTitle:
+      "metrics expose fail-closed, review, and regression signals",
+    sourceOwner: "Scope 07 observability metrics",
+    classification: "defer",
+    reason:
+      "Eval-runner emits events and spans today, but no metrics contract or metrics sink exists in this package.",
+    acceptanceGap:
+      "No package-local metric names, labels, counters, or aggregation boundary can be asserted for fail-closed, review, or regression verdict streams.",
+    nextVerificationTarget:
+      "Metrics conformance test: projected eval events expose fail-closed, needs-review, and regression counts with stable tenant/package labels once the metrics contract exists."
+  },
+  {
+    id: "migration.runner-change-classified",
+    currentTitle: "runner changes are classified",
+    sourceOwner: "Scope 07 release governance",
+    classification: "document",
+    reason:
+      "Compatibility classification is a release-review artifact rather than behavior the runtime package can infer while executing an eval.",
+    acceptanceGap:
+      "No package-local API receives a change set or release decision, so the suite cannot classify runner changes from runtime inputs.",
+    nextVerificationTarget:
+      "Release governance checklist: every eval-runner change names its compatibility class and declares whether evaluator refs or fixtures must change."
+  },
+  {
+    id: "migration.evaluator-ref-bump",
+    currentTitle: "verdict-semantic changes bump the evaluator ref",
+    sourceOwner: "Scope 07 release governance",
+    classification: "convert_to_issue",
+    reason:
+      "Detecting semantic verdict changes requires release metadata and cross-commit comparison outside eval-runner's runtime surface.",
+    acceptanceGap:
+      "The package asserts the current evaluator ref, but has no release-level fixture that distinguishes semantic and non-semantic code changes.",
+    nextVerificationTarget:
+      "Release-governance test: a fixture-marked verdict semantic change fails unless DEFAULT_EVAL_RUNNER_EVALUATOR or equivalent release metadata is updated."
+  },
+  {
+    id: "operability.deterministic-latency",
+    currentTitle: "deterministic latency budget is enforced",
+    sourceOwner: "Scope 07 operations benchmark",
+    classification: "defer",
+    reason:
+      "A non-flaky latency budget needs benchmark tooling and thresholds that are not part of the package test surface yet.",
+    acceptanceGap:
+      "The current suite proves deterministic purity and fixture replay, but does not measure latency or enforce a stable performance budget.",
+    nextVerificationTarget:
+      "Benchmark conformance test: deterministic fixture evaluation stays under an agreed step or duration budget in a benchmark harness."
+  },
+  {
+    id: "operability.review-backlog",
+    currentTitle: "review backlog is observable per tenant",
+    sourceOwner: "Scope 05 GateEngine / Scope 07 operations",
+    classification: "convert_to_issue",
+    reason:
+      "Review queues and tenant backlog state live outside the pure eval-runner package.",
+    acceptanceGap:
+      "Eval-runner can produce needs_review verdicts, but it does not own queue storage, tenant grouping, or backlog aggregation.",
+    nextVerificationTarget:
+      "Operations test: tenant-scoped review queue metrics expose pending review backlog from GateEngine-owned review state."
+  },
+  {
+    id: "operability.repair-loop-ceiling",
+    currentTitle: "repair-loop ceiling forces escalation",
+    sourceOwner: "Scope 07 repair orchestration",
+    classification: "convert_to_issue",
+    reason:
+      "Repair iteration ceilings are orchestration policy and are not applied by runEval.",
+    acceptanceGap:
+      "The package emits bounded repair tasks, but no package-local state tracks repeated repair attempts or escalation thresholds.",
+    nextVerificationTarget:
+      "Repair orchestration test: exceeding the configured repair-loop ceiling records an escalation and prevents another automatic repair attempt."
+  },
+  {
+    id: "operability.runbooks",
+    currentTitle:
+      "every fail-closed, review-timeout, and regression path has a runbook",
+    sourceOwner: "Scope 07 operations runbooks",
+    classification: "document",
+    reason:
+      "Runbooks are operational documentation, not eval-runner runtime behavior.",
+    acceptanceGap:
+      "The package exposes coded fail-closed, needs-review, and regression outcomes, but does not link those codes to operator procedures.",
+    nextVerificationTarget:
+      "Runbook coverage check: every fail-closed code, review-timeout path, and regression classification maps to a documented operator response."
+  },
+  {
+    id: "dataset.tenancy-isolation",
+    currentTitle: "dataset tenancy isolation",
+    sourceOwner: "Scope 07 dataset tenancy / Packet 04 follow-up",
+    classification: "defer",
+    reason:
+      "The current dataset resolver is request-supplied and content-addressed, with no tenant or package identifier to assert.",
+    acceptanceGap:
+      "Two tenants can only be distinguished by the request-supplied registry and content id today; there is no dataset tenant identity for eval-runner to reject.",
+    nextVerificationTarget:
+      "Dataset resolver test: a dataset ref from a foreign tenant or package fails closed once dataset identity is represented in the resolver contract."
+  }
+] as const satisfies readonly AcceptanceDebtTriageRow[];
+
+type AcceptanceDebtId = (typeof acceptanceDebtTriageMatrix)[number]["id"];
+
+const acceptanceDebtTriageById = new Map(
+  acceptanceDebtTriageMatrix.map((row) => [row.id, row])
+);
+
+const acceptanceDebtClassificationSet = new Set<string>(
+  acceptanceDebtTriageClassifications
+);
+
 type AcceptanceCheckRow = {
   id: string;
   family:
@@ -144,8 +288,7 @@ type AcceptanceCheckRow = {
       }
     | {
         type: "todo";
-        owner: string;
-        reason: string;
+        triageId: AcceptanceDebtId;
       };
 };
 
@@ -342,8 +485,7 @@ const acceptanceCheckMatrix = [
     check: "review timeout or rejection never auto-promotes",
     coverage: {
       type: "todo",
-      owner: "Scope 05 GateEngine / Scope 07 human review",
-      reason: "approval timeout and rejection promotion is owned by GateEngine review state, not the pure eval-runner package"
+      triageId: "fail.review-timeout-no-promote"
     }
   },
   {
@@ -454,8 +596,7 @@ const acceptanceCheckMatrix = [
     check: "metrics expose fail-closed, review, and regression signals",
     coverage: {
       type: "todo",
-      owner: "Scope 07 observability metrics",
-      reason: "metrics emission is not implemented in the eval-runner package yet"
+      triageId: "observability.metrics"
     }
   },
   {
@@ -464,8 +605,7 @@ const acceptanceCheckMatrix = [
     check: "runner changes are classified",
     coverage: {
       type: "todo",
-      owner: "Scope 07 release governance",
-      reason: "compatibility class is a review/release artifact rather than a runtime package behavior"
+      triageId: "migration.runner-change-classified"
     }
   },
   {
@@ -474,8 +614,7 @@ const acceptanceCheckMatrix = [
     check: "verdict-semantic changes bump the evaluator ref",
     coverage: {
       type: "todo",
-      owner: "Scope 07 release governance",
-      reason: "semantic-change detection requires release metadata outside this package; fixtures assert the current ref"
+      triageId: "migration.evaluator-ref-bump"
     }
   },
   {
@@ -502,8 +641,7 @@ const acceptanceCheckMatrix = [
     check: "deterministic latency budget is enforced",
     coverage: {
       type: "todo",
-      owner: "Scope 07 operations benchmark",
-      reason: "no non-flaky latency budget harness or threshold is present in this package"
+      triageId: "operability.deterministic-latency"
     }
   },
   {
@@ -518,8 +656,7 @@ const acceptanceCheckMatrix = [
     check: "review backlog is observable per tenant",
     coverage: {
       type: "todo",
-      owner: "Scope 05 GateEngine / Scope 07 operations",
-      reason: "review queues live outside the pure eval-runner package"
+      triageId: "operability.review-backlog"
     }
   },
   {
@@ -528,8 +665,7 @@ const acceptanceCheckMatrix = [
     check: "repair-loop ceiling forces escalation",
     coverage: {
       type: "todo",
-      owner: "Scope 07 repair orchestration",
-      reason: "repair iteration ceilings are orchestration state, not implemented by runEval"
+      triageId: "operability.repair-loop-ceiling"
     }
   },
   {
@@ -550,8 +686,7 @@ const acceptanceCheckMatrix = [
     check: "every fail-closed, review-timeout, and regression path has a runbook",
     coverage: {
       type: "todo",
-      owner: "Scope 07 operations runbooks",
-      reason: "runbook ownership is documented in the wiki and not represented as package code"
+      triageId: "operability.runbooks"
     }
   }
 ] satisfies AcceptanceCheckRow[];
@@ -607,7 +742,7 @@ describe("eval runner fixtures", () => {
 });
 
 describe("eval runner acceptance coverage matrix", () => {
-  test("maps every named acceptance row to a test or explicit deferral", () => {
+  test("maps every named acceptance row to a test or classified debt", () => {
     expect(acceptanceCheckMatrix).toHaveLength(54);
 
     const ids = new Set<string>();
@@ -620,19 +755,123 @@ describe("eval runner acceptance coverage matrix", () => {
       if (row.coverage.type === "test") {
         expect(implementedAcceptanceTests.has(row.coverage.name)).toBe(true);
       } else {
-        expect(row.coverage.owner.length).toBeGreaterThan(0);
-        expect(row.coverage.reason.length).toBeGreaterThan(0);
+        const triage = acceptanceDebtTriageById.get(row.coverage.triageId);
+
+        expect(triage).toBeDefined();
+        expect(triage?.id).toBe(row.id);
+        expect(triage?.currentTitle).toBe(row.check);
       }
     }
   });
 
-  for (const row of acceptanceCheckMatrix) {
-    if (row.coverage.type === "todo") {
-      test.todo(
-        `[${row.id}] ${row.check} - ${row.coverage.owner}: ${row.coverage.reason}`
+  test("keeps the eval-runner acceptance debt inventory classified", () => {
+    expect(
+      acceptanceDebtTriageMatrix.map((row) => ({
+        id: row.id,
+        currentTitle: row.currentTitle
+      }))
+    ).toEqual([
+      {
+        id: "fail.review-timeout-no-promote",
+        currentTitle: "review timeout or rejection never auto-promotes"
+      },
+      {
+        id: "observability.metrics",
+        currentTitle:
+          "metrics expose fail-closed, review, and regression signals"
+      },
+      {
+        id: "migration.runner-change-classified",
+        currentTitle: "runner changes are classified"
+      },
+      {
+        id: "migration.evaluator-ref-bump",
+        currentTitle: "verdict-semantic changes bump the evaluator ref"
+      },
+      {
+        id: "operability.deterministic-latency",
+        currentTitle: "deterministic latency budget is enforced"
+      },
+      {
+        id: "operability.review-backlog",
+        currentTitle: "review backlog is observable per tenant"
+      },
+      {
+        id: "operability.repair-loop-ceiling",
+        currentTitle: "repair-loop ceiling forces escalation"
+      },
+      {
+        id: "operability.runbooks",
+        currentTitle:
+          "every fail-closed, review-timeout, and regression path has a runbook"
+      },
+      {
+        id: "dataset.tenancy-isolation",
+        currentTitle: "dataset tenancy isolation"
+      }
+    ]);
+
+    const ids = new Set<string>();
+
+    for (const row of acceptanceDebtTriageMatrix) {
+      expect(ids.has(row.id)).toBe(false);
+      ids.add(row.id);
+      expect(acceptanceDebtClassificationSet.has(row.classification)).toBe(
+        true
       );
+      expect(row.sourceOwner.length).toBeGreaterThan(0);
+      expect(row.reason.length).toBeGreaterThan(0);
+      expect(row.acceptanceGap.length).toBeGreaterThan(0);
+      expect(row.nextVerificationTarget.length).toBeGreaterThan(0);
     }
-  }
+  });
+
+  test("links every classified matrix gap to the triage registry", () => {
+    const matrixDebtIds = acceptanceCheckMatrix.flatMap((row) =>
+      row.coverage.type === "todo" ? [row.coverage.triageId] : []
+    );
+
+    expect(matrixDebtIds).toEqual([
+      "fail.review-timeout-no-promote",
+      "observability.metrics",
+      "migration.runner-change-classified",
+      "migration.evaluator-ref-bump",
+      "operability.deterministic-latency",
+      "operability.review-backlog",
+      "operability.repair-loop-ceiling",
+      "operability.runbooks"
+    ]);
+    expect(acceptanceDebtTriageById.get("dataset.tenancy-isolation")).toMatchObject(
+      {
+        currentTitle: "dataset tenancy isolation",
+        classification: "defer"
+      }
+    );
+  });
+});
+
+describe("eval runner package debt policy", () => {
+  test("production source has no silent debt markers", async () => {
+    const debtMarkers = ["TO" + "DO", "FIX" + "ME", "X" + "XX"];
+    const debtMarkerPattern = new RegExp(debtMarkers.join("|"), "u");
+    const offenders: string[] = [];
+
+    for (const sourcePath of discoverEvalRunnerProductionSourceFiles()) {
+      const source = await readFile(sourcePath, "utf8");
+      const lines = source.split(/\r?\n/u);
+      const lineIndex = lines.findIndex((line) =>
+        debtMarkerPattern.test(line)
+      );
+
+      if (lineIndex !== -1) {
+        offenders.push(
+          `${relativeEvalRunnerSourcePath(sourcePath)}:${lineIndex + 1}`
+        );
+      }
+    }
+
+    expect(offenders).toEqual([]);
+  });
 });
 
 describe("eval runner contract conformance", () => {
@@ -1040,9 +1279,17 @@ describe("eval runner tenancy isolation", () => {
     ).toBe("eval.definition.missing");
   });
 
-  test.todo(
-    "dataset tenancy isolation - Scope 07 dataset tenancy / Packet 04 follow-up: current dataset resolver is request-supplied and content-addressed but has no tenant/package identifier to assert"
-  );
+  test("dataset tenancy acceptance debt is classified without runtime semantics", () => {
+    const triage = acceptanceDebtTriageById.get("dataset.tenancy-isolation");
+
+    expect(triage).toMatchObject({
+      sourceOwner: "Scope 07 dataset tenancy / Packet 04 follow-up",
+      classification: "defer"
+    });
+    expect(triage?.reason).toContain("request-supplied");
+    expect(triage?.acceptanceGap).toContain("tenant identity");
+    expect(triage?.nextVerificationTarget).toContain("fails closed");
+  });
 });
 
 describe("eval runner CI conformance gate", () => {
@@ -2710,6 +2957,40 @@ async function runFixtureVerdict(fixtureName: string): Promise<{
 
 async function readJson(path: string) {
   return JSON.parse(await readFile(path, "utf8")) as unknown;
+}
+
+function discoverEvalRunnerProductionSourceFiles(
+  dir = import.meta.dir
+): string[] {
+  const sourceFiles: string[] = [];
+
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      sourceFiles.push(...discoverEvalRunnerProductionSourceFiles(path));
+      continue;
+    }
+
+    if (
+      entry.isFile() &&
+      entry.name.endsWith(".ts") &&
+      !entry.name.endsWith(".test.ts") &&
+      !entry.name.endsWith(".spec.ts")
+    ) {
+      sourceFiles.push(path);
+    }
+  }
+
+  return sourceFiles.sort();
+}
+
+function relativeEvalRunnerSourcePath(path: string): string {
+  const sourceDirPrefix = `${import.meta.dir}/`;
+
+  return path.startsWith(sourceDirPrefix)
+    ? path.slice(sourceDirPrefix.length)
+    : path;
 }
 
 function expectValidDecisionProvenance(verdict: EvalVerdict) {
