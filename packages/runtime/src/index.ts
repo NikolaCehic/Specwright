@@ -16,7 +16,8 @@ import {
   type FixtureGateDefinition,
   type GateArtifactSnapshot,
   type GateEvaluationInput,
-  type GateEvaluationResult
+  type GateEvaluationResult,
+  type GateLifecycleInstruction
 } from "@specwright/gate-engine";
 import {
   loadHarnessPackage as loadHarnessPackageWithLoader,
@@ -559,6 +560,42 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
       )
     );
 
+    let lifecycleEvent: RuntimeEvent | undefined;
+    let lifecycleError: Error | undefined;
+
+    try {
+      lifecycleEvent = await applyGateLifecycleInstructionForRun({
+        rootDir,
+        runId,
+        instruction: result.instruction,
+        currentPhase: replayed.state.phase,
+        causationId: evaluated.event.id,
+        now: options.now
+      });
+    } catch (error) {
+      lifecycleError = error instanceof Error ? error : new Error(String(error));
+    }
+
+    const gateSpanMetadata: Record<string, unknown> = {
+      phaseId: result.verdict.phase,
+      gateId: result.verdict.gateId,
+      instruction: result.instruction.kind,
+      lifecycleApplication:
+        lifecycleError === undefined
+          ? lifecycleEvent === undefined
+            ? "no_op"
+            : "applied"
+          : "stopped"
+    };
+
+    if (lifecycleEvent !== undefined) {
+      gateSpanMetadata.lifecycleEventType = lifecycleEvent.type;
+    }
+
+    if (lifecycleError !== undefined) {
+      gateSpanMetadata.lifecycleError = lifecycleError.message;
+    }
+
     await recordTraceSpan({
       rootDir,
       runId,
@@ -570,15 +607,18 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
         name: `gate.${result.verdict.gateId}`,
         status: result.verdict.status,
         startedAt: evaluated.event.timestamp,
-        endedAt: evaluated.event.timestamp,
-        eventIds: [evaluated.event.id],
-        metadata: {
-          phaseId: result.verdict.phase,
-          gateId: result.verdict.gateId,
-          instruction: result.instruction.kind
-        }
+        endedAt: lifecycleEvent?.timestamp ?? evaluated.event.timestamp,
+        eventIds:
+          lifecycleEvent === undefined
+            ? [evaluated.event.id]
+            : [evaluated.event.id, lifecycleEvent.id],
+        metadata: gateSpanMetadata
       }
     });
+
+    if (lifecycleError !== undefined) {
+      throw lifecycleError;
+    }
 
     return result;
   }
@@ -679,6 +719,82 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
 }
 
 export const createRuntimeApi = createRuntime;
+
+async function applyGateLifecycleInstructionForRun(input: {
+  rootDir: string | undefined;
+  runId: string;
+  instruction: GateLifecycleInstruction;
+  currentPhase: string;
+  causationId: string;
+  now: RuntimeOptions["now"];
+}): Promise<RuntimeEvent | undefined> {
+  const gateReason = gateLifecycleReason(input.instruction.gateId);
+
+  switch (input.instruction.kind) {
+    case "continue":
+      return undefined;
+    case "transition_phase": {
+      const transitioned = await appendEvent(
+        withTimestamp(
+          {
+            rootDir: input.rootDir,
+            runId: input.runId,
+            type: "phase.transitioned",
+            payload: {
+              phase: input.instruction.targetPhase,
+              fromPhase: input.currentPhase,
+              toPhase: input.instruction.targetPhase,
+              reason: gateReason
+            },
+            causationId: input.causationId
+          },
+          input.now
+        )
+      );
+
+      return transitioned.event;
+    }
+    case "fail_run": {
+      const failed = await appendEvent(
+        withTimestamp(
+          {
+            rootDir: input.rootDir,
+            runId: input.runId,
+            type: "run.failed",
+            payload: {
+              reason: input.instruction.reason,
+              metadata: {
+                gateId: input.instruction.gateId,
+                gateCausation: gateReason,
+                instructionKind: input.instruction.kind
+              }
+            },
+            causationId: input.causationId
+          },
+          input.now
+        )
+      );
+
+      return failed.event;
+    }
+    case "pause_for_human":
+    case "request_approval":
+    case "create_repair_task":
+      throw new Error(
+        `Gate lifecycle instruction ${input.instruction.kind} for gate ${input.instruction.gateId} is deferred by AUD-003A and requires explicit runtime lifecycle support`
+      );
+    default: {
+      const instruction: never = input.instruction;
+      throw new Error(
+        `Unsupported gate lifecycle instruction ${(instruction as { kind?: string }).kind ?? "unknown"}`
+      );
+    }
+  }
+}
+
+function gateLifecycleReason(gateId: string) {
+  return `gate:${gateId}`;
+}
 
 async function resolveHarnessPackage(
   input: RunInput,
