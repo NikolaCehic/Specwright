@@ -16,6 +16,7 @@ const fixturesDir = fileURLToPath(
 );
 
 const cataloguedTypes = [
+  "approval.requested",
   "artifact.recorded",
   "decision.recorded",
   "eval.completed",
@@ -27,6 +28,8 @@ const cataloguedTypes = [
   "phase.entered",
   "phase.transitioned",
   "policy.evaluated",
+  "repair.task_created",
+  "run.blocked",
   "run.completed",
   "run.failed",
   "run.started",

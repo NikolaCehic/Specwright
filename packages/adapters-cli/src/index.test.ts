@@ -1232,12 +1232,27 @@ describe("specwright cli adapter", () => {
     });
   });
 
-  test("answer records human decision evidence without source_fact", async () => {
+  test("answer records a runtime human answer event", async () => {
     const calls: unknown[] = [];
     const runtime = fakeRuntime({
-      async recordEvidence(runId, record, options) {
-        calls.push([runId, record, options]);
-        return record;
+      async recordHumanAnswer(runId, answer, options) {
+        calls.push([runId, answer, options]);
+
+        return {
+          answer,
+          event: {
+            ...fakeEvent({
+              runId,
+              id: "event-answer"
+            }),
+            type: "human.answer_recorded",
+            payload: answer
+          },
+          state: fakeState({
+            runId,
+            pendingQuestions: []
+          })
+        };
       }
     });
 
@@ -1257,16 +1272,41 @@ describe("specwright cli adapter", () => {
 
     expect(result.exitCode).toBe(0);
     expect(calls).toHaveLength(1);
-    expect(calls[0]).toMatchObject([
-      "run-question",
-      {
-        class: "human_decision",
-        authority: "user",
-        claim: "Use the repo README"
-      },
-      {}
+    expect(calls).toEqual([
+      [
+        "run-question",
+        {
+          questionId: "question-1",
+          answer: "Use the repo README",
+          answeredBy: "operator-1",
+          metadata: {
+            tenant: "tenant-a"
+          }
+        },
+        {}
+      ]
     ]);
-    expect(JSON.stringify(calls[0])).not.toContain("source_fact");
+    const envelope = JSON.parse(result.stdout);
+
+    expect(envelope).toMatchObject({
+      command: "answer",
+      outcome: "ok",
+      runId: "run-question",
+      data: {
+        answer: {
+          questionId: "question-1",
+          answeredBy: "operator-1"
+        },
+        event: {
+          id: "event-answer",
+          type: "human.answer_recorded"
+        },
+        state: {
+          pendingQuestions: []
+        }
+      }
+    });
+    outputSchemas.answer.parse(envelope);
   });
 
   test("all outcome codes are unique and no failure maps to exit 1", () => {
@@ -1367,6 +1407,22 @@ function fakeRuntime(overrides: Partial<CliRuntime> = {}): CliRuntime {
         })
       };
     },
+    async recordHumanAnswer(runId, answer) {
+      return {
+        answer,
+        event: {
+          ...fakeEvent({
+            runId
+          }),
+          type: "human.answer_recorded",
+          payload: answer
+        },
+        state: fakeState({
+          runId,
+          pendingQuestions: []
+        })
+      };
+    },
     async runEval() {
       return fakeEvalVerdict();
     },
@@ -1434,6 +1490,7 @@ function fakeState(
     lastEventId?: string;
     pendingApprovals?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingApprovals"];
     pendingQuestions?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingQuestions"];
+    pendingRepairTasks?: Awaited<ReturnType<CliRuntime["getRun"]>>["pendingRepairTasks"];
   } = {}
 ): Awaited<ReturnType<CliRuntime["getRun"]>> {
   return {
@@ -1448,6 +1505,7 @@ function fakeState(
     budgets: {},
     pendingApprovals: overrides.pendingApprovals ?? [],
     pendingQuestions: overrides.pendingQuestions ?? [],
+    pendingRepairTasks: overrides.pendingRepairTasks ?? [],
     artifacts: [],
     lastEventId: overrides.lastEventId ?? "event-1"
   };

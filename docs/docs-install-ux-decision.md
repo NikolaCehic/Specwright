@@ -207,7 +207,7 @@ Live source on this stacked branch shows:
 - README says the intended installed command is `specwright`, while the simplest path today is direct `bun packages/adapters-cli/dist/bin.js`.
 - README source-checkout CLI guidance includes `doctor`, `tool call`, `eval run`, `gate evaluate`, and now reflects that `approve` and `reject` route through `RuntimeApi.recordApproval` with fail-closed stale/missing approval behavior.
 - `docs/` contains decision records and the runtime hero image, not a complete public install/user guide set.
-- All 17 workspace packages are private `0.0.0`; first-wave packages have npm-facing metadata; only `@specwright/cli` declares a `specwright` bin.
+- All 17 workspace packages are private `0.0.0`; first-wave packages have npm-facing metadata; only `@specwright/cli` declares the `specwright` bin, while `@specwright/adapters-mcp` carries a separate adapter-scoped local stdio bin.
 - CLI usage exposes `doctor`, `run`, `status`, `events`, `replay`, `report`, `tool call`, `eval run`, `gate evaluate`, `approve`, `reject`, and `answer`.
 - CLI tests reject an unknown harness id before runtime start, so docs must not promise arbitrary harness selection yet.
 - The current runnable example inventory is `fixtures/simple-app`; no `examples/` directory, monorepo example, docs-repo example, TypeScript app example, host setup example, or harness extension example exists.
