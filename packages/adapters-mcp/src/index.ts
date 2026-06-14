@@ -4,10 +4,12 @@ import { dirname, join } from "node:path";
 import type { RuntimeApi, RuntimeToolCallOptions } from "@specwright/runtime";
 import { getRunStorePaths } from "@specwright/run-store";
 import {
+  ApprovalDecisionSchema,
   ArtifactRecordSchema,
   EvalVerdictSchema,
   EvidenceRecordSchema,
   HarnessSnapshotSchema,
+  HumanAnswerRecordedEventPayloadSchema,
   RedactionClassSchema,
   RunInputSchema,
   RunStateSchema,
@@ -703,28 +705,26 @@ const credentialRequestSchema = z
 const runtimeOperationNames = [
   "startRun",
   "getRun",
+  "getNextAction",
+  "listPendingApprovals",
+  "listPendingQuestions",
+  "resolveApprovalState",
   "getEvents",
   "replay",
   "callTool",
   "runEval",
   "recordEvidence",
   "recordArtifact",
+  "recordApproval",
+  "recordHumanAnswer",
   "evaluateGate",
   "generateReport",
   "writeRunReport"
 ] as const satisfies readonly RuntimeOperationName[];
 
 const runtimeOperationNameSet = new Set<string>(runtimeOperationNames);
-const gatedToolNames = new Set([
-  "specwright_get_next_action",
-  "specwright_answer_question",
-  "specwright_record_approval"
-]);
-const gatedRuntimeOperationNames = new Set([
-  "getNextAction",
-  "recordHumanAnswer",
-  "recordApproval"
-]);
+const gatedToolNames = new Set<string>();
+const gatedRuntimeOperationNames = new Set<string>();
 
 const lookupOptionsSchema = z
   .object({
@@ -738,6 +738,10 @@ const stringOrObjectRequestSchema = z.union([
 ]);
 
 const getRunArgumentsSchema = runLookupArgumentsSchema();
+const getNextActionArgumentsSchema = runLookupArgumentsSchema();
+const listPendingApprovalsArgumentsSchema = runLookupArgumentsSchema();
+const listPendingQuestionsArgumentsSchema = runLookupArgumentsSchema();
+const resolveApprovalStateArgumentsSchema = runLookupArgumentsSchema();
 const getEventsArgumentsSchema = runLookupArgumentsSchema();
 const replayArgumentsSchema = runLookupArgumentsSchema();
 const generateReportArgumentsSchema = runLookupArgumentsSchema();
@@ -794,6 +798,22 @@ const recordArtifactArgumentsSchema = z
   })
   .strict();
 
+const recordApprovalArgumentsSchema = z
+  .object({
+    runId: nonEmptyString,
+    decision: ApprovalDecisionSchema,
+    options: lookupOptionsSchema.optional()
+  })
+  .strict();
+
+const recordHumanAnswerArgumentsSchema = z
+  .object({
+    runId: nonEmptyString,
+    answer: HumanAnswerRecordedEventPayloadSchema,
+    options: lookupOptionsSchema.optional()
+  })
+  .strict();
+
 const evaluateGateArgumentsSchema = z
   .object({
     runId: nonEmptyString,
@@ -801,8 +821,6 @@ const evaluateGateArgumentsSchema = z
     options: lookupOptionsSchema.optional()
   })
   .strict();
-
-const disabledArgumentsSchema = z.object({}).passthrough();
 
 const runtimeEventArraySchema = z.array(RuntimeEventSchema);
 const evidenceRecordArraySchema = z.array(EvidenceRecordSchema);
@@ -1103,23 +1121,35 @@ export const mcpToolBindings = [
     outputSchemaRef: "RunReport",
     requiredScopes: ["report:write"]
   }),
-  disabledBinding({
+  enabledBinding({
     name: "specwright_get_next_action",
-    description: "Disabled boundary item for a future RuntimeApi.getNextAction projection.",
+    description: "Read the next pending approval, human question, repair task, or idle state through RuntimeApi.getNextAction.",
     runtimeOperation: "getNextAction",
-    mutates: false
+    mutates: false,
+    inputParser: getNextActionArgumentsSchema,
+    inputSchemaRef: "RuntimeApi.getNextAction.arguments",
+    outputSchemaRef: "RuntimeNextAction",
+    requiredScopes: ["run:read"]
   }),
-  disabledBinding({
+  enabledBinding({
     name: "specwright_answer_question",
-    description: "Disabled boundary item for a future RuntimeApi.recordHumanAnswer mutation.",
+    description: "Record a durable human answer through RuntimeApi.recordHumanAnswer.",
     runtimeOperation: "recordHumanAnswer",
-    mutates: true
+    mutates: true,
+    inputParser: recordHumanAnswerArgumentsSchema,
+    inputSchemaRef: "RuntimeApi.recordHumanAnswer.arguments",
+    outputSchemaRef: "RuntimeHumanAnswerResult",
+    requiredScopes: ["human:answer"]
   }),
-  disabledBinding({
+  enabledBinding({
     name: "specwright_record_approval",
-    description: "Disabled boundary item for a future RuntimeApi.recordApproval mutation.",
+    description: "Record a durable approval decision through RuntimeApi.recordApproval.",
     runtimeOperation: "recordApproval",
-    mutates: true
+    mutates: true,
+    inputParser: recordApprovalArgumentsSchema,
+    inputSchemaRef: "RuntimeApi.recordApproval.arguments",
+    outputSchemaRef: "RuntimeApprovalDecisionResult",
+    requiredScopes: ["approval:write"]
   })
 ] as const satisfies readonly McpToolBinding[];
 
@@ -4517,6 +4547,22 @@ async function invokeRuntime(
       const parsed = getRunArgumentsSchema.parse(args);
       return runtime.getRun(parsed.runId, parsed.options);
     }
+    case "getNextAction": {
+      const parsed = getNextActionArgumentsSchema.parse(args);
+      return runtime.getNextAction(parsed.runId, parsed.options);
+    }
+    case "listPendingApprovals": {
+      const parsed = listPendingApprovalsArgumentsSchema.parse(args);
+      return runtime.listPendingApprovals(parsed.runId, parsed.options);
+    }
+    case "listPendingQuestions": {
+      const parsed = listPendingQuestionsArgumentsSchema.parse(args);
+      return runtime.listPendingQuestions(parsed.runId, parsed.options);
+    }
+    case "resolveApprovalState": {
+      const parsed = resolveApprovalStateArgumentsSchema.parse(args);
+      return runtime.resolveApprovalState(parsed.runId, parsed.options);
+    }
     case "getEvents": {
       const parsed = getEventsArgumentsSchema.parse(args);
       return runtime.getEvents(parsed.runId, parsed.options);
@@ -4552,6 +4598,14 @@ async function invokeRuntime(
         parsed.record as Parameters<RuntimeApi["recordArtifact"]>[1],
         parsed.options
       );
+    }
+    case "recordApproval": {
+      const parsed = recordApprovalArgumentsSchema.parse(args);
+      return runtime.recordApproval(parsed.runId, parsed.decision, parsed.options);
+    }
+    case "recordHumanAnswer": {
+      const parsed = recordHumanAnswerArgumentsSchema.parse(args);
+      return runtime.recordHumanAnswer(parsed.runId, parsed.answer, parsed.options);
     }
     case "evaluateGate": {
       const parsed = evaluateGateArgumentsSchema.parse(args);
@@ -6135,26 +6189,6 @@ function enabledBinding(input: {
     inputSchema: schemaRef(input.inputSchemaRef),
     outputSchemaRef: input.outputSchemaRef,
     requiredScopes: input.requiredScopes ?? []
-  };
-}
-
-function disabledBinding(input: {
-  name: string;
-  description: string;
-  runtimeOperation: string;
-  mutates: boolean;
-}): DisabledMcpToolBinding {
-  return {
-    name: input.name,
-    description: input.description,
-    runtimeOperation: input.runtimeOperation,
-    mutates: input.mutates,
-    stability: "experimental",
-    enabled: false,
-    inputParser: disabledArgumentsSchema,
-    inputSchema: schemaRef(`${input.runtimeOperation}.disabled`),
-    outputSchemaRef: `${input.runtimeOperation}.disabled`,
-    requiredScopes: []
   };
 }
 
