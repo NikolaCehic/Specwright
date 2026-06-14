@@ -4,7 +4,7 @@ Status: accepted for downstream packet planning
 Work unit: FEAT-004A-human-input-runtime-apis-decision-record
 Date: 2026-06-14
 Decision authority: user-approved documentation authority for the Specwright productization sequence
-Related narrow slice: AUD-004A may land `RuntimeApi.recordApproval`, but it is not the full FEAT-004 human-loop product contract.
+Related implementation slices: AUD-004A landed `RuntimeApi.recordApproval`; AUD-004B adds the first runtime-owned human-loop projection and answer APIs.
 
 ## Decision
 
@@ -14,12 +14,12 @@ The approved method posture is:
 
 | RuntimeApi method | Wave | Decision |
 | --- | --- | --- |
-| `recordApproval(runId, approvalDecision)` | Current first slice | Approved as the narrow approval-decision operation from AUD-004A. It records `decision.recorded` only when the approval is pending. It remains incomplete without the broader security, audit, and adapter contract below. |
-| `recordHumanAnswer(runId, answer)` | First full FEAT-004 wave | Add as the runtime-owned answer operation that records `human.answer_recorded` and clears pending questions through event projection. |
-| `getNextAction(runId)` | First full FEAT-004 wave | Add as a read projection that reports whether the run should continue, wait for approval, wait for human input, repair, retry, fail, or complete. |
-| `listPendingApprovals(runId)` | First full FEAT-004 wave | Add as a read projection over authoritative run state. |
-| `listPendingQuestions(runId)` | First full FEAT-004 wave | Add as a read projection over authoritative run state. |
-| `resolveApprovalState(runId)` | First full FEAT-004 wave | Add as a read projection summarizing pending, resolved, expired, mismatched, stale, and duplicate approval state. |
+| `recordApproval(runId, approvalDecision)` | Implemented first slice | Records `decision.recorded` only when the approval is pending. |
+| `recordHumanAnswer(runId, answer)` | Implemented first human-loop wave | Runtime-owned answer operation that records `human.answer_recorded` and clears pending questions through event projection. |
+| `getNextAction(runId)` | Implemented first human-loop wave | Read projection that reports the next pending approval, human question, repair task, or no-op state. |
+| `listPendingApprovals(runId)` | Implemented first human-loop wave | Read projection over authoritative run state. |
+| `listPendingQuestions(runId)` | Implemented first human-loop wave | Read projection over authoritative run state. |
+| `resolveApprovalState(runId)` | Implemented first human-loop wave | Read projection summarizing pending queues, next action, blocked state, and resolved state. |
 | request/create human-input methods | Deferred | Runtime requests should initially come from lifecycle/gate/tool/eval events. A direct public method to create arbitrary human questions is deferred until lifecycle and server-mode contracts require it. |
 
 ## Schema Posture
@@ -29,7 +29,7 @@ Existing schema primitives are the starting substrate, not a blanket approval to
 | Contract | Current substrate | Decision |
 | --- | --- | --- |
 | Approval request | `ApprovalRequestSchema` | Use for pending approval projection. A later schema packet must decide whether prompt text, choices, explicit timeout/default behavior, risk, and metadata need first-class fields instead of metadata-only encoding. |
-| Approval decision | `ApprovalDecisionSchema` | Use for `recordApproval`, with decision-hash, subject/principal, deadline, and audit constraints enforced by runtime logic. |
+| Approval decision | `ApprovalDecisionSchema` | Use for `recordApproval`. Pending-item validation is implemented; decision-hash, subject/principal, deadline, and segregation constraints remain follow-up runtime/schema work. |
 | Human question | `HumanQuestionSchema` | Use for pending question projection. It supports prompt, optional subject, allowed decision values, expertise, required-for, and metadata. |
 | Human answer | `HumanAnswerRecordedEventPayloadSchema` | Use for append-only answer events. `recordHumanAnswer` must validate question identity and answer shape before appending. |
 | Human input request | `HumanInputRequestedEventPayloadSchema` | Use for runtime-created pending questions. |
@@ -113,8 +113,8 @@ Run-store administration already demonstrates dual-control approval checks for a
 
 | Surface | Decision |
 | --- | --- |
-| CLI | Keep `approve`, `reject`, and `answer` public command names. `approve` and `reject` may use `recordApproval`. `answer` must move from evidence recording to `recordHumanAnswer` before it is considered full human-input support. |
-| MCP | Keep `specwright_get_next_action`, `specwright_answer_question`, and `specwright_record_approval` disabled until the runtime methods, schemas, auth policy, and conformance tests exist. |
+| CLI | Keep `approve`, `reject`, and `answer` public command names. `approve` and `reject` use `recordApproval`; `answer` uses `recordHumanAnswer`. |
+| MCP | Expose `specwright_get_next_action`, `specwright_answer_question`, and `specwright_record_approval` as stable local RuntimeApi-backed tools after runtime methods and conformance tests exist. |
 | Host command packs | Defer rendering and resolution hooks to host command-pack decisions. Hosts must call the runtime contract rather than maintain private approval queues. |
 | Runtime server mode | Defer protocol endpoints, auth, queueing, and process lifecycle to the server-mode packet. |
 | SDK and marketplace | Defer extension hooks until SDK governance and compatibility rules exist. |
@@ -124,40 +124,35 @@ Run-store administration already demonstrates dual-control approval checks for a
 
 Live source on this stacked branch shows:
 
-- `RuntimeApi` exposes `recordApproval`, plus run, event, replay, tool, eval, evidence, artifact, gate, and report operations.
-- `RuntimeApi` does not expose `recordHumanAnswer`, `getNextAction`, `listPendingApprovals`, `listPendingQuestions`, or `resolveApprovalState`.
+- `RuntimeApi` exposes `recordApproval`, `recordHumanAnswer`, `getNextAction`, `listPendingApprovals`, `listPendingQuestions`, `resolveApprovalState`, plus run, event, replay, tool, eval, evidence, artifact, gate, and report operations.
 - `recordApproval` appends `decision.recorded` only for a pending approval and rejects missing/already-resolved approvals.
+- `recordHumanAnswer` appends `human.answer_recorded` only for a pending question and rejects missing/already-resolved questions.
 - CLI `approve` and `reject` call `recordApproval` and classify stale/missing approvals as integrity failures.
-- CLI `answer` still records `human_decision` evidence through `recordEvidence`; it does not append `human.answer_recorded`.
-- MCP keeps future next-action, answer, and approval tools disabled.
+- CLI `answer` calls `recordHumanAnswer` and classifies stale/missing questions as integrity failures.
+- MCP exposes next-action, answer, and approval tools as stable local RuntimeApi-backed bindings.
 - Schemas already include approval request, human question, approval decision, human input requested, and human answer recorded payload primitives.
 - Run-store projection tracks pending approvals/questions from events and removes them on matching answer or decision events.
 
-## Relationship To AUD-004A
+## Relationship To AUD-004A/AUD-004B
 
-AUD-004A is allowed to provide the narrow `recordApproval` defect fix. FEAT-004A keeps ownership of:
+AUD-004A provided the narrow `recordApproval` defect fix. AUD-004B provides the first runtime-owned human-loop API implementation. FEAT-004A keeps ownership of:
 
-- `recordHumanAnswer`
-- `getNextAction`
-- pending-list methods
-- approval-state resolution
-- adapter-neutral human-input contract
 - pending/resume semantics
 - lifecycle/server/host interaction
 - full security and audit policy
 - schema/generated changes if needed
 - docs, conformance, release, and CI requirements
 
-Workers must not treat the AUD-004A approval slice as completion of FEAT-004.
+Workers must not treat AUD-004A/AUD-004B as completion of FEAT-004's full security, server, host, generated-contract, and release posture.
 
 ## Downstream Owners
 
 | Work | Owner |
 | --- | --- |
-| Full runtime human-loop API implementation | FEAT-004 implementation packet |
+| Runtime human-loop hardening and generated contracts | FEAT-004 implementation packet |
 | Lifecycle creation of approval/question events | FEAT-003A lifecycle orchestrator packets |
 | CLI command behavior and output contracts | FEAT-002 implementation packets |
-| MCP tool enablement | FEAT-005A |
+| MCP/server/host hardening beyond local RuntimeApi tools | FEAT-005A and FEAT-012A |
 | Host rendering and command packs | FEAT-006A |
 | Durable backend and distributed resume | FEAT-009A |
 | Adapter parity and support matrix | FEAT-011A |
@@ -173,11 +168,11 @@ Workers must not treat the AUD-004A approval slice as completion of FEAT-004.
 | Approvals, clarifications, and human input must be runtime capabilities, not only CLI syntax | raw features log `F4`, `FEAT-EPIC-004` |
 | Target method names include next action, human answer, approval, pending lists, and approval-state resolution | raw features log `F4` |
 | Decision-hash, principal, deadline, segregation, no-self-approval, immutable events, and stale/replay rejection are required semantics | raw features log `F4` |
-| Current stacked runtime includes only the narrow `recordApproval` human-loop method | `packages/runtime/src/index.ts`, upstream `AUD-004A` stack |
-| CLI answer is currently evidence-backed rather than a human-answer runtime event | `packages/adapters-cli/src/index.ts`, CLI tests |
-| MCP future human-loop tools are disabled | `packages/adapters-mcp/src/index.ts`, MCP tests |
+| Current stacked runtime includes first-wave human-loop methods | `packages/runtime/src/index.ts`, upstream `AUD-004A`/`AUD-004B` stack |
+| CLI answer is runtime-event backed | `packages/adapters-cli/src/index.ts`, CLI tests |
+| MCP human-loop tools are enabled as local RuntimeApi bindings | `packages/adapters-mcp/src/index.ts`, MCP tests |
 | Schema and run-store primitives already support pending human-loop projections | `packages/schemas/src/index.ts`, `packages/run-store/src/index.ts` |
 
 ## Diff Boundary
 
-This record does not approve or implement RuntimeApi additions, schema/generated changes, CLI/MCP/server/host behavior, durable queues, lifecycle orchestration, tests, README/docs, package manifests, CI, release workflows, GitHub settings, npm publish operations, raw-source edits, or wiki status edits. Those remain separate packets and gates.
+This record does not approve or implement generated schema contracts, server/host behavior beyond local RuntimeApi and MCP bindings, durable queues, lifecycle orchestration beyond existing event projections, README/install docs, package manifests, release workflows, GitHub settings, npm publish operations, raw-source wiki edits, or full security hardening. Those remain separate packets and gates.

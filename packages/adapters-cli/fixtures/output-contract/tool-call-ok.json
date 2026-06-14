@@ -1,0 +1,23 @@
+{
+  "apiVersion": 1,
+  "command": "tool.call",
+  "outcome": "ok",
+  "runId": "run-contract",
+  "data": {
+    "toolCallId": "tool-call-contract",
+    "status": "success",
+    "output": {
+      "ok": true
+    },
+    "provenance": {
+      "toolId": "fs.read",
+      "toolVersion": "0.1.0",
+      "adapterVersion": "0.1.0",
+      "argsHash": "sha256:args",
+      "resultHash": "sha256:result",
+      "decisionHash": "sha256:decision",
+      "cacheStatus": "bypass",
+      "traceId": "trace-tool"
+    }
+  }
+}
