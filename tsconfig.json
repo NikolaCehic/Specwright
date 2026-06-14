@@ -93,10 +93,10 @@
       "@specwright/runtime/*": [
         "packages/runtime/src/*"
       ],
-      "@specwright/adapters-cli": [
+      "@specwright/cli": [
         "packages/adapters-cli/src/index.ts"
       ],
-      "@specwright/adapters-cli/*": [
+      "@specwright/cli/*": [
         "packages/adapters-cli/src/*"
       ],
       "@specwright/adapters-mcp": [
