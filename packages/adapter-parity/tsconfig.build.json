@@ -5,10 +5,10 @@
     "rootDir": "src",
     "outDir": "dist",
     "paths": {
-      "@specwright/adapters-cli": [
+      "@specwright/cli": [
         "../adapters-cli/dist/index.d.ts"
       ],
-      "@specwright/adapters-cli/*": [
+      "@specwright/cli/*": [
         "../adapters-cli/dist/*"
       ],
       "@specwright/runtime": [
