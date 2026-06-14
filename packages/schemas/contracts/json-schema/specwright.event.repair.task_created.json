@@ -1,0 +1,135 @@
+{
+  "$id": "specwright.event.repair.task_created",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "metadata": {
+      "additionalProperties": {},
+      "type": "object"
+    },
+    "repairTask": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptanceChecks": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "allowedRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "allowedTools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "blockedTools": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "constraints": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "createdFromFindingIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "escalationRule": {
+          "type": "string"
+        },
+        "expiresAt": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "failedPhase": {
+          "type": "string"
+        },
+        "gateId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {},
+          "type": "object"
+        },
+        "problem": {
+          "type": "string"
+        },
+        "producedBy": {
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "enum": [
+                "deterministic",
+                "model_assisted",
+                "human"
+              ]
+            },
+            "ref": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "kind",
+            "ref"
+          ],
+          "type": "object"
+        },
+        "repairId": {
+          "type": "string"
+        },
+        "requiredCorrection": {
+          "type": "string"
+        },
+        "requiredEvidenceRefs": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "sourceFindingId": {
+          "type": "string"
+        },
+        "successEval": {
+          "type": "string"
+        },
+        "successGate": {
+          "type": "string"
+        },
+        "targetRef": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        }
+      },
+      "required": [],
+      "type": "object",
+      "x-zod-effect": "refinement"
+    }
+  },
+  "required": [
+    "repairTask"
+  ],
+  "title": "RepairTaskCreatedEventPayloadSchema",
+  "type": "object",
+  "x-specwright-contract": {
+    "family": "event",
+    "hash": "sha256:1fc2098fc5c361a03e5235c4c2451e5f53c879dcbde074c4156e7bb3bafe7224",
+    "id": "specwright.event.repair.task_created",
+    "status": "public",
+    "version": "1"
+  }
+}

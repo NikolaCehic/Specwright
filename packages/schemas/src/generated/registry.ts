@@ -10,6 +10,7 @@ import {
   ApprovalDecisionSchema,
   ApprovalDecisionValueSchema,
   ApprovalRequestSchema,
+  ApprovalRequestedEventPayloadSchema,
   ArtifactClaimSchema,
   ArtifactFileRefSchema,
   ArtifactInputSchema,
@@ -86,8 +87,10 @@ import {
   PolicyVerdictStatusSchema,
   PromptAssetRefSchema,
   RedactionClassSchema,
+  RepairTaskCreatedEventPayloadSchema,
   RepairTaskSchema,
   RoleDefinitionSchema,
+  RunBlockedEventPayloadSchema,
   RunCompletedEventPayloadSchema,
   RunFailedEventPayloadSchema,
   RunInputSchema,
@@ -739,6 +742,44 @@ const contractRegistryData = [
   {
     "authority": {
       "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `approval.requested`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:d7b9dbebfc1e4d992bf2050dea7f5d94d352cd6a71a46c4848880936da89c1af",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/approval-requested-event-payload.positive.json",
+      "fixtures/negative/approval-requested-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "ApprovalRequestedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/approval-requested-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.approval.requested.json",
+      "negativeFixture": "fixtures/negative/approval-requested-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/approval-requested-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.approval.requested",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `approval.requested`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "governance",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `artifact.recorded`. Durable posture: durable. Extension posture: strict."
     },
     "canonicalHash": "sha256:e0e38fe8121eb83916a32e9df5e579375be806976937844e4ade9f73d548a80e",
@@ -1194,6 +1235,82 @@ const contractRegistryData = [
   {
     "authority": {
       "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `repair.task_created`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:1fc2098fc5c361a03e5235c4c2451e5f53c879dcbde074c4156e7bb3bafe7224",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/repair-task-created-event-payload.positive.json",
+      "fixtures/negative/repair-task-created-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RepairTaskCreatedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/repair-task-created-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.repair.task_created.json",
+      "negativeFixture": "fixtures/negative/repair-task-created-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/repair-task-created-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.repair.task_created",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `repair.task_created`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
+      "semantics": "Payload contract for `run.blocked`. Durable posture: durable. Extension posture: strict."
+    },
+    "canonicalHash": "sha256:cd2c3c22f38afacfb6a4c20e9aa08b09906e75c4498f7721335afc99bb9f1b7f",
+    "compatibilityClass": "forward-compatible",
+    "conformanceFixtures": [
+      "fixtures/conformance/run-blocked-event-payload.positive.json",
+      "fixtures/negative/run-blocked-event-payload.negative.json"
+    ],
+    "durability": "durable",
+    "exportName": "RunBlockedEventPayloadSchema",
+    "extensionPoints": [
+      "strict"
+    ],
+    "family": "event",
+    "generatedArtifacts": {
+      "fixture": "fixtures/conformance/run-blocked-event-payload.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.event.run.blocked.json",
+      "negativeFixture": "fixtures/negative/run-blocked-event-payload.negative.json",
+      "replayFixture": "fixtures/replay/run-blocked-event-payload.replay.json",
+      "type": "src/generated/types.ts",
+      "validator": "src/generated/validators.ts"
+    },
+    "id": "specwright.event.run.blocked",
+    "migrationDescriptors": [],
+    "notes": "Payload contract for `run.blocked`.",
+    "owner": "01 Shared Schemas / 02 Run Store",
+    "redaction": {
+      "defaultClass": "operator",
+      "fields": []
+    },
+    "schemaFormat": "zod",
+    "secondaryFamily": "lifecycle",
+    "status": "public",
+    "version": "1"
+  },
+  {
+    "authority": {
+      "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `run.completed`. Durable posture: durable. Extension posture: strict."
     },
     "canonicalHash": "sha256:e37ba0c18b1d30ea8da7b9a082f2ed3cac18ac6cde717b101699ecd99d704528",
@@ -1310,7 +1427,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
     },
-    "canonicalHash": "sha256:65662fff45c6f493c33091586a24a5e0c74898913afaeb04a5289c0a80022a17",
+    "canonicalHash": "sha256:6c077640020c4a278aeee402bd020fc70d3efde557ae07eac60bfd174a371319",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event.positive.json",
@@ -3326,7 +3443,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Rebuildable state projection. Durable posture: derived. Extension posture: strict."
     },
-    "canonicalHash": "sha256:532d6baee777d10718203e243a9987cc28e7f1f39f4f4a608cc5ff76f723c774",
+    "canonicalHash": "sha256:6abeaf8f51bb78b4c5150bb9c3fe8ff2187b7a0aaa14dd405bcc424ff9effbbc",
     "compatibilityClass": "patch-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/run-state.positive.json",
@@ -3859,6 +3976,7 @@ const validators = new Map<string, ZodTypeAny>([
   [contractRegistryKey("specwright.capability.tool-definition", "1"), ToolDefinitionSchema],
   [contractRegistryKey("specwright.compatibility.harness-schema-version", "1"), HarnessSchemaVersionSchema],
   [contractRegistryKey("specwright.compatibility.metadata", "1"), MetadataSchema],
+  [contractRegistryKey("specwright.event.approval.requested", "1"), ApprovalRequestedEventPayloadSchema],
   [contractRegistryKey("specwright.event.artifact.recorded", "1"), ArtifactRecordedEventPayloadSchema],
   [contractRegistryKey("specwright.event.decision.recorded", "1"), DecisionRecordedEventPayloadSchema],
   [contractRegistryKey("specwright.event.eval.completed", "1"), EvalCompletedEventPayloadSchema],
@@ -3871,6 +3989,8 @@ const validators = new Map<string, ZodTypeAny>([
   [contractRegistryKey("specwright.event.phase.transitioned", "1"), PhaseTransitionedEventPayloadSchema],
   [contractRegistryKey("specwright.event.policy-evaluated-event", "1"), PolicyEvaluatedEventSchema],
   [contractRegistryKey("specwright.event.policy.evaluated", "1"), PolicyEvaluatedEventPayloadSchema],
+  [contractRegistryKey("specwright.event.repair.task_created", "1"), RepairTaskCreatedEventPayloadSchema],
+  [contractRegistryKey("specwright.event.run.blocked", "1"), RunBlockedEventPayloadSchema],
   [contractRegistryKey("specwright.event.run.completed", "1"), RunCompletedEventPayloadSchema],
   [contractRegistryKey("specwright.event.run.failed", "1"), RunFailedEventPayloadSchema],
   [contractRegistryKey("specwright.event.run.started", "1"), RunStartedEventPayloadSchema],

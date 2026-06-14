@@ -322,6 +322,7 @@ function isDeclaredInBuckets(dependencies, dependencyName, buckets) {
 function extractPackageImports(source) {
   const imports = new Set();
   const withoutComments = stripComments(source);
+  const stringBindings = extractStringBindings(withoutComments);
   const patterns = [
     /\bimport\s+(?:type\s+)?(?:[^'";]*?\s+from\s+)?["']([^"']+)["']/g,
     /\bexport\s+(?:type\s+)?(?:[^'";]*?\s+from\s+)["']([^"']+)["']/g,
@@ -341,7 +342,62 @@ function extractPackageImports(source) {
     }
   }
 
+  const dynamicBindingPatterns = [
+    /\bimport\s*\(\s*([A-Za-z_$][\w$]*)\s*\)/g,
+    /\brequire\s*\(\s*([A-Za-z_$][\w$]*)\s*\)/g
+  ];
+
+  for (const pattern of dynamicBindingPatterns) {
+    let match;
+
+    while ((match = pattern.exec(withoutComments)) !== null) {
+      const bindingName = match[1];
+      const specifier =
+        bindingName === undefined
+          ? undefined
+          : stringBindingForImport(stringBindings, bindingName, match.index);
+
+      if (specifier !== undefined) {
+        imports.add(specifier);
+      }
+    }
+  }
+
   return [...imports].sort();
+}
+
+function extractStringBindings(source) {
+  const bindings = new Map();
+  const pattern =
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)(?:\s*:\s*[^=;]+)?\s*=\s*["']([^"']+)["']/g;
+  let match;
+
+  while ((match = pattern.exec(source)) !== null) {
+    const bindingName = match[1];
+    const specifier = match[2];
+
+    if (bindingName !== undefined && specifier !== undefined) {
+      const existing = bindings.get(bindingName) ?? [];
+      bindings.set(bindingName, [
+        ...existing,
+        {
+          index: match.index,
+          specifier
+        }
+      ]);
+    }
+  }
+
+  return bindings;
+}
+
+function stringBindingForImport(bindings, bindingName, importIndex) {
+  const candidates = bindings.get(bindingName) ?? [];
+  const nearest = candidates
+    .filter((candidate) => candidate.index < importIndex)
+    .sort((left, right) => right.index - left.index)[0];
+
+  return nearest?.specifier;
 }
 
 function stripComments(source) {
