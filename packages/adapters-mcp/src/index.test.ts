@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readdir, readFile } from "node:fs/promises";
 import { executeCli, type CliRuntime } from "@specwright/adapters-cli";
 import type { RuntimeApi } from "@specwright/runtime";
 import { projectRunState } from "@specwright/run-store";
@@ -7,6 +8,7 @@ import {
   AuthorizationContextSchema,
   ClientPrincipalSchema,
   createMcpAdapter,
+  createMcpServer,
   defaultMcpCatalog,
   defaultMcpPromptCatalog,
   defaultMcpResourceCatalog,
@@ -37,7 +39,94 @@ const authenticatedContext = {
   ci: false
 };
 
+const mcpAdapterReadinessRows = [
+  "package.exports",
+  "factory.createMcpAdapter",
+  "factory.createMcpServer_alias",
+  "protocol.dispatch",
+  "tools.list",
+  "tools.call",
+  "resources",
+  "prompts",
+  "auth.authenticated_mode",
+  "observability",
+  "limits",
+  "versioning"
+] as const;
+
+const mcpServerDeployabilityGaps = [
+  "package_or_bin",
+  "stdio_transport",
+  "http_sse_transport_decision",
+  "host_configuration",
+  "safe_default_auth_profile",
+  "process_lifecycle",
+  "transport_integration_tests"
+] as const;
+
+const futureServerSmokeTests = [
+  "launch process",
+  "list tools",
+  "call one runtime-backed command",
+  "return structured errors",
+  "shut down cleanly"
+] as const;
+
 describe("specwright mcp adapter", () => {
+  test("AUD-011A deployability matrix separates adapter library from server gaps", async () => {
+    const manifest = await readPackageManifest(
+      new URL("../package.json", import.meta.url)
+    );
+    const packageNames = await workspacePackageNames();
+
+    expect(manifest.name).toBe("@specwright/adapters-mcp");
+    expect(manifest.main).toBe("./dist/index.js");
+    expect(manifest.types).toBe("./dist/index.d.ts");
+    expect(manifest.exports).toEqual({
+      ".": {
+        types: "./dist/index.d.ts",
+        import: "./dist/index.js"
+      }
+    });
+    expect(manifest.files).toEqual(["dist"]);
+    expect("bin" in manifest).toBe(false);
+    expect(packageNames.filter((name) => name.includes("mcp"))).toEqual([
+      "@specwright/adapters-mcp"
+    ]);
+    expect(packageNames).not.toContain("@specwright/mcp-server");
+    expect(createMcpServer).toBe(createMcpAdapter);
+    expect(mcpAdapterReadinessRows).toEqual([
+      "package.exports",
+      "factory.createMcpAdapter",
+      "factory.createMcpServer_alias",
+      "protocol.dispatch",
+      "tools.list",
+      "tools.call",
+      "resources",
+      "prompts",
+      "auth.authenticated_mode",
+      "observability",
+      "limits",
+      "versioning"
+    ]);
+    expect(mcpServerDeployabilityGaps).toEqual([
+      "package_or_bin",
+      "stdio_transport",
+      "http_sse_transport_decision",
+      "host_configuration",
+      "safe_default_auth_profile",
+      "process_lifecycle",
+      "transport_integration_tests"
+    ]);
+    expect(futureServerSmokeTests).toEqual([
+      "launch process",
+      "list tools",
+      "call one runtime-backed command",
+      "return structured errors",
+      "shut down cleanly"
+    ]);
+  });
+
   test("registers exactly eleven enabled runtime-backed tools", () => {
     expect(defaultMcpCatalog.enabledBindings).toHaveLength(11);
     expect(defaultMcpCatalog.disabledBindings).toHaveLength(3);
@@ -2223,4 +2312,39 @@ function containsInlineExecutionKey(value: unknown): boolean {
   }
 
   return false;
+}
+
+type PackageManifest = {
+  name?: string;
+  main?: string;
+  types?: string;
+  exports?: unknown;
+  files?: unknown;
+  bin?: unknown;
+};
+
+async function workspacePackageNames() {
+  const packagesRootUrl = new URL("../../", import.meta.url);
+  const entries = await readdir(packagesRootUrl, { withFileTypes: true });
+  const names: string[] = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory() === false) {
+      continue;
+    }
+
+    const manifest = await readPackageManifest(
+      new URL(`${entry.name}/package.json`, packagesRootUrl)
+    );
+
+    if (typeof manifest.name === "string") {
+      names.push(manifest.name);
+    }
+  }
+
+  return names.sort((left, right) => left.localeCompare(right));
+}
+
+async function readPackageManifest(url: URL): Promise<PackageManifest> {
+  return JSON.parse(await readFile(url, "utf8")) as PackageManifest;
 }
