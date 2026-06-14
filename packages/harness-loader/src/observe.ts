@@ -1,20 +1,23 @@
 import { createHash, randomUUID } from "node:crypto";
 import type { CacheStatus, RuntimeEvent } from "@specwright/schemas";
 import {
-  HarnessLoaderError,
   computeSpecHash,
-  loadHarnessPackageWithRecord,
-  type HarnessDependencyEvent,
-  type HarnessGrantEvent,
-  type HarnessLoadRecord,
-  type HarnessLoadStageKind,
-  type HarnessLoadStageObserver,
-  type HarnessLoaderErrorCode,
-  type HarnessTrustEvent,
-  type LoadHarnessPackageOptions,
-  type ResolvedDependency,
-  type SourceFile
+  loadHarnessPackageWithRecord
 } from "./index";
+import type {
+  HarnessDependencyEvent,
+  ResolvedDependency
+} from "./dependency-resolver";
+import type { HarnessGrantEvent } from "./capability-grant";
+import { HarnessLoaderError, type HarnessLoaderErrorCode } from "./errors";
+import type { HarnessTrustEvent } from "./trust";
+import type {
+  HarnessLoadRecord,
+  HarnessLoadStageKind,
+  HarnessLoadStageObserver,
+  LoadHarnessPackageOptions,
+  SourceFile
+} from "./types";
 import {
   buildHarnessLoaderAuditEvent,
   cacheStatusOrDefault,
