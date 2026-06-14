@@ -13,8 +13,8 @@ import {
   diffChunks,
   hashString,
   ingestDocument
-} from "./internal";
-import type { Chunk, MemoryDocument } from "./internal";
+} from "../test/internal";
+import type { Chunk, MemoryDocument } from "../test/internal";
 
 const fixtureRoot = join(import.meta.dir, "..", "fixtures");
 

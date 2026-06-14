@@ -16,7 +16,7 @@ import {
   parseRetrievalResult,
   rankHybridCandidates,
   stableStringify
-} from "../internal";
+} from "../../test/internal";
 import type {
   DenseRetrievalResult,
   LexicalRetrievalResult,
@@ -25,7 +25,7 @@ import type {
   RerankerResult,
   RetrievalQueryInput,
   RetrievalResult
-} from "../internal";
+} from "../../test/internal";
 
 const fixtureRoot = join(import.meta.dir, "..", "..", "test", "fixtures", "ranking");
 

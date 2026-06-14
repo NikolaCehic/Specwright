@@ -1,5 +1,5 @@
-import type { Chunk } from "./chunk";
-import { parseChunk } from "./chunk";
+import type { Chunk } from "../src/chunk";
+import { parseChunk } from "../src/chunk";
 
 export interface ChunkDiffEntry {
   readonly key: string;

@@ -5,7 +5,7 @@ import {
   createMcpAdapter,
   negotiateProtocolVersion
 } from "./index";
-import { fakeRuntimeForPacket06 } from "./packet06-test-helpers";
+import { fakeRuntimeForPacket06 } from "../test/packet06-test-helpers";
 
 describe("Packet 06 MCP versioning", () => {
   test("unsupported protocol version is rejected with supported range and never coerced", () => {
