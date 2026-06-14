@@ -2,20 +2,28 @@ import { z } from "zod";
 import {
   ApprovalDecisionSchema,
   ApprovalRequestSchema,
+  EvalVerdictSchema,
+  GateLifecycleInstructionSchema,
+  GateVerdictSchema,
   HumanQuestionSchema,
   RuntimeEventSchema,
-  RunStateSchema
+  RunStateSchema,
+  ToolCallResultSchema
 } from "@specwright/schemas";
 import { OUTPUT_API_VERSION } from "./constants";
 import type { CliErrorRecord } from "./errors";
 import type { OutcomeClass } from "./outcome";
 
 export type CliCommandName =
+  | "doctor"
   | "run"
   | "status"
   | "events"
   | "replay"
   | "report"
+  | "tool.call"
+  | "eval.run"
+  | "gate.evaluate"
   | "approve"
   | "reject"
   | "answer";
@@ -88,6 +96,40 @@ const approvalDecisionResultSchema = z
   })
   .strict();
 
+const doctorCheckSchema = z
+  .object({
+    id: z.string(),
+    status: z.enum(["pass", "warn", "fail"]),
+    message: z.string(),
+    path: z.string().optional(),
+    operatorAction: z.string().optional()
+  })
+  .strict();
+
+const doctorReportSchema = z
+  .object({
+    rootDir: z.string(),
+    mode: z.literal("source-checkout"),
+    cliVersion: z.string(),
+    configDir: z.string(),
+    summary: z
+      .object({
+        pass: z.number().int().nonnegative(),
+        warn: z.number().int().nonnegative(),
+        fail: z.number().int().nonnegative()
+      })
+      .strict(),
+    checks: z.array(doctorCheckSchema)
+  })
+  .strict();
+
+const gateEvaluationResultSchema = z
+  .object({
+    verdict: GateVerdictSchema,
+    instruction: GateLifecycleInstructionSchema
+  })
+  .strict();
+
 function envelopeSchema(command: CliCommandName, data: z.ZodTypeAny) {
   return z
     .object({
@@ -115,6 +157,7 @@ function envelopeSchema(command: CliCommandName, data: z.ZodTypeAny) {
     .strict();
 }
 
+export const doctorOutputSchema = envelopeSchema("doctor", doctorReportSchema);
 export const runOutputSchema = envelopeSchema("run", z.unknown());
 export const statusOutputSchema = envelopeSchema("status", RunStateSchema);
 export const eventsOutputSchema = envelopeSchema(
@@ -141,6 +184,18 @@ export const reportOutputSchema = envelopeSchema(
     })
     .strict()
 );
+export const toolCallOutputSchema = envelopeSchema(
+  "tool.call",
+  ToolCallResultSchema
+);
+export const evalRunOutputSchema = envelopeSchema(
+  "eval.run",
+  EvalVerdictSchema
+);
+export const gateEvaluateOutputSchema = envelopeSchema(
+  "gate.evaluate",
+  gateEvaluationResultSchema
+);
 export const approveOutputSchema = envelopeSchema(
   "approve",
   approvalDecisionResultSchema
@@ -152,11 +207,15 @@ export const rejectOutputSchema = envelopeSchema(
 export const answerOutputSchema = envelopeSchema("answer", z.unknown());
 
 export const outputSchemas = Object.freeze({
+  doctor: doctorOutputSchema,
   run: runOutputSchema,
   status: statusOutputSchema,
   events: eventsOutputSchema,
   replay: replayOutputSchema,
   report: reportOutputSchema,
+  "tool.call": toolCallOutputSchema,
+  "eval.run": evalRunOutputSchema,
+  "gate.evaluate": gateEvaluateOutputSchema,
   approve: approveOutputSchema,
   reject: rejectOutputSchema,
   answer: answerOutputSchema

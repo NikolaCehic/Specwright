@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { executeCli, type CliRuntime } from "@specwright/adapters-cli";
+import { readdir, readFile } from "node:fs/promises";
+import { executeCli, type CliRuntime } from "@specwright/cli";
 import type { RuntimeApi } from "@specwright/runtime";
 import { projectRunState } from "@specwright/run-store";
 import {
@@ -7,6 +8,7 @@ import {
   AuthorizationContextSchema,
   ClientPrincipalSchema,
   createMcpAdapter,
+  createMcpServer,
   defaultMcpCatalog,
   defaultMcpPromptCatalog,
   defaultMcpResourceCatalog,
@@ -37,10 +39,97 @@ const authenticatedContext = {
   ci: false
 };
 
+const mcpAdapterReadinessRows = [
+  "package.exports",
+  "factory.createMcpAdapter",
+  "factory.createMcpServer_alias",
+  "protocol.dispatch",
+  "tools.list",
+  "tools.call",
+  "resources",
+  "prompts",
+  "auth.authenticated_mode",
+  "observability",
+  "limits",
+  "versioning"
+] as const;
+
+const mcpServerDeployabilityGaps = [
+  "public_mcp_server_package",
+  "http_sse_transport_decision",
+  "host_configuration",
+  "safe_default_auth_profile",
+  "remote_auth_profile",
+  "release_packaging"
+] as const;
+
+const firstWaveStdioSmokeTests = [
+  "launch local stdio process",
+  "initialize",
+  "list tools through JSON-RPC",
+  "call one runtime-backed command through JSON-RPC",
+  "shut down cleanly on stdin close"
+] as const;
+
 describe("specwright mcp adapter", () => {
-  test("registers exactly eleven enabled runtime-backed tools", () => {
-    expect(defaultMcpCatalog.enabledBindings).toHaveLength(11);
-    expect(defaultMcpCatalog.disabledBindings).toHaveLength(3);
+  test("AUD-011A deployability matrix separates adapter library from server gaps", async () => {
+    const manifest = await readPackageManifest(
+      new URL("../package.json", import.meta.url)
+    );
+    const packageNames = await workspacePackageNames();
+
+    expect(manifest.name).toBe("@specwright/adapters-mcp");
+    expect(manifest.main).toBe("./dist/index.js");
+    expect(manifest.types).toBe("./dist/index.d.ts");
+    expect(manifest.exports).toEqual({
+      ".": {
+        types: "./dist/index.d.ts",
+        import: "./dist/index.js"
+      }
+    });
+    expect(manifest.files).toEqual(["dist"]);
+    expect(manifest.bin).toEqual({
+      "specwright-mcp-adapter": "./dist/bin.js"
+    });
+    expect(packageNames.filter((name) => name.includes("mcp"))).toEqual([
+      "@specwright/adapters-mcp"
+    ]);
+    expect(packageNames).not.toContain("@specwright/mcp-server");
+    expect(createMcpServer).toBe(createMcpAdapter);
+    expect(mcpAdapterReadinessRows).toEqual([
+      "package.exports",
+      "factory.createMcpAdapter",
+      "factory.createMcpServer_alias",
+      "protocol.dispatch",
+      "tools.list",
+      "tools.call",
+      "resources",
+      "prompts",
+      "auth.authenticated_mode",
+      "observability",
+      "limits",
+      "versioning"
+    ]);
+    expect(mcpServerDeployabilityGaps).toEqual([
+      "public_mcp_server_package",
+      "http_sse_transport_decision",
+      "host_configuration",
+      "safe_default_auth_profile",
+      "remote_auth_profile",
+      "release_packaging"
+    ]);
+    expect(firstWaveStdioSmokeTests).toEqual([
+      "launch local stdio process",
+      "initialize",
+      "list tools through JSON-RPC",
+      "call one runtime-backed command through JSON-RPC",
+      "shut down cleanly on stdin close"
+    ]);
+  });
+
+  test("registers exactly fourteen enabled runtime-backed tools", () => {
+    expect(defaultMcpCatalog.enabledBindings).toHaveLength(14);
+    expect(defaultMcpCatalog.disabledBindings).toHaveLength(0);
 
     for (const binding of defaultMcpCatalog.enabledBindings) {
       expect(binding.enabled).toBe(true);
@@ -57,28 +146,20 @@ describe("specwright mcp adapter", () => {
         binding.requiredScopes
       ])
     ).toEqual([
+      ["specwright_answer_question", "recordHumanAnswer", true, ["human:answer"]],
       ["specwright_call_tool", "callTool", true, ["tool:call"]],
       ["specwright_evaluate_gate", "evaluateGate", true, ["gate:evaluate"]],
       ["specwright_generate_report", "generateReport", false, ["report:read"]],
       ["specwright_get_events", "getEvents", false, ["run:read"]],
+      ["specwright_get_next_action", "getNextAction", false, ["run:read"]],
       ["specwright_get_run", "getRun", false, ["run:read"]],
+      ["specwright_record_approval", "recordApproval", true, ["approval:write"]],
       ["specwright_record_artifact", "recordArtifact", true, ["artifact:write"]],
       ["specwright_record_evidence", "recordEvidence", true, ["evidence:write"]],
       ["specwright_replay", "replay", false, ["run:read"]],
       ["specwright_run_eval", "runEval", true, ["eval:run"]],
       ["specwright_start_run", "startRun", true, ["run:start"]],
       ["specwright_write_report", "writeRunReport", true, ["report:write"]]
-    ]);
-    expect(
-      defaultMcpCatalog.disabledBindings.map((binding) => [
-        binding.name,
-        binding.runtimeOperation,
-        binding.mutates
-      ])
-    ).toEqual([
-      ["specwright_answer_question", "recordHumanAnswer", true],
-      ["specwright_get_next_action", "getNextAction", false],
-      ["specwright_record_approval", "recordApproval", true]
     ]);
   });
 
@@ -117,12 +198,12 @@ describe("specwright mcp adapter", () => {
         "duplicate_tool_name"
       ],
       [
-        "enabled gated operation",
+        "duplicate enabled control-plane operation",
         magicBinding({
           name: "specwright_get_next_action",
           runtimeOperation: "getNextAction"
         }),
-        "gated_tool_enabled"
+        "duplicate_tool_name"
       ]
     ];
 
@@ -146,20 +227,20 @@ describe("specwright mcp adapter", () => {
 
     expect(first).toEqual(second);
     expect(JSON.stringify(first)).toBe(JSON.stringify(second));
-    expect(first.tools).toHaveLength(11);
+    expect(first.tools).toHaveLength(14);
     expect(first.tools.every((tool) => tool.stability === "stable")).toBe(true);
-    expect(first.tools.map((tool) => tool.name)).not.toContain(
+    expect(first.tools.map((tool) => tool.name)).toContain(
       "specwright_get_next_action"
     );
-    expect(first.tools.map((tool) => tool.name)).not.toContain(
+    expect(first.tools.map((tool) => tool.name)).toContain(
       "specwright_answer_question"
     );
-    expect(first.tools.map((tool) => tool.name)).not.toContain(
+    expect(first.tools.map((tool) => tool.name)).toContain(
       "specwright_record_approval"
     );
   });
 
-  test("unknown, disabled, and invalid calls fail closed with zero runtime calls", async () => {
+  test("unknown and invalid calls fail closed with zero runtime calls", async () => {
     const calls: unknown[] = [];
     const adapter = createMcpAdapter(
       fakeRuntime({
@@ -174,7 +255,7 @@ describe("specwright mcp adapter", () => {
       name: "specwright_make_design_better",
       arguments: {}
     });
-    const disabled = await adapter.tools.call({
+    const invalidControlPlane = await adapter.tools.call({
       name: "specwright_record_approval",
       arguments: { runId: "run-1" }
     });
@@ -189,7 +270,7 @@ describe("specwright mcp adapter", () => {
         code: "method_not_found"
       }
     });
-    expect(disabled).toMatchObject({
+    expect(invalidControlPlane).toMatchObject({
       isError: true,
       error: {
         code: "invalid_request"
@@ -236,6 +317,144 @@ describe("specwright mcp adapter", () => {
       }
     });
     expect(calls).toEqual([["getRun", "run-2", { rootDir: "/runs-root" }]]);
+  });
+
+  test("tools/call resolves runtime human-loop control-plane operations", async () => {
+    const calls: unknown[] = [];
+    const adapter = createMcpAdapter(
+      fakeRuntime({
+        async getNextAction(runId, options) {
+          calls.push(["getNextAction", runId, options]);
+
+          return {
+            kind: "approval",
+            runId,
+            approval: {
+              approvalId: "approval-1",
+              reason: "Policy requires approval."
+            }
+          };
+        },
+        async recordHumanAnswer(runId, answer, options) {
+          calls.push(["recordHumanAnswer", runId, answer, options]);
+
+          return {
+            answer,
+            event: {
+              ...fakeEvent({ runId, id: "event-answer" }),
+              type: "human.answer_recorded",
+              payload: answer
+            },
+            state: fakeState({ runId })
+          };
+        },
+        async recordApproval(runId, decision, options) {
+          calls.push(["recordApproval", runId, decision, options]);
+
+          return {
+            decision,
+            event: {
+              ...fakeEvent({ runId, id: "event-approval" }),
+              type: "decision.recorded",
+              payload: {
+                approvalId: decision.approvalId,
+                decision
+              }
+            },
+            state: fakeState({ runId })
+          };
+        }
+      })
+    );
+
+    const nextAction = await adapter.tools.call({
+      name: "specwright_get_next_action",
+      arguments: {
+        runId: "run-human-loop",
+        options: {
+          rootDir: "/runs-root"
+        }
+      }
+    });
+    const answer = await adapter.tools.call({
+      name: "specwright_answer_question",
+      arguments: {
+        runId: "run-human-loop",
+        answer: {
+          questionId: "question-1",
+          answer: "Use the README.",
+          answeredBy: "operator-1"
+        },
+        options: {
+          rootDir: "/runs-root"
+        }
+      }
+    });
+    const approval = await adapter.tools.call({
+      name: "specwright_record_approval",
+      arguments: {
+        runId: "run-human-loop",
+        decision: {
+          approvalId: "approval-1",
+          decision: "approved",
+          humanMessage: "Approved for intake."
+        },
+        options: {
+          rootDir: "/runs-root"
+        }
+      }
+    });
+
+    expect(nextAction).toMatchObject({
+      isError: false,
+      result: {
+        kind: "approval",
+        approval: {
+          approvalId: "approval-1"
+        }
+      }
+    });
+    expect(answer).toMatchObject({
+      isError: false,
+      result: {
+        answer: {
+          questionId: "question-1",
+          answeredBy: "operator-1"
+        }
+      }
+    });
+    expect(approval).toMatchObject({
+      isError: false,
+      result: {
+        decision: {
+          approvalId: "approval-1",
+          decision: "approved"
+        }
+      }
+    });
+    expect(calls).toEqual([
+      ["getNextAction", "run-human-loop", { rootDir: "/runs-root" }],
+      [
+        "recordHumanAnswer",
+        "run-human-loop",
+        {
+          questionId: "question-1",
+          answer: "Use the README.",
+          answeredBy: "operator-1"
+        },
+        { rootDir: "/runs-root" }
+      ],
+      [
+        "recordApproval",
+        "run-human-loop",
+        {
+          approvalId: "approval-1",
+          decision: "approved",
+          humanMessage: "Approved for intake."
+        },
+        { rootDir: "/runs-root" }
+      ]
+    ]);
   });
 
   test("recordArtifact accepts runtime-shaped ArtifactRecordInput with runtime-defaulted fields omitted", async () => {
@@ -1709,6 +1928,38 @@ function fakeRuntime(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
         runId
       });
     },
+    async getNextAction(runId) {
+      return {
+        kind: "none",
+        runId,
+        status: "running",
+        phase: "intake"
+      };
+    },
+    async listPendingApprovals() {
+      return [];
+    },
+    async listPendingQuestions() {
+      return [];
+    },
+    async resolveApprovalState(runId) {
+      return {
+        runId,
+        status: "running",
+        phase: "intake",
+        pendingApprovals: [],
+        pendingQuestions: [],
+        pendingRepairTasks: [],
+        nextAction: {
+          kind: "none",
+          runId,
+          status: "running",
+          phase: "intake"
+        },
+        blocked: false,
+        resolved: true
+      };
+    },
     async getEvents(runId) {
       return [
         fakeEvent({
@@ -1770,6 +2021,31 @@ function fakeRuntime(overrides: Partial<RuntimeApi> = {}): RuntimeApi {
         metadata: record.metadata ?? {},
         redactionPolicy: record.redactionPolicy ?? "operator",
         importantClaims: record.importantClaims ?? []
+      };
+    },
+    async recordApproval(runId, decision) {
+      return {
+        decision,
+        event: {
+          ...fakeEvent({ runId }),
+          type: "decision.recorded",
+          payload: {
+            approvalId: decision.approvalId,
+            decision
+          }
+        },
+        state: fakeState({ runId })
+      };
+    },
+    async recordHumanAnswer(runId, answer) {
+      return {
+        answer,
+        event: {
+          ...fakeEvent({ runId }),
+          type: "human.answer_recorded",
+          payload: answer
+        },
+        state: fakeState({ runId })
       };
     },
     async evaluateGate() {
@@ -1884,6 +2160,7 @@ function fakeState(
     budgets: {},
     pendingApprovals: [],
     pendingQuestions: [],
+    pendingRepairTasks: [],
     artifacts: [],
     lastEventId: overrides.lastEventId ?? "event-1"
   };
@@ -2223,4 +2500,39 @@ function containsInlineExecutionKey(value: unknown): boolean {
   }
 
   return false;
+}
+
+type PackageManifest = {
+  name?: string;
+  main?: string;
+  types?: string;
+  exports?: unknown;
+  files?: unknown;
+  bin?: unknown;
+};
+
+async function workspacePackageNames() {
+  const packagesRootUrl = new URL("../../", import.meta.url);
+  const entries = await readdir(packagesRootUrl, { withFileTypes: true });
+  const names: string[] = [];
+
+  for (const entry of entries) {
+    if (entry.isDirectory() === false) {
+      continue;
+    }
+
+    const manifest = await readPackageManifest(
+      new URL(`${entry.name}/package.json`, packagesRootUrl)
+    );
+
+    if (typeof manifest.name === "string") {
+      names.push(manifest.name);
+    }
+  }
+
+  return names.sort((left, right) => left.localeCompare(right));
+}
+
+async function readPackageManifest(url: URL): Promise<PackageManifest> {
+  return JSON.parse(await readFile(url, "utf8")) as PackageManifest;
 }
