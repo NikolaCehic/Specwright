@@ -69,7 +69,7 @@
       "code": "TS6133",
       "column": 1,
       "file": "packages/harness-loader/src/index.ts",
-      "line": 87,
+      "line": 78,
       "message": "'HarnessLoaderErrorCode' is declared but its value is never read.",
       "package": "@specwright/harness-loader"
     },
@@ -77,7 +77,7 @@
       "code": "TS6196",
       "column": 6,
       "file": "packages/harness-loader/src/index.ts",
-      "line": 393,
+      "line": 346,
       "message": "'FetchedHarnessFiles' is declared but never used.",
       "package": "@specwright/harness-loader"
     },
@@ -85,7 +85,7 @@
       "code": "TS6196",
       "column": 6,
       "file": "packages/harness-loader/src/index.ts",
-      "line": 413,
+      "line": 366,
       "message": "'CollectionKey' is declared but never used.",
       "package": "@specwright/harness-loader"
     },
@@ -93,7 +93,7 @@
       "code": "TS6133",
       "column": 3,
       "file": "packages/harness-loader/src/index.ts",
-      "line": 1465,
+      "line": 1418,
       "message": "'label' is declared but its value is never read.",
       "package": "@specwright/harness-loader"
     },
