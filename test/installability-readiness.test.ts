@@ -146,6 +146,12 @@ describe("AUD-005A installability readiness", () => {
         bin: {
           specwright: "./dist/bin.js"
         }
+      },
+      {
+        name: "@specwright/adapters-mcp",
+        bin: {
+          "specwright-mcp-adapter": "./dist/bin.js"
+        }
       }
     ]);
   });

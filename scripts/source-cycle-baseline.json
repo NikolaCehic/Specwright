@@ -25,6 +25,18 @@
       "to": "packages/adapters-mcp/src/versioning/index.ts"
     },
     {
+      "from": "packages/adapters-mcp/src/stdio.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./index",
+      "to": "packages/adapters-mcp/src/index.ts"
+    },
+    {
+      "from": "packages/adapters-mcp/src/stdio.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./versioning",
+      "to": "packages/adapters-mcp/src/versioning/index.ts"
+    },
+    {
       "from": "packages/eval-runner/src/datasets.ts",
       "package": "@specwright/eval-runner",
       "specifier": "./index",
@@ -314,11 +326,11 @@
     }
   ],
   "inventory": {
-    "barrelImportCount": 52,
+    "barrelImportCount": 54,
     "packageCount": 17,
     "packageCycleCount": 0,
     "packageEdgeCount": 45,
-    "productionFileCount": 174,
+    "productionFileCount": 177,
     "sameCycleBarrelImportCount": 21,
     "sourceCycleCount": 8
   },

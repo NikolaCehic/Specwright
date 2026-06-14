@@ -15,7 +15,7 @@ Package and binary posture:
 | Surface | Decision |
 | --- | --- |
 | `@specwright/mcp-server` | Public later-wave package that owns the MCP server executable and host setup contract. |
-| `@specwright/adapters-mcp` | Internal or advanced library substrate for protocol dispatch, catalog, auth composition, limits, observability, and tests. No first-wave public server bin here. |
+| `@specwright/adapters-mcp` | Internal or advanced library substrate for protocol dispatch, catalog, auth composition, limits, observability, and tests. It may carry an adapter-scoped local stdio executable for implementation smoke tests, but that binary is not the public server package contract. |
 | Server executable name | Deferred to the package implementation packet, with preference for a package-local executable that is unambiguous in host config. |
 | `createMcpServer` export | Current alias remains source evidence only. It must not be marketed as a transport/process server until a real server wrapper exists. |
 
@@ -89,6 +89,8 @@ HermesAgent setup is deferred until host-kind, command-pack, and adapter-priorit
 
 Host setup snippets belong to the MCP server implementation/docs packet, not this decision packet. Each snippet must include the package command, local profile, project root/config expectations, and a warning that remote transports are not first-wave.
 
+Implementation update: the first executable packet adds `specwright-mcp-adapter` in `@specwright/adapters-mcp` as a repo-local stdio wrapper around `createMcpAdapter`. It requires `--profile local-stdio --root <path>`, reads newline-delimited JSON-RPC from stdin, writes only protocol messages to stdout, and keeps the dedicated public `@specwright/mcp-server` package deferred.
+
 ## Process Lifecycle Requirements
 
 The executable server packet must define and test:
@@ -123,11 +125,11 @@ Later MCP server implementation must add a staged test stack:
 
 Live source on this stacked branch shows:
 
-- `@specwright/adapters-mcp` is private `0.0.0` and has `main`, `types`, `exports`, and `files`, but no `bin`.
+- `@specwright/adapters-mcp` is private `0.0.0` and has `main`, `types`, `exports`, `files`, and an adapter-scoped `specwright-mcp-adapter` bin.
 - No `@specwright/mcp-server` package exists.
 - `@specwright/cli` is the only package manifest with a `specwright` executable bin.
 - `McpAdapter` is an in-process TypeScript API with `tools`, `resources`, `prompts`, optional `observability`, and `dispatch`.
-- `createMcpServer` is currently an alias to `createMcpAdapter`, not a process or transport server.
+- `createMcpServer` is currently an alias to `createMcpAdapter`; process transport is owned by the adapter-scoped stdio wrapper, not by this alias.
 - Dispatch handles `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list`, and `prompts/get`.
 - Security defaults to disabled unless authenticated mode is explicitly configured.
 - Future human-loop MCP tools are present as disabled catalog entries.
@@ -151,7 +153,7 @@ Live source on this stacked branch shows:
 | --- | --- |
 | Specwright needs an executable MCP server, not only adapter library code | raw features log `F5`, `FEAT-EPIC-005` |
 | Future package shape is either `@specwright/mcp-server` or an MCP adapter bin | raw features log `F5` |
-| Current MCP package is an in-process adapter without a bin | `packages/adapters-mcp/package.json`, `packages/adapters-mcp/src/index.ts` |
+| Current MCP package is an in-process adapter with an adapter-scoped local stdio bin | `packages/adapters-mcp/package.json`, `packages/adapters-mcp/src/index.ts`, `packages/adapters-mcp/src/stdio.ts` |
 | Current server-named factory is only an alias | `packages/adapters-mcp/src/index.ts` |
 | Existing adapter dispatch, resources, prompts, auth, limits, observability, and disabled future tools are useful substrate | `packages/adapters-mcp/src/index.ts`, adapter tests |
 | Current package taxonomy reserves `@specwright/mcp-server` as a later public target | `docs/package-taxonomy-decision.md` |

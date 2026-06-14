@@ -266,6 +266,14 @@ The intended installed command name is `specwright`; the direct `bun packages/ad
 
 The MCP adapter exposes the runtime as MCP tools, resources, and prompts without becoming a second runtime.
 
+For local MCP stdio smoke tests and host wiring, launch the adapter-scoped executable with an explicit local profile and root:
+
+```bash
+bun packages/adapters-mcp/dist/bin.js --profile local-stdio --root fixtures/simple-app
+```
+
+The process reads newline-delimited JSON-RPC messages from stdin and writes only MCP messages to stdout. The adapter-local binary is not the final public `@specwright/mcp-server` package; that package remains the later release target for host setup, package metadata, and remote/authenticated profiles.
+
 ```ts
 import { createRuntime } from "@specwright/runtime";
 import { createMcpAdapter } from "@specwright/adapters-mcp";

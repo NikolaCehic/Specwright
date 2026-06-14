@@ -55,21 +55,20 @@ const mcpAdapterReadinessRows = [
 ] as const;
 
 const mcpServerDeployabilityGaps = [
-  "package_or_bin",
-  "stdio_transport",
+  "public_mcp_server_package",
   "http_sse_transport_decision",
   "host_configuration",
   "safe_default_auth_profile",
-  "process_lifecycle",
-  "transport_integration_tests"
+  "remote_auth_profile",
+  "release_packaging"
 ] as const;
 
-const futureServerSmokeTests = [
-  "launch process",
-  "list tools",
-  "call one runtime-backed command",
-  "return structured errors",
-  "shut down cleanly"
+const firstWaveStdioSmokeTests = [
+  "launch local stdio process",
+  "initialize",
+  "list tools through JSON-RPC",
+  "call one runtime-backed command through JSON-RPC",
+  "shut down cleanly on stdin close"
 ] as const;
 
 describe("specwright mcp adapter", () => {
@@ -89,7 +88,9 @@ describe("specwright mcp adapter", () => {
       }
     });
     expect(manifest.files).toEqual(["dist"]);
-    expect("bin" in manifest).toBe(false);
+    expect(manifest.bin).toEqual({
+      "specwright-mcp-adapter": "./dist/bin.js"
+    });
     expect(packageNames.filter((name) => name.includes("mcp"))).toEqual([
       "@specwright/adapters-mcp"
     ]);
@@ -110,20 +111,19 @@ describe("specwright mcp adapter", () => {
       "versioning"
     ]);
     expect(mcpServerDeployabilityGaps).toEqual([
-      "package_or_bin",
-      "stdio_transport",
+      "public_mcp_server_package",
       "http_sse_transport_decision",
       "host_configuration",
       "safe_default_auth_profile",
-      "process_lifecycle",
-      "transport_integration_tests"
+      "remote_auth_profile",
+      "release_packaging"
     ]);
-    expect(futureServerSmokeTests).toEqual([
-      "launch process",
-      "list tools",
-      "call one runtime-backed command",
-      "return structured errors",
-      "shut down cleanly"
+    expect(firstWaveStdioSmokeTests).toEqual([
+      "launch local stdio process",
+      "initialize",
+      "list tools through JSON-RPC",
+      "call one runtime-backed command through JSON-RPC",
+      "shut down cleanly on stdin close"
     ]);
   });
 
