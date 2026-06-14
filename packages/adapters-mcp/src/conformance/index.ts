@@ -24,7 +24,7 @@ export type McpConformanceCase = {
 };
 
 export const PAGE10_CONFORMANCE_CASES = [
-  c("contract.tool-runtime-1to1", "contract", "Every MCP tool maps 1:1 to a stable RuntimeApi operation", "packages/adapters-mcp/src/index.test.ts registers exactly eleven enabled runtime-backed tools"),
+  c("contract.tool-runtime-1to1", "contract", "Every MCP tool maps 1:1 to a stable RuntimeApi operation", "packages/adapters-mcp/src/index.test.ts registers exactly fourteen enabled runtime-backed tools"),
   c("contract.magic-tool-unregistrable", "contract", "No magic tool is registrable", "packages/adapters-mcp/src/index.test.ts rejects magic and stale catalog registrations"),
   c("contract.resources-read-only", "contract", "resources/read is read-only", "packages/adapters-mcp/src/index.test.ts resources/write is unregistered and performs zero runtime calls"),
   c("contract.prompts-runtime-actions", "contract", "MCP prompts produce only runtime action descriptors", "packages/adapters-mcp/src/index.test.ts every prompts/get output validates as a runtime action descriptor"),
@@ -37,12 +37,12 @@ export const PAGE10_CONFORMANCE_CASES = [
   c("determinism.idempotent-retry", "determinism-replay", "Idempotent retries do not duplicate effects", "packages/adapters-mcp/src/conformance.test.ts real-runtime idempotent MCP tool retry returns cached result without duplicate runtime events"),
   c("determinism.cache-advisory", "determinism-replay", "Cached projections are advisory", "packages/adapters-mcp/src/index.test.ts repeated canonical reads are byte-identical and project from runtime reads"),
 
-  c("fail.invalid-args", "fail-closed", "Invalid args fail closed", "packages/adapters-mcp/src/index.test.ts unknown, disabled, and invalid calls fail closed with zero runtime calls"),
+  c("fail.invalid-args", "fail-closed", "Invalid args fail closed", "packages/adapters-mcp/src/index.test.ts unknown and invalid calls fail closed with zero runtime calls"),
   c("fail.stale-state", "fail-closed", "Stale state is rejected", "packages/adapters-mcp/src/observability/packet05.test.ts stale-state metric and expectedLastEventId audit coverage"),
   c("fail.policy-denial", "fail-closed", "Policy denial is relayed, never bypassed", "packages/adapters-mcp/src/index.test.ts runtime policy denial and approval_required are surfaced without laundering"),
   c("fail.policy-error", "fail-closed", "Policy fault fails closed", "packages/adapters-mcp/src/index.test.ts policy_error outcome surfaces as a denial"),
   c("fail.approval-not-auto", "fail-closed", "Approval is never auto-satisfied", "packages/adapters-mcp/src/index.test.ts approval_required is returned as an error with approvalId"),
-  c("fail.approval-terminal", "fail-closed", "Approval timeout/rejection is terminal", "packages/adapters-mcp/src/index.test.ts disabled record_approval remains unavailable until runtime exports it"),
+  c("fail.approval-terminal", "fail-closed", "Approval timeout/rejection is terminal", "packages/runtime/src/index.test.ts recordApproval fails closed for invalid, missing, and resolved approvals"),
   c("fail.partial-write", "fail-closed", "Partial-write fails closed", "packages/adapters-mcp/src/observability/packet05.test.ts side-effecting operations fail closed on audit and span partial writes"),
   c("fail.no-silent-partial-mutation", "fail-closed", "No silent partial mutation", "packages/adapters-mcp/src/observability/packet05.test.ts mutating tools fail closed when post-mutation runtime events cannot be read"),
 

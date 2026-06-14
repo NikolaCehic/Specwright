@@ -45,6 +45,7 @@ import {
   EvalVerdictSchema,
   HarnessSnapshotSchema,
   ApprovalDecisionSchema,
+  HumanAnswerRecordedEventPayloadSchema,
   RunInputSchema,
   type ApprovalDecision,
   type ApprovalRequest,
@@ -52,7 +53,9 @@ import {
   type EvalVerdict,
   type EvidenceRecord,
   type HarnessSnapshot,
+  type HumanAnswerRecordedEventPayload,
   type HumanQuestion,
+  type RepairTask,
   type RunInput,
   type RunState,
   type RuntimeEvent,
@@ -151,10 +154,65 @@ export type RuntimeApprovalDecisionResult = {
   event: RuntimeEvent;
   state: RunState;
 };
+export type RuntimeHumanAnswerOptions = RunLookupOptions;
+export type RuntimeHumanAnswerResult = {
+  answer: HumanAnswerRecordedEventPayload;
+  event: RuntimeEvent;
+  state: RunState;
+};
+export type RuntimeNextAction =
+  | {
+      kind: "approval";
+      runId: string;
+      approval: ApprovalRequest;
+    }
+  | {
+      kind: "question";
+      runId: string;
+      question: HumanQuestion;
+    }
+  | {
+      kind: "repair";
+      runId: string;
+      repairTask: RepairTask;
+    }
+  | {
+      kind: "none";
+      runId: string;
+      status: RunState["status"];
+      phase: string;
+    };
+export type RuntimeApprovalState = {
+  runId: string;
+  status: RunState["status"];
+  phase: string;
+  pendingApprovals: ApprovalRequest[];
+  pendingQuestions: HumanQuestion[];
+  pendingRepairTasks: RepairTask[];
+  nextAction: RuntimeNextAction;
+  blocked: boolean;
+  resolved: boolean;
+};
 
 export type RuntimeApi = {
   startRun(input: RunInput): Promise<RunHandle>;
   getRun(runId: string, options?: RunLookupOptions): Promise<RunState>;
+  getNextAction(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<RuntimeNextAction>;
+  listPendingApprovals(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<ApprovalRequest[]>;
+  listPendingQuestions(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<HumanQuestion[]>;
+  resolveApprovalState(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<RuntimeApprovalState>;
   getEvents(
     runId: string,
     options?: RunLookupOptions
@@ -185,6 +243,11 @@ export type RuntimeApi = {
     decision: ApprovalDecision,
     options?: RuntimeApprovalDecisionOptions
   ): Promise<RuntimeApprovalDecisionResult>;
+  recordHumanAnswer(
+    runId: string,
+    answer: HumanAnswerRecordedEventPayload,
+    options?: RuntimeHumanAnswerOptions
+  ): Promise<RuntimeHumanAnswerResult>;
   evaluateGate(
     runId: string,
     request: RuntimeEvaluateGateRequest,
@@ -212,6 +275,19 @@ export type RuntimeApiRecordApprovalRequiredRegression = CompileTimeAssert<
 >;
 export type RuntimeApiRecordApprovalDefinedRegression = CompileTimeAssert<
   undefined extends RuntimeApi["recordApproval"] ? false : true
+>;
+export type RuntimeApiHumanLoopProjectionRegression = CompileTimeAssert<
+  OptionalKey<RuntimeApi, "getNextAction"> extends false
+    ? OptionalKey<RuntimeApi, "recordHumanAnswer"> extends false
+      ? OptionalKey<RuntimeApi, "listPendingApprovals"> extends false
+        ? OptionalKey<RuntimeApi, "listPendingQuestions"> extends false
+          ? OptionalKey<RuntimeApi, "resolveApprovalState"> extends false
+            ? true
+            : false
+          : false
+        : false
+      : false
+    : false
 >;
 
 export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
@@ -713,6 +789,56 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
     return artifact;
   }
 
+  async function getNextActionForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<RuntimeNextAction> {
+    const state = await getRun(runId, lookupOptions);
+
+    return nextActionFromState(runId, state);
+  }
+
+  async function listPendingApprovalsForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<ApprovalRequest[]> {
+    const state = await getRun(runId, lookupOptions);
+
+    return state.pendingApprovals;
+  }
+
+  async function listPendingQuestionsForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<HumanQuestion[]> {
+    const state = await getRun(runId, lookupOptions);
+
+    return state.pendingQuestions;
+  }
+
+  async function resolveApprovalStateForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<RuntimeApprovalState> {
+    const state = await getRun(runId, lookupOptions);
+    const nextAction = nextActionFromState(runId, state);
+
+    return {
+      runId,
+      status: state.status,
+      phase: state.phase,
+      pendingApprovals: state.pendingApprovals,
+      pendingQuestions: state.pendingQuestions,
+      pendingRepairTasks: state.pendingRepairTasks,
+      nextAction,
+      blocked: state.status === "blocked",
+      resolved:
+        state.pendingApprovals.length === 0 &&
+        state.pendingQuestions.length === 0 &&
+        state.pendingRepairTasks.length === 0
+    };
+  }
+
   async function recordApprovalForRun(
     runId: string,
     decisionLike: ApprovalDecision,
@@ -753,6 +879,49 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
     };
   }
 
+  async function recordHumanAnswerForRun(
+    runId: string,
+    answerLike: HumanAnswerRecordedEventPayload,
+    lookupOptions: RuntimeHumanAnswerOptions = {}
+  ): Promise<RuntimeHumanAnswerResult> {
+    const answer = HumanAnswerRecordedEventPayloadSchema.parse(answerLike);
+    const questionId = answer.questionId ?? answer.humanQuestionId;
+
+    if (questionId === undefined) {
+      throw new Error("Human answer must reference a pending question");
+    }
+
+    const rootDir = rootDirForRun(runId, lookupOptions, options, runRoots);
+    const state = await getRun(runId, { rootDir });
+    const pendingQuestion = state.pendingQuestions.find(
+      (question) => question.questionId === questionId
+    );
+
+    if (pendingQuestion === undefined) {
+      throw new Error(
+        `Human question ${questionId} is not currently pending for run ${runId}`
+      );
+    }
+
+    const recorded = await appendEvent(
+      withTimestamp(
+        {
+          rootDir,
+          runId,
+          type: "human.answer_recorded",
+          payload: answer
+        },
+        options.now
+      )
+    );
+
+    return {
+      answer,
+      event: recorded.event,
+      state: recorded.state
+    };
+  }
+
   async function generateReportForRun(
     runId: string,
     lookupOptions: RuntimeReportOptions = {}
@@ -778,6 +947,10 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
   return {
     startRun,
     getRun,
+    getNextAction: getNextActionForRun,
+    listPendingApprovals: listPendingApprovalsForRun,
+    listPendingQuestions: listPendingQuestionsForRun,
+    resolveApprovalState: resolveApprovalStateForRun,
     getEvents,
     replay,
     callTool,
@@ -785,6 +958,7 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
     recordEvidence: recordEvidenceForRun,
     recordArtifact: recordArtifactForRun,
     recordApproval: recordApprovalForRun,
+    recordHumanAnswer: recordHumanAnswerForRun,
     evaluateGate: evaluateGateForRun,
     generateReport: generateReportForRun,
     writeRunReport: writeRunReportForRun
@@ -792,6 +966,45 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
 }
 
 export const createRuntimeApi = createRuntime;
+
+function nextActionFromState(runId: string, state: RunState): RuntimeNextAction {
+  const approval = state.pendingApprovals[0];
+
+  if (approval !== undefined) {
+    return {
+      kind: "approval",
+      runId,
+      approval
+    };
+  }
+
+  const question = state.pendingQuestions[0];
+
+  if (question !== undefined) {
+    return {
+      kind: "question",
+      runId,
+      question
+    };
+  }
+
+  const repairTask = state.pendingRepairTasks[0];
+
+  if (repairTask !== undefined) {
+    return {
+      kind: "repair",
+      runId,
+      repairTask
+    };
+  }
+
+  return {
+    kind: "none",
+    runId,
+    status: state.status,
+    phase: state.phase
+  };
+}
 
 async function applyGateLifecycleInstructionForRun(input: {
   rootDir: string | undefined;

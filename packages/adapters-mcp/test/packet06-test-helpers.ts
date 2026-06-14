@@ -29,6 +29,42 @@ export function fakeRuntimeForPacket06(input: { calls?: string[] } = {}): Runtim
       calls?.push("getRun");
       return fakeState(runId);
     },
+    async getNextAction(runId) {
+      calls?.push("getNextAction");
+      return {
+        kind: "none",
+        runId,
+        status: "running",
+        phase: "intake"
+      };
+    },
+    async listPendingApprovals() {
+      calls?.push("listPendingApprovals");
+      return [];
+    },
+    async listPendingQuestions() {
+      calls?.push("listPendingQuestions");
+      return [];
+    },
+    async resolveApprovalState(runId) {
+      calls?.push("resolveApprovalState");
+      return {
+        runId,
+        status: "running",
+        phase: "intake",
+        pendingApprovals: [],
+        pendingQuestions: [],
+        pendingRepairTasks: [],
+        nextAction: {
+          kind: "none",
+          runId,
+          status: "running",
+          phase: "intake"
+        },
+        blocked: false,
+        resolved: true
+      };
+    },
     async getEvents(runId) {
       calls?.push("getEvents");
       return [
@@ -97,9 +133,40 @@ export function fakeRuntimeForPacket06(input: { calls?: string[] } = {}): Runtim
         redactionPolicy: record.redactionPolicy ?? "operator"
       } as unknown as Awaited<ReturnType<RuntimeApi["recordArtifact"]>>;
     },
-    async recordApproval() {
+    async recordApproval(runId, decision) {
       calls?.push("recordApproval");
-      throw new Error("MCP approval recording remains disabled for AUD-004A");
+      return {
+        decision,
+        event: {
+          id: "event-approval",
+          runId,
+          type: "decision.recorded",
+          timestamp: "2026-05-29T00:00:00.000Z",
+          sequence: 1,
+          traceId: "trace-1",
+          payload: {
+            approvalId: decision.approvalId,
+            decision
+          }
+        },
+        state: fakeState(runId)
+      } as unknown as Awaited<ReturnType<RuntimeApi["recordApproval"]>>;
+    },
+    async recordHumanAnswer(runId, answer) {
+      calls?.push("recordHumanAnswer");
+      return {
+        answer,
+        event: {
+          id: "event-answer",
+          runId,
+          type: "human.answer_recorded",
+          timestamp: "2026-05-29T00:00:00.000Z",
+          sequence: 1,
+          traceId: "trace-1",
+          payload: answer
+        },
+        state: fakeState(runId)
+      } as unknown as Awaited<ReturnType<RuntimeApi["recordHumanAnswer"]>>;
     },
     async evaluateGate() {
       calls?.push("evaluateGate");
