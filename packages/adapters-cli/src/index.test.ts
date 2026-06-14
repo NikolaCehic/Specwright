@@ -30,6 +30,7 @@ const cliSurfaceBaseline = [
   { command: "events", runtimeOperation: "getEvents", mutates: false },
   { command: "replay", runtimeOperation: "replay", mutates: false },
   { command: "report", runtimeOperation: "writeRunReport", mutates: true },
+  { command: "eval.run", runtimeOperation: "runEval", mutates: true },
   { command: "approve", runtimeOperation: "recordApproval", mutates: true },
   { command: "reject", runtimeOperation: "recordApproval", mutates: true },
   { command: "answer", runtimeOperation: "recordEvidence", mutates: true }
@@ -41,13 +42,19 @@ describe("specwright cli adapter", () => {
     const commands = help.stdout
       .split("\n")
       .filter((line) => line.startsWith("  specwright "))
-      .map((line) => line.trim().split(/\s+/)[1]);
+      .map((line) => {
+        const parts = line.trim().split(/\s+/);
+
+        return parts[1] === "eval" && parts[2] === "run"
+          ? "eval.run"
+          : parts[1];
+      });
 
     expect(help.exitCode).toBe(0);
     expect(commands).toEqual(cliSurfaceBaseline.map((row) => row.command));
     expect(
       cliSurfaceBaseline.filter((row) => row.mutates).map((row) => row.command)
-    ).toEqual(["run", "report", "approve", "reject", "answer"]);
+    ).toEqual(["run", "report", "eval.run", "approve", "reject", "answer"]);
     expect(new Set(cliSurfaceBaseline.map((row) => row.runtimeOperation))).toEqual(
       new Set([
         "startRun",
@@ -55,6 +62,7 @@ describe("specwright cli adapter", () => {
         "getEvents",
         "replay",
         "writeRunReport",
+        "runEval",
         "recordApproval",
         "diagnose",
         "recordEvidence"
@@ -383,6 +391,147 @@ describe("specwright cli adapter", () => {
     expect(result.stdout).toContain("Summary: /runs/run-5/summary.md");
     expect(result.stdout).toContain("secret=[redacted]");
     expect(result.stdout).not.toContain("\u001b");
+  });
+
+  test("eval run calls runtime.runEval and envelopes the verdict", async () => {
+    const calls: unknown[] = [];
+    const runtime = fakeRuntime({
+      async runEval(runId, request, options) {
+        calls.push([runId, request, options]);
+
+        return fakeEvalVerdict({
+          evalId: String(request),
+          status: "pass"
+        });
+      }
+    });
+
+    const result = await executeCli(
+      [
+        "eval",
+        "run",
+        "run-eval",
+        "--eval",
+        "eval.required",
+        "--root",
+        "/runs-root",
+        "--json"
+      ],
+      runtime,
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(calls).toEqual([
+      ["run-eval", "eval.required", { rootDir: "/runs-root" }]
+    ]);
+    expect(envelope).toMatchObject({
+      command: "eval.run",
+      outcome: "ok",
+      runId: "run-eval",
+      data: {
+        evalId: "eval.required",
+        status: "pass"
+      }
+    });
+    outputSchemas["eval.run"].parse(envelope);
+  });
+
+  test("eval run returns failing verdict data with a classified nonzero outcome", async () => {
+    const result = await executeCli(
+      [
+        "eval",
+        "run",
+        "run-eval",
+        "--eval",
+        "eval.required",
+        "--json"
+      ],
+      fakeRuntime({
+        async runEval() {
+          return fakeEvalVerdict({
+            status: "fail",
+            findings: [
+              {
+                code: "missing_artifact",
+                message: "Required artifact was not produced.",
+                severity: "blocking"
+              }
+            ]
+          });
+        }
+      }),
+      { context: authenticatedContext }
+    );
+    const envelope = JSON.parse(result.stdout);
+
+    expect(result.exitCode).toBe(6);
+    expect(result.stderr).toBe("");
+    expect(envelope).toMatchObject({
+      command: "eval.run",
+      outcome: "gate_failure",
+      runId: "run-eval",
+      data: {
+        status: "fail",
+        findings: [
+          {
+            code: "missing_artifact"
+          }
+        ]
+      },
+      error: {
+        errorClass: "gate_failure",
+        code: 6
+      }
+    });
+    outputSchemas["eval.run"].parse(envelope);
+  });
+
+  test("eval run requires an authenticated actor before runtime mutation", async () => {
+    const calls: unknown[] = [];
+    const result = await executeCli(
+      [
+        "eval",
+        "run",
+        "run-eval",
+        "--eval",
+        "eval.required",
+        "--json"
+      ],
+      fakeRuntime({
+        async runEval(runId, request, options) {
+          calls.push([runId, request, options]);
+
+          return fakeEvalVerdict();
+        }
+      }),
+      {
+        context: {
+          principal: {
+            id: "anonymous",
+            source: "anonymous",
+            assuranceLevel: "anonymous",
+            roles: []
+          },
+          tenant: {
+            id: "tenant-a",
+            allowedRoots: ["/runs-root"]
+          },
+          ci: true
+        }
+      }
+    );
+
+    expect(result.exitCode).toBe(11);
+    expect(calls).toEqual([]);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toMatchObject({
+      errorClass: "auth",
+      code: 11,
+      runId: "run-eval"
+    });
   });
 
   test("usage and input validation failures are classified", async () => {
@@ -801,6 +950,9 @@ function fakeRuntime(overrides: Partial<CliRuntime> = {}): CliRuntime {
         })
       };
     },
+    async runEval() {
+      return fakeEvalVerdict();
+    },
     ...overrides
   };
 }
@@ -915,6 +1067,29 @@ function fakeEvent(
           task: "Generate the authoritative contract registry."
         }
       }
+  };
+}
+
+function fakeEvalVerdict(
+  overrides: Partial<Awaited<ReturnType<CliRuntime["runEval"]>>> = {}
+): Awaited<ReturnType<CliRuntime["runEval"]>> {
+  return {
+    evalId: overrides.evalId ?? "eval.required",
+    targetRef: overrides.targetRef ?? "eval:eval.required",
+    status: overrides.status ?? "pass",
+    severity: overrides.severity ?? "blocking",
+    findings: overrides.findings ?? [],
+    evidenceRefs: overrides.evidenceRefs ?? ["evidence:1"],
+    producedBy: overrides.producedBy ?? {
+      kind: "deterministic",
+      ref: "test-eval-runner"
+    },
+    ...(overrides.repairTask === undefined
+      ? {}
+      : { repairTask: overrides.repairTask }),
+    ...(overrides.provenance === undefined
+      ? {}
+      : { provenance: overrides.provenance })
   };
 }
 

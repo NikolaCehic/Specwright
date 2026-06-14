@@ -8,6 +8,10 @@
     {
       "classification": "additive-compatible",
       "description": "Adds the doctor command envelope for read-only source-checkout diagnostics."
+    },
+    {
+      "classification": "additive-compatible",
+      "description": "Adds the eval.run command envelope for governed eval verdicts returned through RuntimeApi.runEval."
     }
   ]
 }

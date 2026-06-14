@@ -1,5 +1,9 @@
 import { createRuntime, type RuntimeApi } from "@specwright/runtime";
-import { EvidenceRecordSchema, type EvidenceRecord } from "@specwright/schemas";
+import {
+  EvidenceRecordSchema,
+  type EvalVerdict,
+  type EvidenceRecord
+} from "@specwright/schemas";
 import { CLI_VERSION, DEFAULT_HARNESS_ID } from "./constants";
 import {
   resolveExecutionContext,
@@ -62,6 +66,7 @@ export type CliRuntime = Pick<
   | "writeRunReport"
   | "recordEvidence"
   | "recordApproval"
+  | "runEval"
 >;
 
 export type CliExecution = {
@@ -113,6 +118,15 @@ type ParsedCommand =
       redactionProfile: RedactionProfile;
     }
   | {
+      kind: "eval.run";
+      runId: string;
+      evalId: string;
+      rootDir?: string | undefined;
+      json: boolean;
+      ci: boolean;
+      deadlineMs?: number | undefined;
+    }
+  | {
       kind: "approve" | "reject";
       runId: string;
       approvalId: string;
@@ -150,6 +164,7 @@ type CommandResult = {
   diagnostics?: CliDiagnostic[] | undefined;
   errorMessage?: string | undefined;
   operatorAction?: string | undefined;
+  jsonEnvelopeOnError?: boolean | undefined;
 };
 
 export async function executeCli(
@@ -413,6 +428,37 @@ async function executeCommand(
       };
     }
 
+    case "eval.run": {
+      const rootDir = canonicalizeAllowedPath({
+        value: command.rootDir,
+        flagName: "root",
+        context
+      });
+      const verdict = await withDeadline(
+        runtime.runEval(command.runId, command.evalId, lookupOptions(rootDir)),
+        deadlineMs,
+        "runEval exceeded the invocation deadline"
+      );
+      const outcome = outcomeForEvalVerdict(verdict);
+
+      return {
+        command: "eval.run",
+        outcome,
+        runId: command.runId,
+        data: verdict,
+        stdout: renderEvalVerdict(command.runId, verdict),
+        errorMessage:
+          outcome === "ok"
+            ? undefined
+            : `Eval ${verdict.evalId} completed with status ${verdict.status}`,
+        operatorAction:
+          outcome === "ok"
+            ? undefined
+            : "Inspect the eval verdict findings, repair the failing condition, and rerun the eval before promoting the run.",
+        jsonEnvelopeOnError: true
+      };
+    }
+
     case "answer": {
       const rootDir = canonicalizeAllowedPath({
         value: command.rootDir,
@@ -511,7 +557,7 @@ function executionForCommandResult(
           operatorAction: result.operatorAction
         });
 
-  if (result.outcome !== "ok") {
+  if (result.outcome !== "ok" && result.jsonEnvelopeOnError !== true) {
     return {
       exitCode,
       stdout: "",
@@ -607,6 +653,8 @@ function parseCommand(
     case "replay":
     case "report":
       return parseRunLookup(command, rest, options.defaultDeadlineMs);
+    case "eval":
+      return parseEval(rest, options.defaultDeadlineMs);
     case "approve":
     case "reject":
       return parseApprovalDecision(command, rest, options.defaultDeadlineMs);
@@ -709,6 +757,54 @@ function parseRunLookup(
         : undefined,
     deadlineMs: deadlineFromParsed(parsed, defaultDeadlineMs),
     redactionProfile: profile
+  };
+}
+
+function parseEval(
+  argv: readonly string[],
+  defaultDeadlineMs: number
+): ParsedCommand {
+  const [subcommand, ...rest] = argv;
+
+  if (subcommand !== "run") {
+    throw new CliUsageError("eval requires subcommand run");
+  }
+
+  const parsed = parseArguments(rest, {
+    valueFlags: ["eval", "root", "deadline"],
+    booleanFlags: ["json", "ci"]
+  });
+
+  if (parsed.positionals.length !== 1) {
+    throw new CliUsageError("eval run requires exactly one <run-id>");
+  }
+
+  const runId = parsed.positionals[0];
+  const evalId = stringFlag(parsed, "eval");
+
+  if (runId === undefined) {
+    throw new CliUsageError("eval run requires exactly one <run-id>");
+  }
+
+  if (evalId === undefined) {
+    throw new CliUsageError("eval run requires --eval <eval-id>");
+  }
+
+  if (evalId.trim().length === 0 || containsUnsafeControl(evalId)) {
+    throw new CliInputError(
+      "--eval must be non-empty text without control characters",
+      { runId }
+    );
+  }
+
+  return {
+    kind: "eval.run",
+    runId,
+    evalId,
+    rootDir: stringFlag(parsed, "root"),
+    json: parsed.flags.json === true,
+    ci: parsed.flags.ci === true,
+    deadlineMs: deadlineFromParsed(parsed, defaultDeadlineMs)
   };
 }
 
@@ -979,6 +1075,25 @@ function renderReport(
   ]);
 }
 
+function renderEvalVerdict(runId: string, verdict: EvalVerdict) {
+  return lines([
+    "Eval completed",
+    `Run: ${runId}`,
+    `Eval: ${sanitizeText(verdict.evalId)}`,
+    `Status: ${verdict.status}`,
+    `Severity: ${verdict.severity}`,
+    `Target: ${sanitizeText(verdict.targetRef)}`,
+    `Findings: ${verdict.findings.length}`,
+    ...verdict.findings.slice(0, 3).map((finding) =>
+      [
+        "-",
+        sanitizeText(finding.code ?? "finding"),
+        sanitizeText(finding.message)
+      ].join(" ")
+    )
+  ]);
+}
+
 function renderAnswerResult(evidence: EvidenceRecord) {
   return lines([
     "Answer recorded",
@@ -1029,6 +1144,7 @@ function usage() {
     "  specwright events <run-id> [--root <path>] [--limit <n>] [--redaction-profile <shared-log|operator>] [--json] [--ci] [--deadline <ms>]",
     "  specwright replay <run-id> [--root <path>] [--limit <n>] [--json] [--ci] [--deadline <ms>]",
     "  specwright report <run-id> [--root <path>] [--redaction-profile <shared-log|operator>] [--json] [--ci] [--deadline <ms>]",
+    "  specwright eval run <run-id> --eval <eval-id> [--root <path>] [--json] [--ci] [--deadline <ms>]",
     "  specwright approve <run-id> --approval <approval-id> --decision-hash <hash> [--message <text>] [--root <path>] [--json]",
     "  specwright reject <run-id> --approval <approval-id> --decision-hash <hash> [--message <text>] [--root <path>] [--json]",
     "  specwright answer <run-id> --question <question-id> --answer <text> [--root <path>] [--json]"
@@ -1054,6 +1170,10 @@ function normalizeContext(
 }
 
 function commandNameFromArgv(argv: readonly string[]): string {
+  if (argv[0] === "eval" && argv[1] === "run") {
+    return "eval.run";
+  }
+
   return argv[0] ?? "help";
 }
 
@@ -1063,6 +1183,7 @@ function authorityForCommand(command: RuntimeCommand["kind"]): CommandAuthority 
       return "read";
     case "run":
     case "report":
+    case "eval.run":
       return "privileged";
     case "approve":
     case "reject":
@@ -1072,6 +1193,18 @@ function authorityForCommand(command: RuntimeCommand["kind"]): CommandAuthority 
     case "events":
     case "replay":
       return "read";
+  }
+}
+
+function outcomeForEvalVerdict(verdict: EvalVerdict): OutcomeClass {
+  switch (verdict.status) {
+    case "pass":
+    case "skipped":
+      return "ok";
+    case "needs_review":
+      return "blocked";
+    case "fail":
+      return "gate_failure";
   }
 }
 

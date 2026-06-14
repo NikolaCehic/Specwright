@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   ApprovalDecisionSchema,
   ApprovalRequestSchema,
+  EvalVerdictSchema,
   HumanQuestionSchema,
   RuntimeEventSchema,
   RunStateSchema
@@ -17,6 +18,7 @@ export type CliCommandName =
   | "events"
   | "replay"
   | "report"
+  | "eval.run"
   | "approve"
   | "reject"
   | "answer";
@@ -170,6 +172,10 @@ export const reportOutputSchema = envelopeSchema(
     })
     .strict()
 );
+export const evalRunOutputSchema = envelopeSchema(
+  "eval.run",
+  EvalVerdictSchema
+);
 export const approveOutputSchema = envelopeSchema(
   "approve",
   approvalDecisionResultSchema
@@ -187,6 +193,7 @@ export const outputSchemas = Object.freeze({
   events: eventsOutputSchema,
   replay: replayOutputSchema,
   report: reportOutputSchema,
+  "eval.run": evalRunOutputSchema,
   approve: approveOutputSchema,
   reject: rejectOutputSchema,
   answer: answerOutputSchema

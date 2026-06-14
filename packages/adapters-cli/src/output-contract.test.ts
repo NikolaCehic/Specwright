@@ -12,7 +12,8 @@ const fixtureNames = [
   "status-ok.json",
   "events-ok.json",
   "replay-ok.json",
-  "report-ok.json"
+  "report-ok.json",
+  "eval-run-ok.json"
 ] as const;
 const authenticatedContext = {
   principal: {
@@ -50,6 +51,9 @@ describe("cli output contract fixtures", () => {
     expect(classifications).toMatchObject({
       apiVersion: 1,
       changes: [
+        {
+          classification: "additive-compatible"
+        },
         {
           classification: "additive-compatible"
         },
@@ -119,7 +123,15 @@ async function liveEnvelopes(): Promise<Record<string, Record<string, unknown>>>
       "--limit",
       "1"
     ],
-    "report-ok.json": ["report", "run-contract", "--json"]
+    "report-ok.json": ["report", "run-contract", "--json"],
+    "eval-run-ok.json": [
+      "eval",
+      "run",
+      "run-contract",
+      "--eval",
+      "eval.required",
+      "--json"
+    ]
   };
   const envelopes: Record<string, Record<string, unknown>> = {};
 
@@ -201,6 +213,9 @@ function contractRuntime(): CliRuntime {
         markdown: "# Run Summary\n\n- Status: running\n",
         missingInputs: []
       };
+    },
+    async runEval() {
+      return fakeEvalVerdict();
     },
     async recordEvidence(_runId, record) {
       return record;
@@ -316,6 +331,21 @@ function fakeEvent(
         },
         task: "Generate the authoritative contract registry."
       }
+    }
+  };
+}
+
+function fakeEvalVerdict(): Awaited<ReturnType<CliRuntime["runEval"]>> {
+  return {
+    evalId: "eval.required",
+    targetRef: "eval:eval.required",
+    status: "pass",
+    severity: "blocking",
+    findings: [],
+    evidenceRefs: ["evidence:1"],
+    producedBy: {
+      kind: "deterministic",
+      ref: "contract-eval-runner"
     }
   };
 }
