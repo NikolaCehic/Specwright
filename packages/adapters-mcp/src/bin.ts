@@ -1,5 +1,6 @@
 #!/usr/bin/env bun
 import { resolve } from "node:path";
+import { createInterface } from "node:readline";
 import { createRuntime } from "@specwright/runtime";
 import {
   createMcpAdapter,
@@ -62,11 +63,28 @@ if (!options.ok) {
 
   await serveMcpStdio({
     adapter,
-    stdin: stdioProcess.stdin,
+    stdin: stdinLines(stdioProcess.stdin),
     stdout: process.stdout as StdioStreamWriter,
     stderr: process.stderr as StdioStreamWriter,
     requestContext: options.requestContext
   });
+}
+
+async function* stdinLines(
+  stdin: AsyncIterable<Uint8Array>
+): AsyncIterable<string> {
+  const reader = createInterface({
+    input: stdin,
+    crlfDelay: Infinity
+  });
+
+  try {
+    for await (const line of reader) {
+      yield `${line}\n`;
+    }
+  } finally {
+    reader.close();
+  }
 }
 
 function parseOptions(argv: readonly string[], cwd: string): BinOptions {
