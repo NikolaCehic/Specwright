@@ -44,7 +44,9 @@ import {
 import {
   EvalVerdictSchema,
   HarnessSnapshotSchema,
+  ApprovalDecisionSchema,
   RunInputSchema,
+  type ApprovalDecision,
   type ArtifactRecord,
   type EvalVerdict,
   type EvidenceRecord,
@@ -141,6 +143,12 @@ export type RuntimeEvaluateGateRequest = string | EvaluateGateRequest;
 export type RuntimeReportOptions = RunLookupOptions & {
   tenantScope?: string | undefined;
 };
+export type RuntimeApprovalDecisionOptions = RunLookupOptions;
+export type RuntimeApprovalDecisionResult = {
+  decision: ApprovalDecision;
+  event: RuntimeEvent;
+  state: RunState;
+};
 
 export type RuntimeApi = {
   startRun(input: RunInput): Promise<RunHandle>;
@@ -170,6 +178,11 @@ export type RuntimeApi = {
     record: ArtifactRecordInput,
     options?: RunLookupOptions
   ): Promise<ArtifactRecord>;
+  recordApproval(
+    runId: string,
+    decision: ApprovalDecision,
+    options?: RuntimeApprovalDecisionOptions
+  ): Promise<RuntimeApprovalDecisionResult>;
   evaluateGate(
     runId: string,
     request: RuntimeEvaluateGateRequest,
@@ -184,6 +197,20 @@ export type RuntimeApi = {
     options?: RuntimeReportOptions
   ): Promise<RunReport>;
 };
+
+type OptionalKey<TObject, TKey extends keyof TObject> = {} extends Pick<
+  TObject,
+  TKey
+>
+  ? true
+  : false;
+type CompileTimeAssert<TValue extends true> = TValue;
+export type RuntimeApiRecordApprovalRequiredRegression = CompileTimeAssert<
+  OptionalKey<RuntimeApi, "recordApproval"> extends false ? true : false
+>;
+export type RuntimeApiRecordApprovalDefinedRegression = CompileTimeAssert<
+  undefined extends RuntimeApi["recordApproval"] ? false : true
+>;
 
 export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
   const loadHarnessPackage =
@@ -681,6 +708,46 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
     return artifact;
   }
 
+  async function recordApprovalForRun(
+    runId: string,
+    decisionLike: ApprovalDecision,
+    lookupOptions: RuntimeApprovalDecisionOptions = {}
+  ): Promise<RuntimeApprovalDecisionResult> {
+    const decision = ApprovalDecisionSchema.parse(decisionLike);
+    const rootDir = rootDirForRun(runId, lookupOptions, options, runRoots);
+    const state = await getRun(runId, { rootDir });
+    const pendingApproval = state.pendingApprovals.find(
+      (approval) => approval.approvalId === decision.approvalId
+    );
+
+    if (pendingApproval === undefined) {
+      throw new Error(
+        `Approval ${decision.approvalId} is not currently pending for run ${runId}`
+      );
+    }
+
+    const recorded = await appendEvent(
+      withTimestamp(
+        {
+          rootDir,
+          runId,
+          type: "decision.recorded",
+          payload: {
+            approvalId: decision.approvalId,
+            decision
+          }
+        },
+        options.now
+      )
+    );
+
+    return {
+      decision,
+      event: recorded.event,
+      state: recorded.state
+    };
+  }
+
   async function generateReportForRun(
     runId: string,
     lookupOptions: RuntimeReportOptions = {}
@@ -712,6 +779,7 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
     runEval: runEvalForRun,
     recordEvidence: recordEvidenceForRun,
     recordArtifact: recordArtifactForRun,
+    recordApproval: recordApprovalForRun,
     evaluateGate: evaluateGateForRun,
     generateReport: generateReportForRun,
     writeRunReport: writeRunReportForRun

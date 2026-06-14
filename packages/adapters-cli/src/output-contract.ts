@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  ApprovalDecisionSchema,
   ApprovalRequestSchema,
   HumanQuestionSchema,
   RuntimeEventSchema,
@@ -79,6 +80,14 @@ const diagnosticSchema = z
   })
   .passthrough();
 
+const approvalDecisionResultSchema = z
+  .object({
+    decision: ApprovalDecisionSchema,
+    event: RuntimeEventSchema,
+    state: RunStateSchema
+  })
+  .strict();
+
 function envelopeSchema(command: CliCommandName, data: z.ZodTypeAny) {
   return z
     .object({
@@ -132,8 +141,14 @@ export const reportOutputSchema = envelopeSchema(
     })
     .strict()
 );
-export const approveOutputSchema = envelopeSchema("approve", z.unknown());
-export const rejectOutputSchema = envelopeSchema("reject", z.unknown());
+export const approveOutputSchema = envelopeSchema(
+  "approve",
+  approvalDecisionResultSchema
+);
+export const rejectOutputSchema = envelopeSchema(
+  "reject",
+  approvalDecisionResultSchema
+);
 export const answerOutputSchema = envelopeSchema("answer", z.unknown());
 
 export const outputSchemas = Object.freeze({

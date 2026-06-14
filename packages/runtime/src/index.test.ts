@@ -7,6 +7,7 @@ import { appendEvidence, listEvidence } from "@specwright/evidence-store";
 import type { EvaluateGateRequest, GateEvaluationResult } from "@specwright/gate-engine";
 import type { RunEvalRequest } from "@specwright/eval-runner";
 import type {
+  ApprovalRequest,
   EvidenceRecord,
   EvalVerdict,
   RunInput,
@@ -14,7 +15,15 @@ import type {
   ToolCallRequest,
   ToolCallResult
 } from "@specwright/schemas";
-import { appendEvent, getRunStorePaths } from "@specwright/run-store";
+import {
+  RUN_STATE_CHECKPOINT_VERSION,
+  appendEvent,
+  getRunStorePaths,
+  projectRunState,
+  readEvents,
+  writeCheckpoint,
+  type RunStateCheckpoint
+} from "@specwright/run-store";
 import { readRunSummary } from "@specwright/run-reports";
 import { readTrace } from "@specwright/trace-recorder";
 import { createRuntime, type ToolBrokerLike } from "./index";
@@ -275,6 +284,120 @@ describe("runtime facade", () => {
           eventIds: [events.at(-2)?.id, events.at(-1)?.id]
         })
       );
+  });
+
+  test("recordApproval appends immutable decision evidence and clears pending approvals", async () => {
+    const runtime = runtimeForTests();
+    const handle = await runtime.startRun(runInput);
+    const pendingApproval: ApprovalRequest = {
+      approvalId: "approval-1",
+      reason: "Policy requires approval.",
+      subjectRef: "tool:fs.read",
+      requiredFor: "intake"
+    };
+
+    await seedPendingApprovals(handle.runId, [pendingApproval]);
+    await expect(runtime.getRun(handle.runId)).resolves.toMatchObject({
+      pendingApprovals: [pendingApproval]
+    });
+
+    const result = await runtime.recordApproval(handle.runId, {
+      approvalId: "approval-1",
+      decision: "approved",
+      humanMessage: "Approved for the current intake pass.",
+      constraints: {
+        maxFiles: 3
+      },
+      resultingConstraints: {
+        allowedPath: "AGENTS.md"
+      },
+      causationIds: ["event-policy-1"],
+      metadata: {
+        reviewer: "operator-1"
+      }
+    });
+    const events = await runtime.getEvents(handle.runId);
+    const recorded = events.at(-1);
+
+    expect(result.decision).toEqual({
+      approvalId: "approval-1",
+      decision: "approved",
+      humanMessage: "Approved for the current intake pass.",
+      constraints: {
+        maxFiles: 3
+      },
+      resultingConstraints: {
+        allowedPath: "AGENTS.md"
+      },
+      causationIds: ["event-policy-1"],
+      metadata: {
+        reviewer: "operator-1"
+      }
+    });
+    expect(result.event.type).toBe("decision.recorded");
+    expect(result.event).toEqual(recorded);
+    expect(recorded?.payload).toEqual({
+      approvalId: "approval-1",
+      decision: result.decision
+    });
+    expect(result.state.pendingApprovals).toEqual([]);
+    await expect(runtime.getRun(handle.runId)).resolves.toMatchObject({
+      pendingApprovals: []
+    });
+    await expect(runtime.replay(handle.runId)).resolves.toMatchObject({
+      state: {
+        pendingApprovals: []
+      }
+    });
+  });
+
+  test("recordApproval fails closed for invalid, missing, and resolved approvals", async () => {
+    const runtime = runtimeForTests();
+    const handle = await runtime.startRun(runInput);
+    const initialEvents = await runtime.getEvents(handle.runId);
+
+    await expect(
+      runtime.recordApproval(handle.runId, {
+        approvalId: "approval-1",
+        decision: "maybe"
+      } as never)
+    ).rejects.toThrow();
+    await expect(runtime.getEvents(handle.runId)).resolves.toHaveLength(
+      initialEvents.length
+    );
+
+    await expect(
+      runtime.recordApproval(handle.runId, {
+        approvalId: "approval-1",
+        decision: "approved"
+      })
+    ).rejects.toThrow("not currently pending");
+    await expect(runtime.getEvents(handle.runId)).resolves.toHaveLength(
+      initialEvents.length
+    );
+
+    await seedPendingApprovals(handle.runId, [
+      {
+        approvalId: "approval-1",
+        reason: "Policy requires approval."
+      }
+    ]);
+    await runtime.recordApproval(handle.runId, {
+      approvalId: "approval-1",
+      decision: "rejected"
+    });
+    await expect(
+      runtime.recordApproval(handle.runId, {
+        approvalId: "approval-1",
+        decision: "approved"
+      })
+    ).rejects.toThrow("not currently pending");
+
+    const decisionEvents = (await runtime.getEvents(handle.runId)).filter(
+      (event) => event.type === "decision.recorded"
+    );
+
+    expect(decisionEvents).toHaveLength(1);
   });
 
   test("runEval delegates to EvalRunner and records eval.completed", async () => {
@@ -656,6 +779,51 @@ function runtimeForTests(
     now: () => "2026-05-29T00:00:00.000Z",
     ...overrides
   });
+}
+
+async function seedPendingApprovals(
+  runId: string,
+  pendingApprovals: ApprovalRequest[]
+) {
+  const paths = getRunStorePaths(rootDir, runId);
+  const events = await readEvents({
+    rootDir,
+    runId
+  });
+  const checkpoint = buildCheckpoint(runId, events, events.length - 1);
+
+  await writeCheckpoint(paths, {
+    ...checkpoint,
+    state: {
+      ...checkpoint.state,
+      pendingApprovals
+    }
+  });
+}
+
+function buildCheckpoint(
+  runId: string,
+  events: readonly RuntimeEvent[],
+  coveredSequence: number
+): RunStateCheckpoint {
+  const coveredEvent = events[coveredSequence];
+
+  if (coveredEvent === undefined) {
+    throw new Error(`Missing event at sequence ${coveredSequence}`);
+  }
+
+  const state = projectRunState(events.slice(0, coveredSequence + 1));
+
+  return {
+    checkpointVersion: RUN_STATE_CHECKPOINT_VERSION,
+    runId,
+    coveredSequence,
+    coveredLastEventId: coveredEvent.id,
+    state,
+    ...(coveredEvent.integrity === undefined
+      ? {}
+      : { coveredHeadHash: coveredEvent.integrity.hash })
+  };
 }
 
 function gateResultForInstruction(

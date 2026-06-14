@@ -375,7 +375,33 @@ describe("specwright cli adapter", () => {
     });
   });
 
-  test("approve and reject fail closed when runtime approval API is absent", async () => {
+  test("approve and reject map to runtime approval decisions", async () => {
+    const calls: unknown[] = [];
+    const runtime = fakeRuntime({
+      async recordApproval(runId, decision, options) {
+        calls.push([runId, decision, options]);
+
+        return {
+          decision,
+          event: {
+            ...fakeEvent({
+              runId,
+              id: `event-${decision.decision}`,
+              sequence: calls.length
+            }),
+            type: "decision.recorded",
+            payload: {
+              approvalId: decision.approvalId,
+              decision
+            }
+          },
+          state: fakeState({
+            runId,
+            pendingApprovals: []
+          })
+        };
+      }
+    });
     const approve = await executeCli(
       [
         "approve",
@@ -383,12 +409,142 @@ describe("specwright cli adapter", () => {
         "--approval",
         "approval-1",
         "--decision-hash",
-        "sha256:approval"
+        "sha256:approval",
+        "--message",
+        "Approved for intake.",
+        "--root",
+        "/runs-root"
       ],
-      fakeRuntime(),
+      runtime,
       { context: authenticatedContext }
     );
     const reject = await executeCli(
+      [
+        "reject",
+        "run-approval",
+        "--approval",
+        "approval-2",
+        "--decision-hash",
+        "sha256:approval",
+        "--json"
+      ],
+      runtime,
+      { context: authenticatedContext }
+    );
+    const rejectEnvelope = JSON.parse(reject.stdout);
+
+    expect(approve.exitCode).toBe(0);
+    expect(approve.stdout).toContain("Approval recorded");
+    expect(approve.stdout).toContain("Approval: approval-1");
+    expect(approve.stdout).toContain("Decision: approved");
+    expect(reject.exitCode).toBe(0);
+    expect(reject.stderr).toBe("");
+    expect(rejectEnvelope).toMatchObject({
+      command: "reject",
+      outcome: "ok",
+      runId: "run-approval",
+      data: {
+        decision: {
+          approvalId: "approval-2",
+          decision: "rejected"
+        },
+        state: {
+          pendingApprovals: []
+        }
+      }
+    });
+    outputSchemas.reject.parse(rejectEnvelope);
+    expect(calls).toEqual([
+      [
+        "run-approval",
+        {
+          approvalId: "approval-1",
+          decision: "approved",
+          humanMessage: "Approved for intake."
+        },
+        {
+          rootDir: "/runs-root"
+        }
+      ],
+      [
+        "run-approval",
+        {
+          approvalId: "approval-2",
+          decision: "rejected"
+        },
+        {}
+      ]
+    ]);
+  });
+
+  test("malformed approval decision hashes fail before runtime mutation", async () => {
+    const calls: unknown[] = [];
+    const malformedHash = await executeCli(
+      [
+        "approve",
+        "run-approval",
+        "--approval",
+        "approval-1",
+        "--decision-hash",
+        "bad",
+        "--json"
+      ],
+      fakeRuntime({
+        async recordApproval(runId, decision, options) {
+          calls.push([runId, decision, options]);
+
+          return {
+            decision,
+            event: fakeEvent({ runId }),
+            state: fakeState({ runId })
+          };
+        }
+      }),
+      { context: authenticatedContext }
+    );
+    const malformedApprovalId = await executeCli(
+      [
+        "approve",
+        "run-approval",
+        "--approval",
+        "   ",
+        "--decision-hash",
+        "sha256:approval",
+        "--json"
+      ],
+      fakeRuntime({
+        async recordApproval(runId, decision, options) {
+          calls.push([runId, decision, options]);
+
+          return {
+            decision,
+            event: fakeEvent({ runId }),
+            state: fakeState({ runId })
+          };
+        }
+      }),
+      { context: authenticatedContext }
+    );
+
+    expect(malformedHash.exitCode).toBe(3);
+    expect(malformedHash.stdout).toBe("");
+    expect(JSON.parse(malformedHash.stderr)).toMatchObject({
+      errorClass: "input_validation",
+      code: 3,
+      runId: "run-approval"
+    });
+    expect(malformedApprovalId.exitCode).toBe(3);
+    expect(malformedApprovalId.stdout).toBe("");
+    expect(JSON.parse(malformedApprovalId.stderr)).toMatchObject({
+      errorClass: "input_validation",
+      code: 3,
+      runId: "run-approval"
+    });
+    expect(calls).toEqual([]);
+  });
+
+  test("missing or resolved approvals remain integrity failures at the CLI boundary", async () => {
+    const result = await executeCli(
       [
         "reject",
         "run-approval",
@@ -398,20 +554,24 @@ describe("specwright cli adapter", () => {
         "sha256:approval",
         "--json"
       ],
-      fakeRuntime(),
+      fakeRuntime({
+        async recordApproval() {
+          throw new Error(
+            "Approval approval-1 is not currently pending for run run-approval"
+          );
+        }
+      }),
       { context: authenticatedContext }
     );
 
-    expect(approve.exitCode).toBe(10);
-    expect(approve.stderr).toContain("RuntimeApi exposes no approval");
-    expect(reject.exitCode).toBe(10);
-    expect(reject.stdout).toBe("");
-    expect(JSON.parse(reject.stderr)).toMatchObject({
+    expect(result.exitCode).toBe(10);
+    expect(result.stdout).toBe("");
+    expect(JSON.parse(result.stderr)).toMatchObject({
       errorClass: "integrity",
       code: 10,
       runId: "run-approval",
       operatorAction:
-        "Upgrade the runtime to an approval-decision API; this CLI will not fabricate approval state."
+        "Resolve a currently pending approval through the approval-decision API; stale, missing, or already-resolved approvals are refused."
     });
   });
 
@@ -503,6 +663,25 @@ function fakeRuntime(overrides: Partial<CliRuntime> = {}): CliRuntime {
     },
     async recordEvidence(_runId, record) {
       return record;
+    },
+    async recordApproval(runId, decision) {
+      return {
+        decision,
+        event: {
+          ...fakeEvent({
+            runId
+          }),
+          type: "decision.recorded",
+          payload: {
+            approvalId: decision.approvalId,
+            decision
+          }
+        },
+        state: fakeState({
+          runId,
+          pendingApprovals: []
+        })
+      };
     },
     ...overrides
   };

@@ -60,6 +60,7 @@ export type CliRuntime = Pick<
   | "replay"
   | "writeRunReport"
   | "recordEvidence"
+  | "recordApproval"
 >;
 
 export type CliExecution = {
@@ -410,14 +411,50 @@ async function executeCommand(
     case "reject": {
       validateDecisionHash(command.decisionHash);
 
-      throw new CliIntegrityError(
-        `${command.kind} is unavailable because RuntimeApi exposes no approval decision operation`,
-        {
-          runId: command.runId,
-          operatorAction:
-            "Upgrade the runtime to an approval-decision API; this CLI will not fabricate approval state."
+      const rootDir = canonicalizeAllowedPath({
+        value: command.rootDir,
+        flagName: "root",
+        context
+      });
+      let recorded: Awaited<
+        ReturnType<CliRuntime["recordApproval"]>
+      >;
+
+      try {
+        recorded = await withDeadline(
+          runtime.recordApproval(
+            command.runId,
+            {
+              approvalId: command.approvalId,
+              decision: command.kind === "approve" ? "approved" : "rejected",
+              ...(command.message === undefined
+                ? {}
+                : { humanMessage: command.message })
+            },
+            lookupOptions(rootDir)
+          ),
+          deadlineMs,
+          "recordApproval exceeded the invocation deadline"
+        );
+      } catch (error) {
+        if (messageForError(error).includes("not currently pending")) {
+          throw new CliIntegrityError(messageForError(error), {
+            runId: command.runId,
+            operatorAction:
+              "Resolve a currently pending approval through the approval-decision API; stale, missing, or already-resolved approvals are refused."
+          });
         }
-      );
+
+        throw error;
+      }
+
+      return {
+        command: command.kind,
+        outcome: "ok",
+        runId: command.runId,
+        data: recorded,
+        stdout: renderApprovalResult(recorded)
+      };
     }
   }
 }
@@ -878,6 +915,18 @@ function renderAnswerResult(evidence: EvidenceRecord) {
     `Evidence: ${evidence.id}`,
     `Class: ${evidence.class}`,
     `Authority: ${evidence.authority}`
+  ]);
+}
+
+function renderApprovalResult(
+  result: Awaited<ReturnType<CliRuntime["recordApproval"]>>
+) {
+  return lines([
+    "Approval recorded",
+    `Approval: ${sanitizeText(result.decision.approvalId)}`,
+    `Decision: ${result.decision.decision}`,
+    `Event: ${result.event.id}`,
+    `Pending approvals: ${result.state.pendingApprovals.length}`
   ]);
 }
 

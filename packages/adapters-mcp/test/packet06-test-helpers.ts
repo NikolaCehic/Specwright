@@ -97,6 +97,10 @@ export function fakeRuntimeForPacket06(input: { calls?: string[] } = {}): Runtim
         redactionPolicy: record.redactionPolicy ?? "operator"
       } as unknown as Awaited<ReturnType<RuntimeApi["recordArtifact"]>>;
     },
+    async recordApproval() {
+      calls?.push("recordApproval");
+      throw new Error("MCP approval recording remains disabled for AUD-004A");
+    },
     async evaluateGate() {
       calls?.push("evaluateGate");
       throw new Error("not needed for Packet 06 helper");
