@@ -117,12 +117,13 @@ Evidence was refreshed from the current repository on 2026-06-14:
 
 - Root package is private and has no root `version`.
 - There are 17 package manifests under `packages/*`.
-- All 17 workspace packages are private and have `version: "0.0.0"`.
+- `@specwright/schemas` is public at `version: "0.1.0"`; the remaining 16 workspace packages are still private.
+- `@specwright/policy-engine` is private at `version: "0.1.0"` only to satisfy the schemas package's source-test dev dependency without leaking `workspace:*` into the schemas publish manifest; the remaining 15 packages still use `version: "0.0.0"`.
 - All 17 workspace packages currently define `main`, `types`, `exports`, and `files`.
 - Only `@specwright/cli` defines the `specwright` bin; `@specwright/adapters-mcp` defines a separate adapter-scoped `specwright-mcp-adapter` stdio bin.
 - First-wave package manifests define `description`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `engines`, and `publishConfig`; internal and deferred package manifests do not.
 - Root scripts include `check:pack`, which builds and runs the first-wave npm packlist dry-run without publishing artifacts.
-- 16 packages use `workspace:*` in production dependencies; all 17 use `workspace:*` when dev dependencies are included.
+- 16 packages use `workspace:*` in production dependencies; 16 packages use `workspace:*` when dev dependencies are included.
 - README install/use flow is source-checkout oriented and invokes built CLI output directly, while naming `specwright` as the intended installed command.
 
 ## Source Trace

@@ -85,12 +85,17 @@ describe("AUD-005A installability readiness", () => {
     await expect(stat(join(rootDir, "LICENSE"))).resolves.toBeDefined();
 
     expect(workspaceManifests).toHaveLength(17);
-    expect(packageManifests.every((manifest) => manifest.private === true)).toBe(
-      true
-    );
     expect(
-      packageManifests.every((manifest) => manifest.version === "0.0.0")
-    ).toBe(true);
+      packageManifests
+        .filter((manifest) => manifest.private === false)
+        .map((manifest) => manifest.name)
+    ).toEqual(["@specwright/schemas"]);
+    expect(
+      packageManifests
+        .filter((manifest) => manifest.version === "0.1.0")
+        .map((manifest) => manifest.name)
+        .sort()
+    ).toEqual(["@specwright/policy-engine", "@specwright/schemas"]);
     expect(firstWaveManifests.map((manifest) => manifest.name).sort()).toEqual(
       [...firstWavePublicPackageNames]
     );
@@ -134,7 +139,7 @@ describe("AUD-005A installability readiness", () => {
     }
     expect(workspaceManifests.filter(hasProductionWorkspaceDependency))
       .toHaveLength(16);
-    expect(workspaceManifests.filter(hasAnyWorkspaceDependency)).toHaveLength(17);
+    expect(workspaceManifests.filter(hasAnyWorkspaceDependency)).toHaveLength(16);
     expect(
       binManifests.map((entry) => ({
         name: entry.manifest.name,
