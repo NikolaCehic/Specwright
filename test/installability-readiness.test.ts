@@ -95,7 +95,12 @@ describe("AUD-005A installability readiness", () => {
         .filter((manifest) => manifest.version === "0.1.0")
         .map((manifest) => manifest.name)
         .sort()
-    ).toEqual(["@specwright/policy-engine", "@specwright/schemas"]);
+    ).toEqual([
+      "@specwright/harness-loader",
+      "@specwright/policy-engine",
+      "@specwright/run-store",
+      "@specwright/schemas"
+    ]);
     expect(firstWaveManifests.map((manifest) => manifest.name).sort()).toEqual(
       [...firstWavePublicPackageNames]
     );
@@ -138,8 +143,8 @@ describe("AUD-005A installability readiness", () => {
       expect((manifest.keywords as string[]).includes("specwright")).toBe(true);
     }
     expect(workspaceManifests.filter(hasProductionWorkspaceDependency))
-      .toHaveLength(16);
-    expect(workspaceManifests.filter(hasAnyWorkspaceDependency)).toHaveLength(16);
+      .toHaveLength(14);
+    expect(workspaceManifests.filter(hasAnyWorkspaceDependency)).toHaveLength(14);
     expect(
       binManifests.map((entry) => ({
         name: entry.manifest.name,

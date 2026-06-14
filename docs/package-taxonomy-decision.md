@@ -118,7 +118,9 @@ Evidence was refreshed from the current repository on 2026-06-14:
 - Root package is private and has no root `version`.
 - There are 17 package manifests under `packages/*`.
 - `@specwright/schemas` is public at `version: "0.1.0"`; the remaining 16 workspace packages are still private.
-- `@specwright/policy-engine` is private at `version: "0.1.0"` only to satisfy the schemas package's source-test dev dependency without leaking `workspace:*` into the schemas publish manifest; the remaining 15 packages still use `version: "0.0.0"`.
+- `@specwright/run-store` is private at `version: "0.1.0"` so downstream first-wave packages can depend on a release-shaped run package contract without leaking `workspace:*`.
+- `@specwright/harness-loader` is private at `version: "0.1.0"` and uses exact `0.1.0` dependencies for `@specwright/run-store` and `@specwright/schemas`, leaving publication blocked only by the explicit release approval gate.
+- `@specwright/policy-engine` is private at `version: "0.1.0"` only to satisfy the schemas package's source-test dev dependency without leaking `workspace:*` into the schemas publish manifest; the remaining 13 packages still use `version: "0.0.0"`.
 - All 17 workspace packages currently define `main`, `types`, `exports`, and `files`.
 - Only `@specwright/cli` defines the `specwright` bin; `@specwright/adapters-mcp` defines a separate adapter-scoped `specwright-mcp-adapter` stdio bin.
 - First-wave package manifests define `description`, `license`, `repository`, `homepage`, `bugs`, `keywords`, `engines`, and `publishConfig`; internal and deferred package manifests do not.

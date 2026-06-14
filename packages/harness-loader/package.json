@@ -1,6 +1,6 @@
 {
   "name": "@specwright/harness-loader",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "Harness loading and validation utilities for Specwright runtimes.",
   "license": "MIT",
@@ -47,8 +47,8 @@
     "test": "bun test src/index.test.ts src/trust.test.ts src/registry.test.ts"
   },
   "dependencies": {
-    "@specwright/run-store": "workspace:*",
-    "@specwright/schemas": "workspace:*",
+    "@specwright/run-store": "0.1.0",
+    "@specwright/schemas": "0.1.0",
     "zod": "^3.22.4"
   }
 }
