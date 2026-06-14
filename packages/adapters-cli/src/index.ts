@@ -1,8 +1,6 @@
 import { createRuntime, type RuntimeApi } from "@specwright/runtime";
 import {
-  EvidenceRecordSchema,
   type EvalVerdict,
-  type EvidenceRecord,
   type ToolCallRequest,
   type ToolCallResult
 } from "@specwright/schemas";
@@ -69,6 +67,7 @@ export type CliRuntime = Pick<
   | "writeRunReport"
   | "recordEvidence"
   | "recordApproval"
+  | "recordHumanAnswer"
   | "runEval"
   | "evaluateGate"
 >;
@@ -574,19 +573,43 @@ async function executeCommand(
         flagName: "root",
         context
       });
-      const record = answerEvidenceRecord(command, context);
-      const evidence = await withDeadline(
-        runtime.recordEvidence(command.runId, record, lookupOptions(rootDir)),
-        deadlineMs,
-        "recordEvidence exceeded the invocation deadline"
-      );
+      let recorded: Awaited<ReturnType<CliRuntime["recordHumanAnswer"]>>;
+
+      try {
+        recorded = await withDeadline(
+          runtime.recordHumanAnswer(
+            command.runId,
+            {
+              questionId: command.questionId,
+              answer: command.answer,
+              answeredBy: context.principal.id,
+              metadata: {
+                tenant: context.tenant.id
+              }
+            },
+            lookupOptions(rootDir)
+          ),
+          deadlineMs,
+          "recordHumanAnswer exceeded the invocation deadline"
+        );
+      } catch (error) {
+        if (messageForError(error).includes("not currently pending")) {
+          throw new CliIntegrityError(messageForError(error), {
+            runId: command.runId,
+            operatorAction:
+              "Resolve a currently pending question through the human-answer API; stale, missing, or already-resolved questions are refused."
+          });
+        }
+
+        throw error;
+      }
 
       return {
         command: "answer",
         outcome: "ok",
         runId: command.runId,
-        data: evidence,
-        stdout: renderAnswerResult(evidence)
+        data: recorded,
+        stdout: renderAnswerResult(recorded)
       };
     }
 
@@ -1406,12 +1429,16 @@ function renderToolCallResult(runId: string, result: ToolCallResult) {
   ]);
 }
 
-function renderAnswerResult(evidence: EvidenceRecord) {
+function renderAnswerResult(
+  result: Awaited<ReturnType<CliRuntime["recordHumanAnswer"]>>
+) {
+  const questionId = result.answer.questionId ?? result.answer.humanQuestionId;
+
   return lines([
     "Answer recorded",
-    `Evidence: ${evidence.id}`,
-    `Class: ${evidence.class}`,
-    `Authority: ${evidence.authority}`
+    `Question: ${sanitizeText(questionId ?? "unknown")}`,
+    `Event: ${result.event.id}`,
+    `Pending questions: ${result.state.pendingQuestions.length}`
   ]);
 }
 
@@ -1628,38 +1655,4 @@ function pendingFromPayload(data: unknown) {
   }
 
   return undefined;
-}
-
-function answerEvidenceRecord(
-  command: Extract<ParsedCommand, { kind: "answer" }>,
-  context: CliExecutionContext
-): EvidenceRecord {
-  return EvidenceRecordSchema.parse({
-    id: `cli:answer:${command.runId}:${command.questionId}`,
-    class: "human_decision",
-    claim: sanitizeText(command.answer),
-    sourceRefs: [
-      {
-        id: command.questionId,
-        authority: "user",
-        redactionClass: "operator",
-        metadata: {
-          questionId: command.questionId,
-          actor: context.principal.id
-        }
-      }
-    ],
-    confidence: "high",
-    authority: "user",
-    createdBy: {
-      phase: "cli",
-      actionId: "answer"
-    },
-    redactionPolicy: "operator",
-    metadata: {
-      questionId: command.questionId,
-      actor: context.principal.id,
-      tenant: context.tenant.id
-    }
-  });
 }
