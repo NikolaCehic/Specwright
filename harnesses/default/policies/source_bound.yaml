@@ -1,5 +1,5 @@
-id: source_bound_v0
-description: Read-only source discovery plus deterministic eval execution for the default v0 harness while the model-assisted example remains passive.
+id: source_bound
+description: Read-only source discovery plus deterministic eval execution for the default harness while the model-assisted example remains passive.
 scopes: ["workspace:read", "evidence:read", "eval:run"]
 tools:
   - fs.list
@@ -26,49 +26,49 @@ runtimeInvariants:
   - id: deny.shell.exec
     layer: runtime_invariant
     effect: deny
-    reason: Shell execution is outside Default Harness v0.
+    reason: Shell execution is outside Default Harness.
     match:
       actionKind: tool_call
       toolId: shell.exec
   - id: deny.fs.write
     layer: runtime_invariant
     effect: deny
-    reason: Filesystem writes are outside Default Harness v0.
+    reason: Filesystem writes are outside Default Harness.
     match:
       actionKind: tool_call
       toolId: fs.write
   - id: deny.git.branch
     layer: runtime_invariant
     effect: deny
-    reason: Git mutation is outside Default Harness v0.
+    reason: Git mutation is outside Default Harness.
     match:
       actionKind: tool_call
       toolId: git.branch
   - id: deny.git.commit
     layer: runtime_invariant
     effect: deny
-    reason: Git mutation is outside Default Harness v0.
+    reason: Git mutation is outside Default Harness.
     match:
       actionKind: tool_call
       toolId: git.commit
   - id: deny.git.push
     layer: runtime_invariant
     effect: deny
-    reason: Git mutation is outside Default Harness v0.
+    reason: Git mutation is outside Default Harness.
     match:
       actionKind: tool_call
       toolId: git.push
   - id: deny.network.request
     layer: runtime_invariant
     effect: deny
-    reason: Network actions are outside Default Harness v0.
+    reason: Network actions are outside Default Harness.
     match:
       actionKind: tool_call
       toolId: network.request
   - id: deny.network.write
     layer: runtime_invariant
     effect: deny
-    reason: Network actions are outside Default Harness v0.
+    reason: Network actions are outside Default Harness.
     match:
       actionKind: tool_call
       toolId: network.write

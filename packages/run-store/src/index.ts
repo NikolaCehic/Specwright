@@ -55,7 +55,7 @@ import {
   type WithDualControlTimestamps
 } from "./administration";
 
-export const RUN_STORE_DIR = ".archetype";
+export const RUN_STORE_DIR = ".specwright";
 export const RUNS_DIR = "runs";
 export const EVENTS_FILE = "events.jsonl";
 export const STATE_FILE = "state.json";
@@ -88,11 +88,11 @@ export const TOMBSTONE_VERSION = 1;
 export const MIGRATION_RECORD_HASH_PREFIX = "sha256:";
 export const MIGRATION_RECORD_GENESIS_SEED = `${MIGRATION_RECORD_HASH_PREFIX}${"0".repeat(64)}`;
 export const RUN_STORE_BASELINE_VERSION = {
-  packageLayoutVersion: "specwright.run-package.v0",
-  ledgerFormatVersion: "specwright.ledger.plain-jsonl.v0",
-  projectionVersion: "specwright.reducer.baseline.v0",
-  snapshotFormatVersion: "specwright.snapshot.none.v0",
-  backendAdapterVersion: "specwright.backend.file.v0"
+  packageLayoutVersion: "specwright.run-package.legacy",
+  ledgerFormatVersion: "specwright.ledger.plain-jsonl.legacy",
+  projectionVersion: "specwright.reducer.baseline.legacy",
+  snapshotFormatVersion: "specwright.snapshot.none.legacy",
+  backendAdapterVersion: "specwright.backend.file.legacy"
 } as const;
 export const RUN_STORE_CURRENT_VERSION = {
   packageLayoutVersion: "specwright.run-package.v1",

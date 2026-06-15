@@ -46,7 +46,7 @@
     }
   ],
   "datasetManifest": {
-    "schemaVersion": "specwright.eval-dataset.v0",
+    "schemaVersion": "specwright.eval-dataset.v1",
     "id": "specwright.default.artifact_schema_presence",
     "version": "1.0.0",
     "evalId": "artifact_schema_presence",
@@ -113,7 +113,7 @@
           ],
           "producedBy": {
             "kind": "deterministic",
-            "ref": "specwright.eval-runner.v0"
+            "ref": "specwright.eval-runner.v1"
           },
           "provenance": {
             "decisionHash": "sha256:ac36f7cc21cc3ebf63c8fdd15a6a01da73d46e4d6d1fdf3ad2beca1ada2327ca",

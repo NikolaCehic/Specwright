@@ -12,7 +12,7 @@ const expectedRootScripts = [
   "check:pack",
   "check:unused",
   "ci",
-  "proof:v0",
+  "proof",
   "test",
   "test:all",
   "test:core",

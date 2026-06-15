@@ -46,8 +46,8 @@ jobs:
       - name: Tests
         run: bun run test
 
-      - name: Proof v0
-        run: bun run proof:v0
+      - name: Proof
+        run: bun run proof
 
   package-typecheck:
     name: Package typecheck (${{ matrix.package }})

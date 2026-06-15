@@ -365,7 +365,7 @@ async function readRuntimeEvents(
 }
 
 async function discoverRunIds(rootDir?: string | undefined) {
-  const runsDir = join(resolve(rootDir ?? "."), ".archetype", "runs");
+  const runsDir = join(resolve(rootDir ?? "."), ".specwright", "runs");
 
   try {
     return await readdir(runsDir);

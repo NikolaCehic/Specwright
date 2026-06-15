@@ -27,9 +27,9 @@
           "evaluatedAt": "2026-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "model_assisted",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154"
+          "decisionHash": "sha256:86a23bc01670f4e785a5bb7e82c96d661b3b1d96addd5b166fc32f7514b75b55"
         },
         "instruction": {
           "kind": "fail_run",
@@ -40,10 +40,10 @@
         "inputRefHashes": {
           "artifact:summary": "sha256:fea1546ca6a45212532e60999b84bb24e3afc3b3409831c0321ff6464f037b2f"
         },
-        "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154",
+        "decisionHash": "sha256:86a23bc01670f4e785a5bb7e82c96d661b3b1d96addd5b166fc32f7514b75b55",
         "evaluator": {
           "kind": "model_assisted",
-          "ref": "specwright.gate-engine.v0"
+          "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
         },
         "checks": [
           {
@@ -112,9 +112,9 @@
           "evaluatedAt": "2026-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "model_assisted",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154"
+          "decisionHash": "sha256:86a23bc01670f4e785a5bb7e82c96d661b3b1d96addd5b166fc32f7514b75b55"
         },
         "instruction": {
           "kind": "fail_run",
@@ -132,23 +132,23 @@
         "originatingFindingIds": [
           "model_review"
         ],
-        "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154"
+        "decisionHash": "sha256:86a23bc01670f4e785a5bb7e82c96d661b3b1d96addd5b166fc32f7514b75b55"
       }
     }
   ],
   "spans": [
     {
-      "spanId": "span_gate_a555c29eb328f047f1500209",
+      "spanId": "span_gate_d604671253d6c2ec3dc05a5f",
       "kind": "gate",
       "name": "gate.model_assisted_invalid_output",
       "status": "fail",
       "startedAt": "2026-01-01T00:00:00.000Z",
       "endedAt": "2026-01-01T00:00:00.000Z",
       "metadata": {
-        "decisionHash": "sha256:c482ff1c05b32d32b24c890f117c6190131e0474591564110337200649435154",
+        "decisionHash": "sha256:86a23bc01670f4e785a5bb7e82c96d661b3b1d96addd5b166fc32f7514b75b55",
         "definitionHash": "sha256:29b56cf43c70f0e4fb9ab9d11c802d09a66fd0760c1986c4ab15cacecbaa96a4",
         "evaluatorKind": "model_assisted",
-        "evaluatorRef": "specwright.gate-engine.v0",
+        "evaluatorRef": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0",
         "gateId": "model_assisted_invalid_output",
         "instructionKind": "fail_run",
         "phase": "verification",
@@ -156,8 +156,8 @@
       }
     },
     {
-      "spanId": "span_gate_input_resolution_5ba152320f1440c3282c3fc5",
-      "parentSpanId": "span_gate_a555c29eb328f047f1500209",
+      "spanId": "span_gate_input_resolution_630dcf99d53ebb2025d6def3",
+      "parentSpanId": "span_gate_d604671253d6c2ec3dc05a5f",
       "kind": "gate.input_resolution",
       "name": "gate.model_assisted_invalid_output.input_resolution",
       "status": "success",
@@ -173,8 +173,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_c3f1d8e8bc5328747f522bf4",
-      "parentSpanId": "span_gate_a555c29eb328f047f1500209",
+      "spanId": "span_gate_check_22d84abd17d47d7b2a53a432",
+      "parentSpanId": "span_gate_d604671253d6c2ec3dc05a5f",
       "kind": "gate.check",
       "name": "gate.model_assisted_invalid_output.check.summary_text_present",
       "status": "pass",
@@ -191,8 +191,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_2bea8ff393c57d4c1940200e",
-      "parentSpanId": "span_gate_a555c29eb328f047f1500209",
+      "spanId": "span_gate_check_11040ef4341db1f8f81bd55b",
+      "parentSpanId": "span_gate_d604671253d6c2ec3dc05a5f",
       "kind": "gate.check",
       "name": "gate.model_assisted_invalid_output.check.model_review",
       "status": "fail",
@@ -209,8 +209,8 @@
       }
     },
     {
-      "spanId": "span_tool_7d44de96275f2cd6d8793e7e",
-      "parentSpanId": "span_gate_check_2bea8ff393c57d4c1940200e",
+      "spanId": "span_tool_371d2dc17020b12dc008f3db",
+      "parentSpanId": "span_gate_check_11040ef4341db1f8f81bd55b",
       "kind": "tool",
       "name": "gate.model_assisted_invalid_output.tool.model_review",
       "status": "fail",

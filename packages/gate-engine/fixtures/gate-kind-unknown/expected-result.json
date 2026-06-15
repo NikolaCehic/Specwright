@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "gate.kind.unknown",
-        "severity": "blocking",
         "message": "Gate definition gate_kind_unknown declares unknown kind unknown",
+        "severity": "blocking",
         "targetRef": "gate:gate_kind_unknown",
         "evidenceRefs": []
       }
@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:039bc6c0adbe0004f0516a16a7d5307fc1ff8c0b48eb76197329af2b77231d4b"
+    "decisionHash": "sha256:3273c9d3271e82b75a349045bd2fd8b3a881a3a6cfc91f496e3673b10ccadb73"
   },
   "instruction": {
     "kind": "fail_run",

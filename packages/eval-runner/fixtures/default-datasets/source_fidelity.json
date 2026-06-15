@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "specwright.eval-dataset.v0",
+  "schemaVersion": "specwright.eval-dataset.v1",
   "id": "specwright.default.source_fidelity",
   "version": "1.0.0",
   "evalId": "source_fidelity",
@@ -66,7 +66,7 @@
         ],
         "producedBy": {
           "kind": "deterministic",
-          "ref": "specwright.eval-runner.v0"
+          "ref": "specwright.eval-runner.v1"
         },
         "provenance": {
           "decisionHash": "sha256:1728a6a1c383ae9db6fed80684277d24a7ce70703b9db885ff026b6b1027952f",

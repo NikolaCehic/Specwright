@@ -6,15 +6,15 @@ This package versions gate behavior as an evaluator identity plus a declared com
 
 - `GATE_CONTRACT_VERSION` is `1.0.0` in [src/gate-contract-version.ts](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/src/gate-contract-version.ts).
 - `GATE_ENGINE_EVALUATOR_VERSION` is `1.0.0` in [src/gate-contract-version.ts](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/src/gate-contract-version.ts).
-- `DEFAULT_GATE_ENGINE_EVALUATOR` stays byte-stable as `specwright.gate-engine.v0` in [src/evaluator-identity.ts](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/src/evaluator-identity.ts).
+- `DEFAULT_GATE_ENGINE_EVALUATOR` stays byte-stable as `gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0` in [src/evaluator-identity.ts](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/src/evaluator-identity.ts).
 - The structured canonical ref for the same semantics is `gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0`.
 
 ## Evaluator Identity
 
 - `GateEngineEvaluatorIdentitySchema` defines the structured replay anchor in [src/evaluator-identity.ts](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/src/evaluator-identity.ts).
 - `serializeCanonicalEvaluatorRef(...)` emits the structured ref.
-- `serializeEvaluatorRef(...)` emits the preferred stored ref. For the baseline `1.0.0` semantics that preferred ref is the legacy alias `specwright.gate-engine.v0`.
-- `parseEvaluatorRef(...)` resolves both the structured ref and the recorded `v0` alias. Unknown refs return `undefined` and must fail closed on replay.
+- `serializeEvaluatorRef(...)` emits the preferred stored ref. For the baseline `1.0.0` semantics, the preferred ref is `gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0`.
+- `parseEvaluatorRef(...)` resolves the structured ref. Unknown refs return `undefined` and must fail closed on replay.
 
 ## Compatibility Classes
 
@@ -43,6 +43,6 @@ The append-only changelog lives in [src/engine-changelog.ts](/Users/nikolacehic/
 
 ## Replay
 
-- Historical `specwright.gate-engine.v0` verdicts replay through the alias map to the structured `1.0.0` semantics.
-- Replay coverage lives in [src/replay.test.ts](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/src/replay.test.ts) and the governed fixture [fixtures/v0-verdict-replay](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/fixtures/v0-verdict-replay).
+- Recorded `gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0` verdicts replay against the structured `1.0.0` semantics.
+- Replay coverage lives in [src/replay.test.ts](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/src/replay.test.ts) and the governed fixture [fixtures/recorded-verdict-replay](/Users/nikolacehic/Documents/Specwright/packages/gate-engine/fixtures/recorded-verdict-replay).
 - An unresolvable recorded evaluator ref is treated as an audit gap and must fail closed rather than fabricate a re-derived verdict.

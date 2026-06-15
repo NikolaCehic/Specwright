@@ -2,7 +2,7 @@
   "recordVersion": 1,
   "runId": "fixture-retention-expired",
   "sealedAt": "2026-05-01T00:00:00.000Z",
-  "sealRecordPath": "/tmp/specwright-retention-fixtures-yvxJvy/.archetype/runs/fixture-retention-expired/seal.json",
+  "sealRecordPath": "/tmp/specwright-retention-fixtures-yvxJvy/.specwright/runs/fixture-retention-expired/seal.json",
   "integrityHead": "sha256:7022b28617010aec989ccc67cba3b329294b6244ad71e09ae6858e640c1e8d22",
   "readMostly": true
 }

@@ -10,7 +10,7 @@ const HashDigestSchema = z
 
 export const GraderManifestSchema = z
   .object({
-    schemaVersion: z.literal("specwright.eval-grader.v0"),
+    schemaVersion: z.literal("specwright.eval-grader.v1"),
     id: z.string().min(1),
     version: z.string().min(1),
     rubricHash: HashDigestSchema,

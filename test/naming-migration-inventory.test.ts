@@ -7,8 +7,13 @@ const rootDir = join(import.meta.dir, "..");
 const legacyStateDir = `.${"archetype"}`;
 const canonicalStateDir = `.${"specwright"}`;
 
-const expectedArchetypeFiles = [
+const expectedArchetypeFiles = [] as const;
+
+const archetypeClassifications = [] as const;
+
+const expectedSpecwrightFiles = [
   ".gitignore",
+  "packages/adapters-cli/fixtures/output-contract/doctor-ok.json",
   "packages/adapters-cli/fixtures/output-contract/report-ok.json",
   "packages/adapters-cli/fixtures/output-contract/run-ok.json",
   "packages/adapters-cli/src/index.test.ts",
@@ -16,17 +21,29 @@ const expectedArchetypeFiles = [
   "packages/adapters-mcp/src/audit/writer.ts",
   "packages/adapters-mcp/src/index.test.ts",
   "packages/adapters-mcp/src/observability/correlation.ts",
+  "packages/adapters-mcp/test/packet06-test-helpers.ts",
   "packages/evidence-store/src/index.test.ts",
+  "packages/harness-loader/src/capability-grant.ts",
+  "packages/harness-loader/src/index.test.ts",
+  "packages/harness-loader/test/fixtures/grants/default-registry.json",
+  "packages/harness-loader/test/fixtures/grants/malformed-grant-registry.json",
+  "packages/harness-loader/test/fixtures/grants/over-grant-registry.json",
+  "packages/harness-loader/test/fixtures/grants/runtime-invariant-registry.json",
   "packages/operations/src/tenancy.test.ts",
   "packages/run-reports/src/index.test.ts",
   "packages/run-reports/src/retention.ts",
   "packages/run-store/fixtures/retention/fixture-retention-expired/read-mostly.json",
   "packages/run-store/fixtures/retention/fixture-retention-held/read-mostly.json",
-  "packages/run-store/src/index.ts"
+  "packages/run-store/src/index.ts",
+  "packages/trace-recorder/src/index.test.ts"
 ] as const;
 
-const archetypeClassifications = [
+const specwrightClassifications = [
   [".gitignore", "config_ignore_policy"],
+  [
+    "packages/adapters-cli/fixtures/output-contract/doctor-ok.json",
+    "output_contract_fixture"
+  ],
   [
     "packages/adapters-cli/fixtures/output-contract/report-ok.json",
     "output_contract_fixture"
@@ -43,39 +60,8 @@ const archetypeClassifications = [
     "packages/adapters-mcp/src/observability/correlation.ts",
     "production_direct_path"
   ],
-  ["packages/evidence-store/src/index.test.ts", "store_test_path"],
-  ["packages/operations/src/tenancy.test.ts", "tenancy_test_path"],
-  ["packages/run-reports/src/index.test.ts", "report_test_path"],
-  ["packages/run-reports/src/retention.ts", "production_direct_path"],
-  [
-    "packages/run-store/fixtures/retention/fixture-retention-expired/read-mostly.json",
-    "retention_fixture"
-  ],
-  [
-    "packages/run-store/fixtures/retention/fixture-retention-held/read-mostly.json",
-    "retention_fixture"
-  ],
-  ["packages/run-store/src/index.ts", "runtime_default"]
-] as const;
-
-const expectedSpecwrightFiles = [
-  "packages/adapters-cli/fixtures/output-contract/doctor-ok.json",
-  "packages/adapters-mcp/test/packet06-test-helpers.ts",
-  "packages/harness-loader/src/capability-grant.ts",
-  "packages/harness-loader/src/index.test.ts",
-  "packages/harness-loader/test/fixtures/grants/default-registry.json",
-  "packages/harness-loader/test/fixtures/grants/malformed-grant-registry.json",
-  "packages/harness-loader/test/fixtures/grants/over-grant-registry.json",
-  "packages/harness-loader/test/fixtures/grants/runtime-invariant-registry.json",
-  "packages/trace-recorder/src/index.test.ts"
-] as const;
-
-const specwrightClassifications = [
-  [
-    "packages/adapters-cli/fixtures/output-contract/doctor-ok.json",
-    "output_contract_fixture"
-  ],
   ["packages/adapters-mcp/test/packet06-test-helpers.ts", "test_state_path"],
+  ["packages/evidence-store/src/index.test.ts", "store_test_path"],
   ["packages/harness-loader/src/capability-grant.ts", "product_identifier"],
   ["packages/harness-loader/src/index.test.ts", "product_identifier"],
   [
@@ -94,16 +80,22 @@ const specwrightClassifications = [
     "packages/harness-loader/test/fixtures/grants/runtime-invariant-registry.json",
     "product_identifier"
   ],
+  ["packages/operations/src/tenancy.test.ts", "tenancy_test_path"],
+  ["packages/run-reports/src/index.test.ts", "report_test_path"],
+  ["packages/run-reports/src/retention.ts", "production_direct_path"],
+  [
+    "packages/run-store/fixtures/retention/fixture-retention-expired/read-mostly.json",
+    "retention_fixture"
+  ],
+  [
+    "packages/run-store/fixtures/retention/fixture-retention-held/read-mostly.json",
+    "retention_fixture"
+  ],
+  ["packages/run-store/src/index.ts", "runtime_default"],
   ["packages/trace-recorder/src/index.test.ts", "product_identifier"]
 ] as const;
 
-const directProductionArchetypeSites = [
-  "packages/adapters-mcp/src/audit/writer.ts:163",
-  "packages/adapters-mcp/src/audit/writer.ts:234",
-  "packages/adapters-mcp/src/observability/correlation.ts:368",
-  "packages/run-reports/src/retention.ts:1097",
-  "packages/run-store/src/index.ts:58"
-] as const;
+const directProductionArchetypeSites = [] as const;
 
 const futureMigrationOwners = [
   ["canonical_specwright_layout", "FEAT-TASK-014.1/G-NAME-001"],
@@ -115,26 +107,21 @@ const futureMigrationOwners = [
 ] as const;
 
 describe("AUD-015A naming migration inventory", () => {
-  test("current legacy state-dir references are inventoried and classified", async () => {
+  test("current legacy state-dir references remain absent", async () => {
     const archetypeFiles = await trackedFilesContaining(legacyStateDir);
 
     expect(archetypeFiles).toEqual(expectedArchetypeFiles);
-    expect(archetypeFiles.filter((file) => file !== ".gitignore")).toHaveLength(14);
+    expect(archetypeFiles.filter((file) => file !== ".gitignore")).toHaveLength(0);
     expect(archetypeClassifications.map(([file]) => file)).toEqual(archetypeFiles);
-    expect(productionFiles(archetypeFiles)).toEqual([
-      "packages/adapters-mcp/src/audit/writer.ts",
-      "packages/adapters-mcp/src/observability/correlation.ts",
-      "packages/run-reports/src/retention.ts",
-      "packages/run-store/src/index.ts"
-    ]);
+    expect(productionFiles(archetypeFiles)).toEqual([]);
     expect(await directLiteralSites(legacyStateDir)).toEqual(
       directProductionArchetypeSites
     );
     expect(await readFile(join(rootDir, "packages/run-store/src/index.ts"), "utf8"))
-      .toContain(`export const RUN_STORE_DIR = "${legacyStateDir}";`);
+      .not.toContain(`export const RUN_STORE_DIR = "${legacyStateDir}";`);
   });
 
-  test("current canonical-name rows are separated from runtime state migration", async () => {
+  test("current canonical state-dir references are inventoried and classified", async () => {
     const specwrightFiles = await trackedFilesContaining(canonicalStateDir);
 
     expect(specwrightFiles).toEqual(expectedSpecwrightFiles);

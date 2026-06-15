@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "plan_schema_valid",
-        "severity": "blocking",
         "message": "Artifact schema validation failed",
+        "severity": "blocking",
         "targetRef": "artifact:plan_artifact",
         "evidenceRefs": [
           "evidence:plan"
@@ -27,9 +27,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:5fd8844744e748f2ca609e24d45ff8b033ba461221bc4311e60b61354c3f4fc4"
+    "decisionHash": "sha256:7145ef2c2577687ac1574691fd8cb904d705dcf5ec9c212268b64b81d3040587"
   },
   "instruction": {
     "kind": "create_repair_task",
@@ -38,6 +38,7 @@
       "id": "repair.artifact_schema",
       "gateId": "artifact_schema",
       "failedPhase": "verification",
+      "targetRef": "artifact:plan_artifact",
       "problem": "Artifact schema validation failed",
       "requiredEvidenceRefs": [
         "evidence:plan"
@@ -51,8 +52,7 @@
       "successGate": "artifact_schema",
       "createdFromFindingIds": [
         "plan_schema_valid"
-      ],
-      "targetRef": "artifact:plan_artifact"
+      ]
     }
   }
 }

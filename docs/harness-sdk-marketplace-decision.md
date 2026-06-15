@@ -119,7 +119,7 @@ Why this example goes first:
 - The current default harness already demonstrates a source-bound planning flow.
 - It uses read-only filesystem list/read plus eval execution and denies write, shell, git, and network authority by omission.
 - It can prove manifests, trust metadata, grants, dependencies, compatibility, package tests, and docs without requiring mutating runners.
-- It is a bridge from the current v0 fixture toward an installable extension story.
+- It is a bridge from the current source-checkout fixture toward an installable extension story.
 
 Later examples should be added in this order only after their prerequisites exist: code review, PR verification, docs audit, implementation, security review, frontend QA, and release readiness.
 

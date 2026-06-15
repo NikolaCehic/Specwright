@@ -5,7 +5,7 @@
   "runId": "run-contract",
   "data": {
     "runId": "run-contract",
-    "summaryPath": "/workspace/.archetype/runs/run-contract/summary.md",
+    "summaryPath": "/workspace/.specwright/runs/run-contract/summary.md",
     "markdown": "# Run Summary\n\n- Status: running\n",
     "missingInputs": []
   }

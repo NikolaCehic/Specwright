@@ -8,11 +8,11 @@ import {
   ArtifactStoreError,
   getArtifactStorePaths,
   listArtifacts,
-  MVP_ARTIFACT_FILENAMES,
+  production_ARTIFACT_FILENAMES,
   readArtifact,
   type ArtifactRecordInput
 } from "./index";
-import type { MvpArtifactType } from "@specwright/schemas";
+import type { ArtifactType } from "@specwright/schemas";
 
 let rootDir: string;
 
@@ -25,11 +25,11 @@ afterEach(async () => {
 });
 
 describe("artifact store", () => {
-  test("records and reads each MVP artifact type", async () => {
+  test("records and reads each production artifact type", async () => {
     const runId = "run-artifacts";
     const stored: string[] = [];
 
-    for (const artifactType of mvpArtifactTypes) {
+    for (const artifactType of productionArtifactTypes) {
       const artifactId = `artifact-${artifactType}`;
       const content =
         artifactType === "summary"
@@ -50,7 +50,7 @@ describe("artifact store", () => {
       });
 
       expect(artifact.fileRef?.uri).toBe(
-        `artifacts/${MVP_ARTIFACT_FILENAMES[artifactType]}`
+        `artifacts/${production_ARTIFACT_FILENAMES[artifactType]}`
       );
       expect(await readArtifact({ rootDir, runId, artifactId })).toEqual(
         artifact
@@ -270,19 +270,19 @@ describe("artifact store", () => {
   });
 });
 
-const mvpArtifactTypes = [
+const productionArtifactTypes = [
   "run-input",
   "source-inventory",
   "evidence-graph",
   "plan",
   "eval-report",
   "summary"
-] satisfies MvpArtifactType[];
+] satisfies ArtifactType[];
 
 function artifactRecord(
   overrides: Partial<ArtifactRecordInput> & {
     artifactId: string;
-    artifactType: MvpArtifactType;
+    artifactType: ArtifactType;
     content: unknown;
   }
 ): ArtifactRecordInput {

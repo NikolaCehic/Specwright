@@ -1,5 +1,5 @@
 {
-  "$id": "specwright.artifact.mvp-artifact-type",
+  "$id": "specwright.artifact.artifact-type",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "enum": [
     "run-input",
@@ -9,11 +9,11 @@
     "eval-report",
     "summary"
   ],
-  "title": "MvpArtifactTypeSchema",
+  "title": "ArtifactTypeSchema",
   "x-specwright-contract": {
     "family": "artifact",
-    "hash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
-    "id": "specwright.artifact.mvp-artifact-type",
+    "hash": "sha256:80c627f0adac7bde88d3bf2e4a089c17bc61571328ca01f2314d8708427a5f03",
+    "id": "specwright.artifact.artifact-type",
     "status": "public",
     "version": "1"
   }

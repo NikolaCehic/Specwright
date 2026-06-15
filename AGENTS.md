@@ -16,7 +16,7 @@ Use this repository as the primary source of truth unless the user explicitly pr
 
 ## Implementation Quality Bar
 
-- Do not treat application work as an MVP, v0, thin slice, slim vertical, demo, or happy-path-only implementation unless the user explicitly asks for that reduced scope.
+- Do not treat application work as a thin slice, slim vertical, demo, or happy-path-only implementation unless the user explicitly asks for that reduced scope.
 - Build for enterprise-grade use: reliable under realistic load, observable, secure by default, and explicit about operational boundaries.
 - Build for failure, not just one successful flow. Include error paths, degraded states, retry/recovery behavior, validation, malformed input handling, and permission or policy failures where relevant.
 - Keep implementations testable, maintainable, and scalable. Prefer clear module boundaries, deterministic behavior, focused tests, and code that can grow without becoming fragile.

@@ -160,7 +160,7 @@ export async function readAllMcpAuditRecords(
 }
 
 export function getMcpAuditRoot(rootDir?: string | undefined) {
-  return join(resolve(rootDir ?? "."), ".archetype", MCP_AUDIT_DIR);
+  return join(resolve(rootDir ?? "."), ".specwright", MCP_AUDIT_DIR);
 }
 
 export function getMcpAuditIndexPath(rootDir?: string | undefined) {
@@ -231,7 +231,7 @@ async function readAuditJsonl(path: string): Promise<McpAuditRecord[]> {
 
 async function discoverAuditPaths(rootDir?: string | undefined) {
   const root = resolve(rootDir ?? ".");
-  const runRoot = join(root, ".archetype", "runs");
+  const runRoot = join(root, ".specwright", "runs");
   const paths: string[] = [getMcpAuditIndexPath(root)];
 
   try {

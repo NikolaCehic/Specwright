@@ -166,7 +166,7 @@ export {
   type PriorEvalFailureLink
 } from "./emission";
 
-export const DEFAULT_EVAL_RUNNER_EVALUATOR = "specwright.eval-runner.v0";
+export const DEFAULT_EVAL_RUNNER_EVALUATOR = "specwright.eval-runner.v1";
 
 export type EvalArtifactSnapshot = {
   artifactId?: string;

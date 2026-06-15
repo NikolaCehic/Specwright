@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "gate.check.unsupported_mode.unknown_type",
-        "severity": "blocking",
         "message": "Gate check unsupported_mode declares unknown type unsupported_mode",
+        "severity": "blocking",
         "targetRef": "gate:gate_check_unsupported_type/check:unsupported_mode",
         "evidenceRefs": []
       }
@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:b50a9262f71298440e07c5b786aad5b82003f10611659c7fceba9fafe0dc1aee"
+    "decisionHash": "sha256:b67a0ae06d06fb3635043e5f0119093c541555c029585eeb45c48bafd428610c"
   },
   "instruction": {
     "kind": "fail_run",

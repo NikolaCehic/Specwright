@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "gate.onPass.malformed",
-        "severity": "blocking",
         "message": "Gate definition gate_onpass_malformed has malformed onPass",
+        "severity": "blocking",
         "targetRef": "gate:gate_onpass_malformed",
         "evidenceRefs": []
       }
@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:124bf0e524860d11558c2e85405a393048f99dd4a0feab745ad21fcbf8340026"
+    "decisionHash": "sha256:73d67ff44ff9e31d1f0b7a9d5d2da749fb13b6d9581286c58b70833de108131f"
   },
   "instruction": {
     "kind": "fail_run",

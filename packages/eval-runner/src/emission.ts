@@ -1108,10 +1108,10 @@ function buildLocalRuntimeEvent<TPayload>(input: {
     causationId: input.context.causationId,
     correlationId: input.context.correlationId,
     contractId: `specwright.event.${input.type}`,
-    contractVersion: "eval-runner.local.v0",
+    contractVersion: "eval-runner.local.v1",
     schemaHash: hashValue({
       eventType: input.type,
-      payloadSchema: "packages.eval-runner.packet05.v0"
+      payloadSchema: "packages.eval-runner.packet05.v1"
     }),
     payload: input.payload
   }) as EvalEmissionRuntimeEvent<TPayload>;
@@ -1121,7 +1121,7 @@ function localEventSchema(type: EvalEmissionEventType) {
   return runtimeEventSchema(PayloadSchemas[type]).extend({
     type: z.literal(type),
     contractId: z.literal(`specwright.event.${type}`),
-    contractVersion: z.literal("eval-runner.local.v0"),
+    contractVersion: z.literal("eval-runner.local.v1"),
     schemaHash: HashDigestSchema
   });
 }

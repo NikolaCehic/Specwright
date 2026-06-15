@@ -1094,7 +1094,7 @@ function compareEligibility(
 }
 
 function retentionAuditDir(rootDir: string | undefined) {
-  return join(resolve(rootDir ?? "."), ".archetype", RETENTION_AUDIT_DIR);
+  return join(resolve(rootDir ?? "."), ".specwright", RETENTION_AUDIT_DIR);
 }
 
 function retentionAuditPath(rootDir: string | undefined) {

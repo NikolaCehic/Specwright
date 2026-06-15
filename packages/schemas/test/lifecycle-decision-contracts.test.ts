@@ -87,7 +87,7 @@ describe("lifecycle decision contracts", () => {
       evaluatedAt: "1970-01-01T00:00:00.000Z",
       evaluator: {
         kind: "deterministic",
-        ref: "specwright.gate-engine.v0"
+        ref: "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
       }
     });
     const instruction = GateLifecycleInstructionSchema.parse({
@@ -109,7 +109,7 @@ describe("lifecycle decision contracts", () => {
 
     expect(verdict.evaluator).toEqual({
       kind: "deterministic",
-      ref: "specwright.gate-engine.v0"
+      ref: "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     });
     expect(instruction.kind).toBe("create_repair_task");
   });
@@ -125,7 +125,7 @@ describe("lifecycle decision contracts", () => {
         evidenceRefs: ["evidence:repair"],
         producedBy: {
           kind: "deterministic",
-          ref: "specwright.eval-runner.v0"
+          ref: "specwright.eval-runner.v1"
         },
         repairTask: {
           task: "Attach accepted repair evidence",
@@ -145,7 +145,7 @@ describe("lifecycle decision contracts", () => {
       evidenceRefs: ["evidence:repair"],
       producedBy: {
         kind: "deterministic",
-        ref: "specwright.eval-runner.v0"
+        ref: "specwright.eval-runner.v1"
       }
     }).success).toBe(true);
     expect(

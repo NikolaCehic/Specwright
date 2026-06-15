@@ -11,7 +11,7 @@
       "targetRef": "eval:artifact_schema_presence",
       "repairHint": "Use the eval definition signed into the loaded harness package registry.",
       "metadata": {
-        "registeredContentHash": "sha256:9130a3b67a1c34c2c0d02bc036ed42d3abbb7f2cb3430986c32b8d0931657cc8",
+        "registeredContentHash": "sha256:30dec1b831e683dc6b46163d52724f8573b70f0bdfcb9caf8a184ceda3255062",
         "suppliedContentHash": "sha256:a88d8ea1ba96dafb1e7da82d74ebcf12415cdb172c2161d2811003ec2791d1e6"
       }
     }
@@ -19,14 +19,14 @@
   "evidenceRefs": [],
   "producedBy": {
     "kind": "deterministic",
-    "ref": "specwright.eval-runner.v0"
+    "ref": "specwright.eval-runner.v1"
   },
   "provenance": {
-    "decisionHash": "sha256:c25e384014f5b19f35e22012e125eaea34ce95cf51df9a31cae009b436e32183",
+    "decisionHash": "sha256:463bf667e79af1469f52dad81041d1041b8e11103d8c049c9a555d0105ea2959",
     "causationIds": [
-      "specwright.eval-runner.input-hash.targetContentHash=sha256:11973c343f59fa37594831877f0a9149df87191bf6d361d03295b7ee63e54129",
-      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
-      "specwright.eval-runner.input-hash.definitionHash=sha256:373ec62a9dd6056866d79a77dcfb88324da29665f54a26424fddace7105f662b",
+      "specwright.eval-runner.input-hash.targetContentHash=sha256:995b2fe6c999b410784aa6cb8d76ecd0a469e66f4aea4d592f827208b4505e05",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:ba4a85a126eb516ad252a71d23e919c78411d0876739fedd5a7a47caa602e634",
+      "specwright.eval-runner.input-hash.definitionHash=sha256:4d19b673062bef913316c71657674bce6d1fa5fde5c7d87ec1099a4616747d46",
       "specwright.eval-runner.input-hash.checkResultsHash=sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     ]
   }

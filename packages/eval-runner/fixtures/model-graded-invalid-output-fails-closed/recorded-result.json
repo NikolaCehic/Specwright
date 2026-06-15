@@ -12,7 +12,7 @@
     "resultHash": "sha256:eeec998f5512e831386d49ea482b35694e5cc8a97be859ef384ea7cb6b0a4844",
     "cacheStatus": "hit",
     "traceId": "trace_invalid_output_fails_closed",
-    "adapterVersion": "model-adapter.v0",
+    "adapterVersion": "model-adapter.v1",
     "decisionHash": "sha256:6508b42cd000966f028dd23f9207938df5656ffcbf088692faadd22e0b79074f",
     "spanId": "span_invalid_output_fails_closed"
   }

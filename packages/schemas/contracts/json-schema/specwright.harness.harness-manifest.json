@@ -194,7 +194,7 @@
       "type": "object"
     },
     "schemaVersion": {
-      "const": "specwright.harness.v0"
+      "const": "specwright.harness.v1"
     },
     "startPhase": {
       "type": "string"
@@ -257,7 +257,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "harness",
-    "hash": "sha256:f1bf4c0f88b6186ff84fc7087656ad941f7860701284f2f33c328b4a92358120",
+    "hash": "sha256:5b531e9083ea4e2d11fc7582550e5630d3a00be558f5b0cc49e4596c2174ec36",
     "id": "specwright.harness.harness-manifest",
     "status": "public",
     "version": "1"

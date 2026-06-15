@@ -4,7 +4,7 @@
   "argsHash": "sha256:args-fixture",
   "bundleSetRef": "policy-bundle:contract-registry",
   "bundleVersions": [
-    "contract-registry@specwright.policy-bundle.v0"
+    "contract-registry@specwright.policy-bundle.v1"
   ],
   "constraints": [
     {

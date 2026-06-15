@@ -41,9 +41,9 @@ import type {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const DEP_ALPHA_HASH =
-  "sha256:433c9d4f8f84eea4656559cb7cb3040fa74023a7fc0668f9b05d79fa4bf3dead";
+  "sha256:1767a25dc13af67192816ca8e28ce7452eec67883b47541b51803410c538b26a";
 const DEP_BETA_HASH =
-  "sha256:f55ad70e2ef3c77e3b633dd0743dc42ddf328e2b5c3d2ac060134e4a2c842edd";
+  "sha256:2f502c610673d925156a1131eb81f96c1ed58455ad1b2ca65c3911618a750454";
 const WRONG_DEP_HASH =
   "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -294,7 +294,7 @@ phases:
     expect(first.schemaVersion).toBe(SUPPORTED_HARNESS_SCHEMA_VERSION);
     expect(first.specHash).toStartWith("sha256:");
     expect(first.specHash).toBe(
-      "sha256:35d21524acbca9e715a69a9f1166d65b2499b86d1c23f147baccb1f2d082c3b3"
+      "sha256:5263f833c9e2ab37599a39d2a938018a9ac7f24235140929963e48bd83a280a6"
     );
     expect(first.specHash).toBe(second.specHash);
     expect(first.phases.map((phase) => phase.id)).toEqual([
@@ -314,7 +314,7 @@ phases:
       "verification.model_review"
     ]);
     expect(first.policies.map((policy) => policy.id)).toEqual([
-      "source_bound_v0"
+      "source_bound"
     ]);
     expect(first.tools.map((tool) => tool.id)).toEqual([
       "fs.list",
@@ -643,7 +643,7 @@ phases:
       resolved: []
     });
     expect(record.snapshot.specHash).toBe(
-      "sha256:35d21524acbca9e715a69a9f1166d65b2499b86d1c23f147baccb1f2d082c3b3"
+      "sha256:5263f833c9e2ab37599a39d2a938018a9ac7f24235140929963e48bd83a280a6"
     );
     expect(events).toHaveLength(0);
   });
@@ -802,7 +802,7 @@ phases:
     ).toBe("replay-compatible");
     expect(
       classifyTransition({
-        declaredSchemaVersion: "specwright.harness.v0alpha",
+        declaredSchemaVersion: "specwright.harness.preview",
         targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
         packageVersion: "0.1.0",
         runtimeVersion: "current",
@@ -951,8 +951,8 @@ phases:
       "specwright.test.harness-loader.compatibility.v1"
     );
     expect(matrix.rows.map((row) => row.id)).toEqual([
-      "current-v0-load",
-      "historical-v0alpha-migrate"
+      "current-load",
+      "historical-preview-migrate"
     ]);
   });
 
@@ -981,7 +981,7 @@ phases:
     expect(first.snapshot.specHash).toBe(fixture.migratedSpecHash);
     expect(first.snapshot.specHash).toBe(second.snapshot.specHash);
     expect(first.compatibility).toMatchObject({
-      declaredSchemaVersion: "specwright.harness.v0alpha",
+      declaredSchemaVersion: "specwright.harness.preview",
       targetSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
       compatibilityClass: "migration-required",
       loaderBehavior: "migrate",
@@ -996,7 +996,7 @@ phases:
 
   test("parses migrated non-manifest definitions from the migrated byte set", async () => {
     const sourceFiles = fileBackedHistoricalHarnessFiles(
-      "specwright.harness.v0alpha",
+      "specwright.harness.preview",
       "legacy-intake"
     );
     const migratedFiles = fileBackedHistoricalHarnessFiles(
@@ -1960,7 +1960,7 @@ function dependencyFixturePackageDir(name: string) {
   );
 }
 
-function historicalHarnessFiles(schemaVersion = "specwright.harness.v0alpha") {
+function historicalHarnessFiles(schemaVersion = "specwright.harness.preview") {
   return {
     "harness.yaml": `
 id: specwright.test
@@ -1977,7 +1977,7 @@ phases:
 }
 
 function fileBackedHistoricalHarnessFiles(
-  schemaVersion = "specwright.harness.v0alpha",
+  schemaVersion = "specwright.harness.preview",
   phaseId = "legacy-intake"
 ) {
   return {
@@ -2003,7 +2003,7 @@ function compatibilityMatrixWithDowngradedWidening() {
     matrixId: "specwright.test.harness-loader.compatibility.downgrade",
     rows: [
       {
-        id: "current-v0-additive-load-widened",
+        id: "current-additive-load-widened",
         runtimeVersion: "current",
         harnessSchemaVersion: SUPPORTED_HARNESS_SCHEMA_VERSION,
         packageVersionRange: "*",
@@ -2034,7 +2034,7 @@ async function makeMigrationFixture(
     }>;
   } = {}
 ) {
-  const sourceSchemaVersion = "specwright.harness.v0alpha";
+  const sourceSchemaVersion = "specwright.harness.preview";
   const targetSchemaVersion = SUPPORTED_HARNESS_SCHEMA_VERSION;
   const sourceFiles =
     options.sourceFiles ?? historicalHarnessFiles(sourceSchemaVersion);
@@ -2049,7 +2049,7 @@ async function makeMigrationFixture(
     format: "pem"
   });
   const body: MigrationDescriptorBody = {
-    migrationId: "migration.specwright.harness.v0alpha-to-v0",
+    migrationId: "migration.specwright.harness.preview-to-v1",
     source: {
       contractId: "specwright.harness",
       version: sourceSchemaVersion
@@ -2077,7 +2077,7 @@ async function makeMigrationFixture(
       after: ["HarnessManifestSchema", "HarnessSnapshotSchema"]
     },
     rollbackStrategy: "preserve-original-bytes-and-specHash",
-    replayFixtures: ["compatibility-v0alpha"],
+    replayFixtures: ["compatibility-preview"],
     operatorApprovalRequired: false,
     expectedMigratedSpecHash:
       expectedMigratedSpecHashOverride ?? migratedSpecHash

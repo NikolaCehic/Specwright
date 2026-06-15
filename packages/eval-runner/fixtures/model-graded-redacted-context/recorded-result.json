@@ -15,7 +15,7 @@
     "resultHash": "sha256:0396728a51f306d5caab2dc58d7d48572c926b276988319f6e2a72c3836bd143",
     "cacheStatus": "hit",
     "traceId": "trace_redacted_context",
-    "adapterVersion": "model-adapter.v0",
+    "adapterVersion": "model-adapter.v1",
     "decisionHash": "sha256:010dd9d573520a4b7e715505504704fb557f12617e161ee37f1240ebae47c8f5",
     "spanId": "span_redacted_context"
   }

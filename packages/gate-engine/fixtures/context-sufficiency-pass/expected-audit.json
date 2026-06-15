@@ -20,9 +20,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc"
+          "decisionHash": "sha256:85b76533dba4b3b26ada0e75c1a468b39a9a4623d87cc48e971f4cdef005f074"
         },
         "instruction": {
           "kind": "continue",
@@ -35,10 +35,10 @@
           "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
           "runInput": "sha256:e7759fdee65f26c95c5e12a779647047cf04a131727cfe252a50b092dc3f7ebd"
         },
-        "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc",
+        "decisionHash": "sha256:85b76533dba4b3b26ada0e75c1a468b39a9a4623d87cc48e971f4cdef005f074",
         "evaluator": {
           "kind": "deterministic",
-          "ref": "specwright.gate-engine.v0"
+          "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
         },
         "checks": [
           {
@@ -85,9 +85,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc"
+          "decisionHash": "sha256:85b76533dba4b3b26ada0e75c1a468b39a9a4623d87cc48e971f4cdef005f074"
         },
         "instruction": {
           "kind": "continue",
@@ -98,17 +98,17 @@
   ],
   "spans": [
     {
-      "spanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "spanId": "span_gate_e7545eaf0f39e78020377dc7",
       "kind": "gate",
       "name": "gate.context_sufficiency",
       "status": "pass",
       "startedAt": "1970-01-01T00:00:00.000Z",
       "endedAt": "1970-01-01T00:00:00.000Z",
       "metadata": {
-        "decisionHash": "sha256:1117445b0d2f428b95efab3c7f6879f9ebb258938c4b6cbce8bcc7b3046323dc",
+        "decisionHash": "sha256:85b76533dba4b3b26ada0e75c1a468b39a9a4623d87cc48e971f4cdef005f074",
         "definitionHash": "sha256:1df9f99d0e23eb6f1c210579e9356273e27b0e4a89e2f9d72add37b54d10cc58",
         "evaluatorKind": "deterministic",
-        "evaluatorRef": "specwright.gate-engine.v0",
+        "evaluatorRef": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0",
         "gateId": "context_sufficiency",
         "instructionKind": "continue",
         "phase": "evidence",
@@ -116,8 +116,8 @@
       }
     },
     {
-      "spanId": "span_gate_input_resolution_b1dfbfc67cfd621e2de8ff2f",
-      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "spanId": "span_gate_input_resolution_fde7eca5b664c1e18b7d5447",
+      "parentSpanId": "span_gate_e7545eaf0f39e78020377dc7",
       "kind": "gate.input_resolution",
       "name": "gate.context_sufficiency.input_resolution",
       "status": "success",
@@ -136,8 +136,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_6d7c1d2c4acb2c8018c86a96",
-      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "spanId": "span_gate_check_0b11229e046fa19c4b8a5a9a",
+      "parentSpanId": "span_gate_e7545eaf0f39e78020377dc7",
       "kind": "gate.check",
       "name": "gate.context_sufficiency.check.goal_known",
       "status": "pass",
@@ -154,8 +154,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_c0a216d79c41c0758eb16bd6",
-      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "spanId": "span_gate_check_4b57c396e2195e207ff657b0",
+      "parentSpanId": "span_gate_e7545eaf0f39e78020377dc7",
       "kind": "gate.check",
       "name": "gate.context_sufficiency.check.source_authority_known",
       "status": "pass",
@@ -174,8 +174,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_cb48baef39f94300256cfa9a",
-      "parentSpanId": "span_gate_7e336c37c122c4d8ba7cd25b",
+      "spanId": "span_gate_check_b66e944b39dd26656ececf8d",
+      "parentSpanId": "span_gate_e7545eaf0f39e78020377dc7",
       "kind": "gate.check",
       "name": "gate.context_sufficiency.check.context_evidence_covered",
       "status": "pass",

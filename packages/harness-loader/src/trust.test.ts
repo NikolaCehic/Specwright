@@ -292,7 +292,7 @@ describe("harness package trust verification", () => {
   test("rejects a valid signature with mismatched attestation metadata", async () => {
     const fixture = await makeSignedHarnessPackage(rootDir, {
       attestationOverrides: {
-        schemaVersion: "specwright.harness.v1"
+        schemaVersion: "specwright.harness.mismatch"
       }
     });
 
@@ -439,7 +439,7 @@ function dependencyBearingHarnessFiles() {
 dependencies:
   - name: specwright.dep.alpha
     versionRange: 1.0.0
-    pinnedHash: sha256:433c9d4f8f84eea4656559cb7cb3040fa74023a7fc0668f9b05d79fa4bf3dead
+    pinnedHash: sha256:1767a25dc13af67192816ca8e28ce7452eec67883b47541b51803410c538b26a
     trustTier: first-party
 `
   };
@@ -453,7 +453,7 @@ function reviewedDependencyResolver() {
           name: "specwright.dep.alpha",
           version: "1.0.0",
           contentHash:
-            "sha256:433c9d4f8f84eea4656559cb7cb3040fa74023a7fc0668f9b05d79fa4bf3dead",
+            "sha256:1767a25dc13af67192816ca8e28ce7452eec67883b47541b51803410c538b26a",
           trustTier: "first-party" as const
         }
       ];

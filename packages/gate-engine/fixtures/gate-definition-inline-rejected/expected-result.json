@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "gate.definition.inline_rejected",
-        "severity": "blocking",
         "message": "Gate definition gate_definition_inline_rejected was provided inline when a governed source is required",
+        "severity": "blocking",
         "targetRef": "gate:gate_definition_inline_rejected",
         "evidenceRefs": []
       }
@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:5d30356d29c76985b1c5f09d430a68ed03a08c9308c8e3448f0a29433d117fb8"
+    "decisionHash": "sha256:cdcdfee894a2bf6cef1423a622488cbc2b40bf07ccec0f3b9651b1b4291cf073"
   },
   "instruction": {
     "kind": "fail_run",

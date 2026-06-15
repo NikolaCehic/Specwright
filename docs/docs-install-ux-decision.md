@@ -65,7 +65,7 @@ Today, docs may describe this pre-release path:
 1. clone the repository;
 2. install dependencies with Bun;
 3. build packages;
-4. run `bun run proof:v0` or call the built CLI adapter directly against `fixtures/simple-app`;
+4. run `bun run proof` or call the built CLI adapter directly against `fixtures/simple-app`;
 5. inspect status, events, replay, and report output.
 
 The first public "Install in 60 seconds" quickstart must wait until:
@@ -150,7 +150,7 @@ The current runnable example is `fixtures/simple-app`. It should remain the firs
 
 | Example | First posture | Verification requirement |
 | --- | --- | --- |
-| Simple fixture | Supported source-checkout proof fixture. | `bun run proof:v0` and simple-app E2E. |
+| Simple fixture | Supported source-checkout proof fixture. | `bun run proof` and simple-app E2E. |
 | Minimal project | Deferred. | Clean install smoke, first-run output, and no source-checkout paths. |
 | TypeScript app | Deferred. | Framework-neutral setup, artifact expectations, and source-bound evals. |
 | Monorepo | Deferred. | Workspace root detection, package-bound task examples, and bounded file reads. |
@@ -167,7 +167,7 @@ Docs verification should become a release gate in waves.
 
 | Gate | First requirement |
 | --- | --- |
-| Source-checkout smoke | `bun install`, `bun run build`, `bun run proof:v0`, CLI help, doctor, first run, status, events, replay, report. |
+| Source-checkout smoke | `bun install`, `bun run build`, `bun run proof`, CLI help, doctor, first run, status, events, replay, report. |
 | Package install smoke | Deferred until packages are publishable; run from a clean temp project without repo-relative paths. |
 | CLI reference check | Compare docs against `specwright help`, output schemas, and CLI tests. |
 | MCP reference check | Compare docs against MCP tool/resource/prompt lists, auth tests, and conformance rows. |

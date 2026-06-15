@@ -12,7 +12,7 @@
     "resultHash": "sha256:605a0fd91e099351698c0c5e44113880824b0e7c2c6c1af38bf520f343456ad5",
     "cacheStatus": "hit",
     "traceId": "trace_deterministic_fail_short_circuit",
-    "adapterVersion": "model-adapter.v0",
+    "adapterVersion": "model-adapter.v1",
     "decisionHash": "sha256:430f4be6fe2128f54f5e665538115df458c84119937d6d10ca71034b677f3011",
     "spanId": "span_deterministic_fail_short_circuit"
   }

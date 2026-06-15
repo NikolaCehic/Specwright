@@ -27,9 +27,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:f6740cf4551c06efb1b1f4ff6117e0920ace83c9b17b18b8dc049c24f22c4b70"
+    "decisionHash": "sha256:707736d7f2e62d2d7870fb46df72cd076d897caa91763857d7ef92a224b36df8"
   },
   "instruction": {
     "kind": "create_repair_task",

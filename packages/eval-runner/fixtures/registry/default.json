@@ -1,12 +1,12 @@
 {
-  "schemaVersion": "specwright.eval-registry.v0",
+  "schemaVersion": "specwright.eval-registry.v1",
   "harnessPackageId": "specwright.default@0.1.0",
   "entries": [
     {
       "definitionId": "artifact_schema_presence",
       "harnessPackageId": "specwright.default@0.1.0",
       "kind": "artifact_schema",
-      "contentHash": "sha256:9130a3b67a1c34c2c0d02bc036ed42d3abbb7f2cb3430986c32b8d0931657cc8",
+      "contentHash": "sha256:30dec1b831e683dc6b46163d52724f8573b70f0bdfcb9caf8a184ceda3255062",
       "definition": {
         "id": "artifact_schema_presence",
         "description": "Ensure the plan artifact exists and exposes required schema fields.",
@@ -16,12 +16,13 @@
         "artifactSchemas": [
           "plan"
         ],
+        "sourcePath": "evals/artifact_schema_presence.yaml",
         "type": "deterministic",
         "datasetRef": {
           "id": "specwright.default.artifact_schema_presence",
           "version": "1.0.0",
           "path": "packages/eval-runner/fixtures/default-datasets/artifact_schema_presence.json",
-          "contentId": "sha256:60908c02ed97ebdc630aef606a1dad54a8769a63be952bea268e6208bfc33604"
+          "contentId": "sha256:896633eb17fd58a9b965f322d233b90f7424be32f0306dd9c02bceb41590521b"
         },
         "target": {
           "artifactId": "plan"
@@ -53,15 +54,14 @@
         ],
         "onFail": {
           "action": "create_repair_task"
-        },
-        "sourcePath": "evals/artifact_schema_presence.yaml"
+        }
       }
     },
     {
       "definitionId": "source_fidelity",
       "harnessPackageId": "specwright.default@0.1.0",
       "kind": "source_fidelity",
-      "contentHash": "sha256:0ad49c39349114d90d1bfc6ec09351b2b6e9d230f4958a81e3fe182f6520a038",
+      "contentHash": "sha256:4bae4cf615d007f1d894ae8245c125e4bd8cd8fe9f01fa718699e32317212796",
       "definition": {
         "id": "source_fidelity",
         "description": "Verify important plan claims are backed by recorded evidence.",
@@ -73,12 +73,13 @@
           "plan",
           "evidence-graph"
         ],
+        "sourcePath": "evals/source_fidelity.yaml",
         "type": "source_fidelity",
         "datasetRef": {
           "id": "specwright.default.source_fidelity",
           "version": "1.0.0",
           "path": "packages/eval-runner/fixtures/default-datasets/source_fidelity.json",
-          "contentId": "sha256:f9202ee5ce4d13ec541115f461254eda47d55b7e68ec3f82af32f0c95ce11996"
+          "contentId": "sha256:6961cf3d4ea30e9dfa998d2de6b9a567902a2dd2bde350ff4692d5cf885dd960"
         },
         "target": {
           "artifactId": "plan"
@@ -100,15 +101,14 @@
         ],
         "onFail": {
           "action": "create_repair_task"
-        },
-        "sourcePath": "evals/source_fidelity.yaml"
+        }
       }
     },
     {
       "definitionId": "completeness_required_sections",
       "harnessPackageId": "specwright.default@0.1.0",
       "kind": "completeness",
-      "contentHash": "sha256:3708001dc34fd8a530c43144ddde8675dda53052a07ebc70fd49a210f082a4e8",
+      "contentHash": "sha256:dcd90f9a9b18bc9236a27151d9f04fc6c6b59d415f6658f63128ed9acdb2e340",
       "definition": {
         "id": "completeness_required_sections",
         "description": "Ensure the plan includes the minimum reviewable planning sections.",
@@ -118,12 +118,13 @@
         "artifactSchemas": [
           "plan"
         ],
+        "sourcePath": "evals/completeness_required_sections.yaml",
         "type": "completeness",
         "datasetRef": {
           "id": "specwright.default.completeness_required_sections",
           "version": "1.0.0",
           "path": "packages/eval-runner/fixtures/default-datasets/completeness_required_sections.json",
-          "contentId": "sha256:63af2df0e9262c396ab8918c9bac53adf1b3753977f3b7448eb2cc79a79ffd7a"
+          "contentId": "sha256:05b4d7e14690dabf2351bfcc6f459d8db3e97c2ab2a602dd316b7476c3421e9c"
         },
         "target": {
           "artifactId": "plan"
@@ -153,8 +154,7 @@
         ],
         "onFail": {
           "action": "create_repair_task"
-        },
-        "sourcePath": "evals/completeness_required_sections.yaml"
+        }
       }
     }
   ]

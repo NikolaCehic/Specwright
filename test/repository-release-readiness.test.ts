@@ -142,7 +142,7 @@ describe("AUD-016A repository release readiness", () => {
       "check:pack",
       "check:unused",
       "ci",
-      "proof:v0",
+      "proof",
       "test",
       "test:all",
       "test:core",

@@ -19,6 +19,7 @@ import {
   ArtifactRecordedEventPayloadSchema,
   ArtifactRefSchema,
   ArtifactSchemaRefSchema,
+  ArtifactTypeSchema,
   AttachmentRefSchema,
   BudgetStateSchema,
   CacheStatusSchema,
@@ -71,7 +72,6 @@ import {
   HumanQuestionSchema,
   HumanReviewSchema,
   MetadataSchema,
-  MvpArtifactTypeSchema,
   PhaseDefinitionSchema,
   PhaseEnteredEventPayloadSchema,
   PhaseTransitionedEventPayloadSchema,
@@ -416,28 +416,28 @@ const contractRegistryData = [
   {
     "authority": {
       "ownerReviewGroup": "audit-contract-review",
-      "semantics": "v0 artifact type enum. Durable posture: durable. Extension posture: ."
+      "semantics": "Artifact type enum. Durable posture: durable. Extension posture: ."
     },
-    "canonicalHash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
+    "canonicalHash": "sha256:80c627f0adac7bde88d3bf2e4a089c17bc61571328ca01f2314d8708427a5f03",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
-      "fixtures/conformance/mvp-artifact-type.positive.json",
-      "fixtures/negative/mvp-artifact-type.negative.json"
+      "fixtures/conformance/artifact-type.positive.json",
+      "fixtures/negative/artifact-type.negative.json"
     ],
     "durability": "durable",
-    "exportName": "MvpArtifactTypeSchema",
+    "exportName": "ArtifactTypeSchema",
     "extensionPoints": [],
     "family": "artifact",
     "generatedArtifacts": {
-      "fixture": "fixtures/conformance/mvp-artifact-type.positive.json",
-      "jsonSchema": "contracts/json-schema/specwright.artifact.mvp-artifact-type.json",
-      "negativeFixture": "fixtures/negative/mvp-artifact-type.negative.json",
+      "fixture": "fixtures/conformance/artifact-type.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.artifact-type.json",
+      "negativeFixture": "fixtures/negative/artifact-type.negative.json",
       "type": "src/generated/types.ts",
       "validator": "src/generated/validators.ts"
     },
-    "id": "specwright.artifact.mvp-artifact-type",
+    "id": "specwright.artifact.artifact-type",
     "migrationDescriptors": [],
-    "notes": "v0 artifact type enum.",
+    "notes": "Artifact type enum.",
     "owner": "Artifact Store",
     "redaction": {
       "defaultClass": "operator",
@@ -672,7 +672,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Literal harness schema version. Durable posture: durable. Extension posture: ."
     },
-    "canonicalHash": "sha256:e9c576bf33c829c70d6f5dd19400ba4f2d1283396bcc0fbde1123ae3103e9721",
+    "canonicalHash": "sha256:9f1031e31871bd0cbf88dba83bec085001f52b73c6d9e72c50bd6d28d2236d59",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/harness-schema-version.positive.json",
@@ -972,7 +972,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Payload contract for `harness.loaded`. Durable posture: durable. Extension posture: strict."
     },
-    "canonicalHash": "sha256:84727b617e64f9c4970d28531fc8f4040fe11e52d382ccc8555983b2ee7de964",
+    "canonicalHash": "sha256:1cdea3729d68fa05a6fa3582ea9203d43fe79f910b7bf2959a1b5829f4495f96",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/harness-loaded-event-payload.positive.json",
@@ -1427,7 +1427,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Discriminated runtime event contract family keyed by `type`. Durable posture: durable. Extension posture: strict typed payload union, metadata defaults."
     },
-    "canonicalHash": "sha256:6c077640020c4a278aeee402bd020fc70d3efde557ae07eac60bfd174a371319",
+    "canonicalHash": "sha256:8a7545b141b34df4902f4f584e8fb44b6880b8368f6def0887be39082dd7bf52",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/runtime-event.positive.json",
@@ -2733,7 +2733,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Harness package manifest. Durable posture: durable. Extension posture: metadata, passthrough."
     },
-    "canonicalHash": "sha256:f1bf4c0f88b6186ff84fc7087656ad941f7860701284f2f33c328b4a92358120",
+    "canonicalHash": "sha256:5b531e9083ea4e2d11fc7582550e5630d3a00be558f5b0cc49e4596c2174ec36",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/harness-manifest.positive.json",
@@ -2771,7 +2771,7 @@ const contractRegistryData = [
       "ownerReviewGroup": "shared-schema-contract-review",
       "semantics": "Loaded harness snapshot with `specHash`. Durable posture: durable. Extension posture: metadata, strict."
     },
-    "canonicalHash": "sha256:16c1f2c9c9e9ec7942bca7a806c0f524470389b1ab897e93363173844983d9a0",
+    "canonicalHash": "sha256:bf34ee93a9db44d92d5019dbd1a8e3262deedaebf8cc32bfb221bcbf34fdaa54",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
       "fixtures/conformance/harness-snapshot.positive.json",
@@ -3967,7 +3967,7 @@ const validators = new Map<string, ZodTypeAny>([
   [contractRegistryKey("specwright.artifact.artifact-record", "1"), ArtifactRecordSchema],
   [contractRegistryKey("specwright.artifact.artifact-ref", "1"), ArtifactRefSchema],
   [contractRegistryKey("specwright.artifact.artifact-schema-ref", "1"), ArtifactSchemaRefSchema],
-  [contractRegistryKey("specwright.artifact.mvp-artifact-type", "1"), MvpArtifactTypeSchema],
+  [contractRegistryKey("specwright.artifact.artifact-type", "1"), ArtifactTypeSchema],
   [contractRegistryKey("specwright.capability.cache-status", "1"), CacheStatusSchema],
   [contractRegistryKey("specwright.capability.harness-manifest-tools", "1"), HarnessManifestToolsSchema],
   [contractRegistryKey("specwright.capability.tool-call-request", "1"), ToolCallRequestSchema],

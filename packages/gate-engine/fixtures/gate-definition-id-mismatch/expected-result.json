@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "gate.definition.id_mismatch",
-        "severity": "blocking",
         "message": "Gate definition different_gate does not match requested gate gate_definition_id_mismatch",
+        "severity": "blocking",
         "targetRef": "gate:gate_definition_id_mismatch",
         "evidenceRefs": []
       }
@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:63cd5744e0d1ce771a02f9bd853bdfe91258302094f62cbc1afe9515036b3a7a"
+    "decisionHash": "sha256:a0e8d01863bd27fc0a46495afb533bf83176a339a4909dd9833b8e3d3e975dd9"
   },
   "instruction": {
     "kind": "fail_run",

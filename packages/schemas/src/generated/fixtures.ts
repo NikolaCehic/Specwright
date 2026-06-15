@@ -43,9 +43,9 @@ export const contractFixtures = [
     "positive": "fixtures/conformance/artifact-schema-ref.positive.json"
   },
   {
-    "id": "specwright.artifact.mvp-artifact-type",
-    "negative": "fixtures/negative/mvp-artifact-type.negative.json",
-    "positive": "fixtures/conformance/mvp-artifact-type.positive.json"
+    "id": "specwright.artifact.artifact-type",
+    "negative": "fixtures/negative/artifact-type.negative.json",
+    "positive": "fixtures/conformance/artifact-type.positive.json"
   },
   {
     "id": "specwright.capability.cache-status",

@@ -78,7 +78,7 @@ describe("policy decision replay", () => {
     const { recorded } = await replayRecord("replay-equivalent-fs-read");
     const result = replayPolicyDecision({
       ...recorded,
-      hashAlgoVersion: "v0"
+      hashAlgoVersion: "future"
     });
 
     expect(result.equivalent).toBe(false);

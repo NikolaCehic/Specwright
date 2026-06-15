@@ -43,5 +43,5 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
-      - name: Proof v0
-        run: bun run proof:v0
+      - name: Proof current
+        run: bun run proof

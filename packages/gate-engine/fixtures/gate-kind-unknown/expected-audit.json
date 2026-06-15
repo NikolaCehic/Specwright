@@ -27,9 +27,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:039bc6c0adbe0004f0516a16a7d5307fc1ff8c0b48eb76197329af2b77231d4b"
+          "decisionHash": "sha256:3273c9d3271e82b75a349045bd2fd8b3a881a3a6cfc91f496e3673b10ccadb73"
         },
         "instruction": {
           "kind": "fail_run",
@@ -38,10 +38,10 @@
         },
         "definitionHash": "sha256:729b95dbd481aa11a022254ab663ca31536b11463c1591766e2d9a4c18486278",
         "inputRefHashes": {},
-        "decisionHash": "sha256:039bc6c0adbe0004f0516a16a7d5307fc1ff8c0b48eb76197329af2b77231d4b",
+        "decisionHash": "sha256:3273c9d3271e82b75a349045bd2fd8b3a881a3a6cfc91f496e3673b10ccadb73",
         "evaluator": {
           "kind": "deterministic",
-          "ref": "specwright.gate-engine.v0"
+          "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
         },
         "checks": [],
         "missingInputs": []
@@ -71,9 +71,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:039bc6c0adbe0004f0516a16a7d5307fc1ff8c0b48eb76197329af2b77231d4b"
+          "decisionHash": "sha256:3273c9d3271e82b75a349045bd2fd8b3a881a3a6cfc91f496e3673b10ccadb73"
         },
         "instruction": {
           "kind": "fail_run",
@@ -91,31 +91,31 @@
         "originatingFindingIds": [
           "gate.kind.unknown"
         ],
-        "decisionHash": "sha256:039bc6c0adbe0004f0516a16a7d5307fc1ff8c0b48eb76197329af2b77231d4b"
+        "decisionHash": "sha256:3273c9d3271e82b75a349045bd2fd8b3a881a3a6cfc91f496e3673b10ccadb73"
       }
     }
   ],
   "spans": [
     {
-      "spanId": "span_gate_f41d2aabdee5d8de64d06b2a",
+      "spanId": "span_gate_cc979bb5d5e28624a58c1214",
       "kind": "gate",
       "name": "gate.gate_kind_unknown",
       "status": "fail",
       "startedAt": "1970-01-01T00:00:00.000Z",
       "endedAt": "1970-01-01T00:00:00.000Z",
       "metadata": {
-        "decisionHash": "sha256:039bc6c0adbe0004f0516a16a7d5307fc1ff8c0b48eb76197329af2b77231d4b",
+        "decisionHash": "sha256:3273c9d3271e82b75a349045bd2fd8b3a881a3a6cfc91f496e3673b10ccadb73",
         "definitionHash": "sha256:729b95dbd481aa11a022254ab663ca31536b11463c1591766e2d9a4c18486278",
         "evaluatorKind": "deterministic",
-        "evaluatorRef": "specwright.gate-engine.v0",
+        "evaluatorRef": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0",
         "gateId": "gate_kind_unknown",
         "instructionKind": "fail_run",
         "phase": "verification"
       }
     },
     {
-      "spanId": "span_gate_input_resolution_70d1ae59eccfd47b75a45d11",
-      "parentSpanId": "span_gate_f41d2aabdee5d8de64d06b2a",
+      "spanId": "span_gate_input_resolution_873819eb4b9616770a0f4b54",
+      "parentSpanId": "span_gate_cc979bb5d5e28624a58c1214",
       "kind": "gate.input_resolution",
       "name": "gate.gate_kind_unknown.input_resolution",
       "status": "success",

@@ -7,7 +7,7 @@ import {
 
 export const GATE_ENGINE_EVALUATOR_IDENTITY_KIND = "gate-engine" as const;
 export const GATE_ENGINE_EVALUATOR_ID = "specwright.gate-engine" as const;
-export const LEGACY_V0_EVALUATOR_REF = "specwright.gate-engine.v0" as const;
+export const CANONICAL_GATE_ENGINE_EVALUATOR_REF = "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0" as const;
 
 export const GateEngineEvaluatorIdentitySchema = z
   .object({
@@ -33,12 +33,12 @@ export const DEFAULT_GATE_ENGINE_EVALUATOR_IDENTITY =
 const preferredRefByIdentityKey = new Map<string, string>([
   [
     evaluatorIdentityKey(DEFAULT_GATE_ENGINE_EVALUATOR_IDENTITY),
-    LEGACY_V0_EVALUATOR_REF
+    CANONICAL_GATE_ENGINE_EVALUATOR_REF
   ]
 ]);
 
 const aliasedIdentityByRef = new Map<string, GateEngineEvaluatorIdentity>([
-  [LEGACY_V0_EVALUATOR_REF, DEFAULT_GATE_ENGINE_EVALUATOR_IDENTITY]
+  [CANONICAL_GATE_ENGINE_EVALUATOR_REF, DEFAULT_GATE_ENGINE_EVALUATOR_IDENTITY]
 ]);
 
 export const DEFAULT_GATE_ENGINE_EVALUATOR = serializeEvaluatorRef(

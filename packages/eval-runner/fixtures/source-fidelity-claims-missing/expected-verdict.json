@@ -16,10 +16,10 @@
   "evidenceRefs": [],
   "producedBy": {
     "kind": "deterministic",
-    "ref": "specwright.eval-runner.v0"
+    "ref": "specwright.eval-runner.v1"
   },
   "provenance": {
-    "decisionHash": "sha256:096a56f3c26ec0bdbc5f8ad95a2f8070942fc5e1d009d464ee69a32bed318b3b",
+    "decisionHash": "sha256:71e38a42fdd842d18aefbff27ba80e9cc5a662f18141024ab746c9eef0fb0857",
     "causationIds": [
       "specwright.eval-runner.input-hash.targetContentHash=sha256:6d088ecc9556cab8dc3f376a83b7b6865ea56faa112695082befa7b90f8c5e43",
       "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:c4c4517fc96e5e549190b8ff90867ab8d01306749bc37ff6ee9e4a81e78deac0",

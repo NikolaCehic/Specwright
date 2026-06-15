@@ -302,28 +302,28 @@
   {
     "authority": {
       "ownerReviewGroup": "audit-contract-review",
-      "semantics": "v0 artifact type enum. Durable posture: durable. Extension posture: ."
+      "semantics": "Artifact type enum. Durable posture: durable. Extension posture: ."
     },
     "canonicalHash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
     "compatibilityClass": "forward-compatible",
     "conformanceFixtures": [
-      "fixtures/conformance/mvp-artifact-type.positive.json",
-      "fixtures/negative/mvp-artifact-type.negative.json"
+      "fixtures/conformance/production-artifact-type.positive.json",
+      "fixtures/negative/production-artifact-type.negative.json"
     ],
     "durability": "durable",
-    "exportName": "MvpArtifactTypeSchema",
+    "exportName": "ArtifactTypeSchema",
     "extensionPoints": [],
     "family": "artifact",
     "generatedArtifacts": {
-      "fixture": "fixtures/conformance/mvp-artifact-type.positive.json",
-      "jsonSchema": "contracts/json-schema/specwright.artifact.mvp-artifact-type.json",
-      "negativeFixture": "fixtures/negative/mvp-artifact-type.negative.json",
+      "fixture": "fixtures/conformance/production-artifact-type.positive.json",
+      "jsonSchema": "contracts/json-schema/specwright.artifact.production-artifact-type.json",
+      "negativeFixture": "fixtures/negative/production-artifact-type.negative.json",
       "type": "src/generated/types.ts",
       "validator": "src/generated/validators.ts"
     },
-    "id": "specwright.artifact.mvp-artifact-type",
+    "id": "specwright.artifact.production-artifact-type",
     "migrationDescriptors": [],
-    "notes": "v0 artifact type enum.",
+    "notes": "Artifact type enum.",
     "owner": "Artifact Store",
     "redaction": {
       "defaultClass": "operator",

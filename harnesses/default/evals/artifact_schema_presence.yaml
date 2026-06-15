@@ -5,7 +5,7 @@ datasetRef:
   id: specwright.default.artifact_schema_presence
   version: "1.0.0"
   path: packages/eval-runner/fixtures/default-datasets/artifact_schema_presence.json
-  contentId: sha256:60908c02ed97ebdc630aef606a1dad54a8769a63be952bea268e6208bfc33604
+  contentId: sha256:896633eb17fd58a9b965f322d233b90f7424be32f0306dd9c02bceb41590521b
 target:
   artifactId: plan
 artifactSchemas:

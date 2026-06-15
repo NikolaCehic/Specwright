@@ -35,10 +35,10 @@
   ],
   "producedBy": {
     "kind": "deterministic",
-    "ref": "specwright.eval-runner.v0"
+    "ref": "specwright.eval-runner.v1"
   },
   "provenance": {
-    "decisionHash": "sha256:71727d350b0cab973910b9e8f9e0427fb75fa0e60207834a42c729830f035ffe",
+    "decisionHash": "sha256:c69dbfe184169ac8f0239e85ff8a0585182ff53da3350666e86c18ccd06f5f4f",
     "causationIds": [
       "specwright.eval-runner.input-hash.targetContentHash=sha256:b41ce4e86d3c99595021de2cb69cf059ce1b60bb2fb7630280e09d8ba62ac62f",
       "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:30265d4b2e1652c6b941071615fd5e900117dd234a03c492a2d854326289e5f9",

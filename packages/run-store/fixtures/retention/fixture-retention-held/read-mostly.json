@@ -2,7 +2,7 @@
   "recordVersion": 1,
   "runId": "fixture-retention-held",
   "sealedAt": "2026-06-01T00:00:03.000Z",
-  "sealRecordPath": "/tmp/specwright-retention-fixtures-yvxJvy/.archetype/runs/fixture-retention-held/seal.json",
+  "sealRecordPath": "/tmp/specwright-retention-fixtures-yvxJvy/.specwright/runs/fixture-retention-held/seal.json",
   "integrityHead": "sha256:d20d465e01ce7a4c7626ac44a88f8d8e1d91d4d684c00f275c5a57ddb2e955b8",
   "readMostly": true
 }

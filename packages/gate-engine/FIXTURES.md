@@ -17,9 +17,9 @@ Every top-level `.json` file inside a fixture directory is governed. Today that 
 - `expected-audit.json`
 - `recorded-result.json`
 - replay pair files under `repair-loop-relinked/`
-- the new Packet 06 fixtures `definition-changed/` and `v0-verdict-replay/`
+- the new Packet 06 fixtures `definition-changed/` and `recorded-verdict-replay/`
 
-The manifest currently covers 26 fixture directories: the 24 pre-existing directories in the package plus `definition-changed` and `v0-verdict-replay`.
+The manifest currently covers 26 fixture directories: the 24 pre-existing directories in the package plus `definition-changed` and `recorded-verdict-replay`.
 
 ## Fail-Closed Rules
 

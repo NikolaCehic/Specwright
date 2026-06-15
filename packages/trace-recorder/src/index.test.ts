@@ -1085,7 +1085,7 @@ const coverageToolRequest = {
 const coverageHarness = {
   id: harness.id,
   version: harness.version,
-  schemaVersion: "specwright.harness.v0",
+  schemaVersion: "specwright.harness.v1",
   specHash: harness.specHash,
   loadedAt: "2026-06-07T00:00:00.000Z",
   phases: [],

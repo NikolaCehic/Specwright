@@ -837,7 +837,7 @@ function minimalHarnessFiles(resolvedPackageId: string, version: string) {
     "harness.yaml": `
 id: ${resolvedPackageId}
 version: ${version}
-schemaVersion: specwright.harness.v0
+schemaVersion: specwright.harness.v1
 metadata:
   trustTier: first-party
 phases:
@@ -851,7 +851,7 @@ function dependentHarnessFiles(dependencySpecHash: string) {
     "harness.yaml": `
 id: ${packageId}
 version: 0.1.0
-schemaVersion: specwright.harness.v0
+schemaVersion: specwright.harness.v1
 metadata:
   trustTier: first-party
 phases:

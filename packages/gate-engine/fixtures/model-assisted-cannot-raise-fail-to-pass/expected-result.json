@@ -26,9 +26,9 @@
     "evaluatedAt": "2026-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:c9a4d82a4a8e2b5fcaafc45ab78cdae33ec950511a65f7271ffb56692e5d13e0"
+    "decisionHash": "sha256:9483ae9d6f9228a9a4f9e784f5791a333cabc4163810f6e174508a4c1bf9fda4"
   },
   "instruction": {
     "kind": "create_repair_task",

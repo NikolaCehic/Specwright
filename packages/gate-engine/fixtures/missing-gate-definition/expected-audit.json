@@ -27,9 +27,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+          "decisionHash": "sha256:e791338628123d9905b2f888d694d0d4cc9a21d2c18b7b6fad4b795439970601"
         },
         "instruction": {
           "kind": "fail_run",
@@ -38,10 +38,10 @@
         },
         "definitionHash": "sha256:03079e8963a333469328dc5a21505562b9cdf239990e5a33d1fc2404bfb73c4f",
         "inputRefHashes": {},
-        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1",
+        "decisionHash": "sha256:e791338628123d9905b2f888d694d0d4cc9a21d2c18b7b6fad4b795439970601",
         "evaluator": {
           "kind": "deterministic",
-          "ref": "specwright.gate-engine.v0"
+          "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
         },
         "checks": [],
         "missingInputs": []
@@ -71,9 +71,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+          "decisionHash": "sha256:e791338628123d9905b2f888d694d0d4cc9a21d2c18b7b6fad4b795439970601"
         },
         "instruction": {
           "kind": "fail_run",
@@ -89,7 +89,7 @@
         "phase": "verification",
         "reason": "Gate definition missing_gate is missing",
         "requiredAction": "fail_run",
-        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+        "decisionHash": "sha256:e791338628123d9905b2f888d694d0d4cc9a21d2c18b7b6fad4b795439970601"
       }
     },
     {
@@ -101,31 +101,31 @@
         "originatingFindingIds": [
           "gate.definition.missing"
         ],
-        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1"
+        "decisionHash": "sha256:e791338628123d9905b2f888d694d0d4cc9a21d2c18b7b6fad4b795439970601"
       }
     }
   ],
   "spans": [
     {
-      "spanId": "span_gate_c8a25e9c5c6030b1a5ff8334",
+      "spanId": "span_gate_7274de8557fa194bce730f5f",
       "kind": "gate",
       "name": "gate.missing_gate",
       "status": "fail",
       "startedAt": "1970-01-01T00:00:00.000Z",
       "endedAt": "1970-01-01T00:00:00.000Z",
       "metadata": {
-        "decisionHash": "sha256:e0003efa7f54d1e001401c8ae21e2e6cfcecae9622a9a3243a2df3018b1f77e1",
+        "decisionHash": "sha256:e791338628123d9905b2f888d694d0d4cc9a21d2c18b7b6fad4b795439970601",
         "definitionHash": "sha256:03079e8963a333469328dc5a21505562b9cdf239990e5a33d1fc2404bfb73c4f",
         "evaluatorKind": "deterministic",
-        "evaluatorRef": "specwright.gate-engine.v0",
+        "evaluatorRef": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0",
         "gateId": "missing_gate",
         "instructionKind": "fail_run",
         "phase": "verification"
       }
     },
     {
-      "spanId": "span_gate_input_resolution_151c6545239787f83b0c5aca",
-      "parentSpanId": "span_gate_c8a25e9c5c6030b1a5ff8334",
+      "spanId": "span_gate_input_resolution_066bebbf87322977a50a30db",
+      "parentSpanId": "span_gate_7274de8557fa194bce730f5f",
       "kind": "gate.input_resolution",
       "name": "gate.missing_gate.input_resolution",
       "status": "success",

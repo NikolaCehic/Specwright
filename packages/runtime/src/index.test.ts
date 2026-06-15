@@ -1233,7 +1233,7 @@ function validHarnessFiles() {
     "harness.yaml": `
 id: specwright.test
 version: 0.1.0
-schemaVersion: specwright.harness.v0
+schemaVersion: specwright.harness.v1
 phases:
   - id: intake
     gates:

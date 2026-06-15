@@ -4,23 +4,23 @@
     {
       "name": "specwright.dep.alpha",
       "version": "1.0.0",
-      "contentHash": "sha256:433c9d4f8f84eea4656559cb7cb3040fa74023a7fc0668f9b05d79fa4bf3dead",
+      "contentHash": "sha256:1767a25dc13af67192816ca8e28ce7452eec67883b47541b51803410c538b26a",
       "trustTier": "first-party",
-      "content": "id: specwright.dep.alpha\nversion: 1.0.0\nschemaVersion: specwright.harness.v0\n"
+      "content": "id: specwright.dep.alpha\nversion: 1.0.0\nschemaVersion: specwright.harness.v1\n"
     },
     {
       "name": "specwright.dep.beta",
       "version": "2.1.0",
-      "contentHash": "sha256:f55ad70e2ef3c77e3b633dd0743dc42ddf328e2b5c3d2ac060134e4a2c842edd",
+      "contentHash": "sha256:2f502c610673d925156a1131eb81f96c1ed58455ad1b2ca65c3911618a750454",
       "trustTier": "first-party",
-      "content": "id: specwright.dep.beta\nversion: 2.1.0\nschemaVersion: specwright.harness.v0\n"
+      "content": "id: specwright.dep.beta\nversion: 2.1.0\nschemaVersion: specwright.harness.v1\n"
     },
     {
       "name": "specwright.dep.community",
       "version": "1.0.0",
-      "contentHash": "sha256:a5531e7802bf7ba4f83211399ad4fe8cfe864ea2c9e277f9bca0f46c55dab05f",
+      "contentHash": "sha256:429dadf1416d2d72159d7b4e3fd108a333338c70a366db496fa2d0e552bd5db7",
       "trustTier": "community",
-      "content": "id: specwright.dep.community\nversion: 1.0.0\nschemaVersion: specwright.harness.v0\n"
+      "content": "id: specwright.dep.community\nversion: 1.0.0\nschemaVersion: specwright.harness.v1\n"
     }
   ]
 }

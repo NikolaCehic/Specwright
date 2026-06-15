@@ -2110,7 +2110,7 @@ function fakeHandle(
     harness: {
       id: "specwright.default",
       version: "0.1.0",
-      schemaVersion: "specwright.harness.v0",
+      schemaVersion: "specwright.harness.v1",
       specHash: "sha256:harness",
       loadedAt: "2026-05-29T00:00:00.000Z",
       phases: [],
@@ -2125,17 +2125,17 @@ function fakeHandle(
     events: [],
     paths: {
       rootDir: "/workspace",
-      runsDir: "/workspace/.archetype/runs",
-      runDir: `/workspace/.archetype/runs/${runId}`,
-      eventsPath: `/workspace/.archetype/runs/${runId}/events.jsonl`,
-      statePath: `/workspace/.archetype/runs/${runId}/state.json`,
-      tracePath: `/workspace/.archetype/runs/${runId}/trace.json`,
-      decisionsPath: `/workspace/.archetype/runs/${runId}/decisions.jsonl`,
-      artifactsDir: `/workspace/.archetype/runs/${runId}/artifacts`,
-      evidenceDir: `/workspace/.archetype/runs/${runId}/evidence`,
-      cacheDir: `/workspace/.archetype/runs/${runId}/cache`,
-      evalsDir: `/workspace/.archetype/runs/${runId}/evals`,
-      summaryPath: `/workspace/.archetype/runs/${runId}/summary.md`
+      runsDir: "/workspace/.specwright/runs",
+      runDir: `/workspace/.specwright/runs/${runId}`,
+      eventsPath: `/workspace/.specwright/runs/${runId}/events.jsonl`,
+      statePath: `/workspace/.specwright/runs/${runId}/state.json`,
+      tracePath: `/workspace/.specwright/runs/${runId}/trace.json`,
+      decisionsPath: `/workspace/.specwright/runs/${runId}/decisions.jsonl`,
+      artifactsDir: `/workspace/.specwright/runs/${runId}/artifacts`,
+      evidenceDir: `/workspace/.specwright/runs/${runId}/evidence`,
+      cacheDir: `/workspace/.specwright/runs/${runId}/cache`,
+      evalsDir: `/workspace/.specwright/runs/${runId}/evals`,
+      summaryPath: `/workspace/.specwright/runs/${runId}/summary.md`
     }
   };
 }

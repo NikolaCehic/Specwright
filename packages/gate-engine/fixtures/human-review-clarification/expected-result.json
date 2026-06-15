@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:53d43fb32ca87c04f1208c73344be7b8f03a2332e2331e601e98313127f8eb9d"
+    "decisionHash": "sha256:a57d55141dbe38b1060dcb1d887907391a0c535a1399835d98264fe0ccf1d683"
   },
   "instruction": {
     "kind": "pause_for_human",

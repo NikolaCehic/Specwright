@@ -1,4 +1,4 @@
 node_modules/
 packages/*/dist/
-.archetype/
+.specwright/
 .DS_Store

@@ -1,6 +1,6 @@
 id: specwright.test
 version: 0.1.0
-schemaVersion: specwright.harness.v0
+schemaVersion: specwright.harness.v1
 metadata:
   trustTier: first-party
 phases:
@@ -8,5 +8,5 @@ phases:
 dependencies:
   - name: specwright.dep.community
     versionRange: 1.0.0
-    pinnedHash: sha256:a5531e7802bf7ba4f83211399ad4fe8cfe864ea2c9e277f9bca0f46c55dab05f
+    pinnedHash: sha256:429dadf1416d2d72159d7b4e3fd108a333338c70a366db496fa2d0e552bd5db7
     trustTier: first-party
