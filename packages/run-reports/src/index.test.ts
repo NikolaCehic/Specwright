@@ -88,7 +88,7 @@ describe("run reports", () => {
     expect(report.markdown).toContain("# Run Summary");
     expect(report.markdown).toContain("Task: Create a source-bound frontend contract");
     expect(report.markdown).toContain("Harness: `default@0.0.0` (sha256:test)");
-    expect(report.markdown).toContain("Replayable run package: `.archetype/runs/run-success`");
+    expect(report.markdown).toContain("Replayable run package: `.specwright/runs/run-success`");
     expect(report.markdown).toContain("intake (phase.entered");
     expect(report.markdown).toContain("context_sufficiency: pass");
     expect(report.markdown).toContain("source_fidelity: pass");

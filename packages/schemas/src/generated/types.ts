@@ -13,6 +13,7 @@ import {
   ArtifactRecordedEventPayloadSchema,
   ArtifactRefSchema,
   ArtifactSchemaRefSchema,
+  ArtifactTypeSchema,
   AttachmentRefSchema,
   BudgetStateSchema,
   CacheStatusSchema,
@@ -65,7 +66,6 @@ import {
   HumanQuestionSchema,
   HumanReviewSchema,
   MetadataSchema,
-  MvpArtifactTypeSchema,
   PhaseDefinitionSchema,
   PhaseEnteredEventPayloadSchema,
   PhaseTransitionedEventPayloadSchema,
@@ -113,7 +113,7 @@ export type ContractTypeById = {
   "specwright.artifact.artifact-record": z.infer<typeof ArtifactRecordSchema>;
   "specwright.artifact.artifact-ref": z.infer<typeof ArtifactRefSchema>;
   "specwright.artifact.artifact-schema-ref": z.infer<typeof ArtifactSchemaRefSchema>;
-  "specwright.artifact.mvp-artifact-type": z.infer<typeof MvpArtifactTypeSchema>;
+  "specwright.artifact.artifact-type": z.infer<typeof ArtifactTypeSchema>;
   "specwright.capability.cache-status": z.infer<typeof CacheStatusSchema>;
   "specwright.capability.harness-manifest-tools": z.infer<typeof HarnessManifestToolsSchema>;
   "specwright.capability.tool-call-request": z.infer<typeof ToolCallRequestSchema>;

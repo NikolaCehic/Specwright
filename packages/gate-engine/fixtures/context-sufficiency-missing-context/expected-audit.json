@@ -29,9 +29,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad"
+          "decisionHash": "sha256:01f7203e393bc36cc2b9dbc49ba4c859ca099cae10d4654f83619a124743b55f"
         },
         "instruction": {
           "kind": "pause_for_human",
@@ -51,10 +51,10 @@
           "evidence:source:requirements": "sha256:30444f8a493eb57cf5e2230cf4846feb8757fc127acb28e0f814bf4fcaa20f87",
           "runInput": "sha256:d5720301f323311933b251e814b748384ea2c13ebc46d0f615346c162f9e5000"
         },
-        "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad",
+        "decisionHash": "sha256:01f7203e393bc36cc2b9dbc49ba4c859ca099cae10d4654f83619a124743b55f",
         "evaluator": {
           "kind": "deterministic",
-          "ref": "specwright.gate-engine.v0"
+          "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
         },
         "checks": [
           {
@@ -110,9 +110,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad"
+          "decisionHash": "sha256:01f7203e393bc36cc2b9dbc49ba4c859ca099cae10d4654f83619a124743b55f"
         },
         "instruction": {
           "kind": "pause_for_human",
@@ -141,23 +141,23 @@
           "requiredFor": "gate:context_sufficiency"
         },
         "requiredFor": "gate:context_sufficiency",
-        "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad"
+        "decisionHash": "sha256:01f7203e393bc36cc2b9dbc49ba4c859ca099cae10d4654f83619a124743b55f"
       }
     }
   ],
   "spans": [
     {
-      "spanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "spanId": "span_gate_a1514b495bc209e5bdbc0655",
       "kind": "gate",
       "name": "gate.context_sufficiency",
       "status": "fail",
       "startedAt": "1970-01-01T00:00:00.000Z",
       "endedAt": "1970-01-01T00:00:00.000Z",
       "metadata": {
-        "decisionHash": "sha256:e189daf5b65e1e7af2b5275799640a6a10d2af171b86f165b3f5630e856d9aad",
+        "decisionHash": "sha256:01f7203e393bc36cc2b9dbc49ba4c859ca099cae10d4654f83619a124743b55f",
         "definitionHash": "sha256:61fc2e37cea551fe99c4288dc6b1ef4b5b2fb18d9d0429a51a35b4a3cef25dcd",
         "evaluatorKind": "deterministic",
-        "evaluatorRef": "specwright.gate-engine.v0",
+        "evaluatorRef": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0",
         "gateId": "context_sufficiency",
         "instructionKind": "pause_for_human",
         "phase": "evidence",
@@ -165,8 +165,8 @@
       }
     },
     {
-      "spanId": "span_gate_input_resolution_a5e7c793b9726a8f16fc943c",
-      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "spanId": "span_gate_input_resolution_ee83d13679de605048111b42",
+      "parentSpanId": "span_gate_a1514b495bc209e5bdbc0655",
       "kind": "gate.input_resolution",
       "name": "gate.context_sufficiency.input_resolution",
       "status": "success",
@@ -185,8 +185,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_3ee4b6f92b932a059730821f",
-      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "spanId": "span_gate_check_f936a353c1128e062230d427",
+      "parentSpanId": "span_gate_a1514b495bc209e5bdbc0655",
       "kind": "gate.check",
       "name": "gate.context_sufficiency.check.goal_known",
       "status": "fail",
@@ -203,8 +203,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_19e80b16764f702752d77ea5",
-      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "spanId": "span_gate_check_d2e1b73883132b7dedc589c7",
+      "parentSpanId": "span_gate_a1514b495bc209e5bdbc0655",
       "kind": "gate.check",
       "name": "gate.context_sufficiency.check.source_authority_known",
       "status": "pass",
@@ -223,8 +223,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_03bb657ccd3821f07a5aebca",
-      "parentSpanId": "span_gate_5bf94e08c2b7291df160cfd0",
+      "spanId": "span_gate_check_9afa6e51df4ed1352318e863",
+      "parentSpanId": "span_gate_a1514b495bc209e5bdbc0655",
       "kind": "gate.check",
       "name": "gate.context_sufficiency.check.context_evidence_covered",
       "status": "pass",

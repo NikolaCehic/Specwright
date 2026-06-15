@@ -5,7 +5,7 @@ datasetRef:
   id: specwright.default.source_fidelity
   version: "1.0.0"
   path: packages/eval-runner/fixtures/default-datasets/source_fidelity.json
-  contentId: sha256:f9202ee5ce4d13ec541115f461254eda47d55b7e68ec3f82af32f0c95ce11996
+  contentId: sha256:6961cf3d4ea30e9dfa998d2de6b9a567902a2dd2bde350ff4692d5cf885dd960
 target:
   artifactId: plan
 artifactSchemas:

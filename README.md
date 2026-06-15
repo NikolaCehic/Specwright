@@ -169,7 +169,7 @@ The default proof run demonstrates the strict source-bound path end to end:
 7. Write `summary.md`.
 8. Replay the run from `events.jsonl` and verify the projection.
 
-The broader package suites cover the enterprise surfaces beyond `proof:v0`: schema contract generation, run-store migration and retention, harness trust and registry lifecycle, policy validation, gate fixture governance, broker conformance and replay, eval fail-closed behavior, CLI output contracts, MCP conformance/versioning/auth/limits/audit, operations tenancy and release checks, and memory chunking/retrieval/eval/broker-policy behavior.
+The broader package suites cover the enterprise surfaces beyond `proof`: schema contract generation, run-store migration and retention, harness trust and registry lifecycle, policy validation, gate fixture governance, broker conformance and replay, eval fail-closed behavior, CLI output contracts, MCP conformance/versioning/auth/limits/audit, operations tenancy and release checks, and memory chunking/retrieval/eval/broker-policy behavior.
 
 Current boundaries are explicit. The default runtime registry executes only the sanctioned local filesystem capabilities. Memory, embeddings, shell, browser, network, model, and external MCP capabilities are represented as governed capability kinds and definitions, but unsupported isolation tiers fail closed unless a sanctioned runner is supplied. Retrieval is advisory context, not source authority. Broad model generation and git mutation are not ambient runtime powers.
 
@@ -204,7 +204,7 @@ bun run typecheck
 Run the default proof:
 
 ```bash
-bun run proof:v0
+bun run proof
 ```
 
 ## Eval Runner

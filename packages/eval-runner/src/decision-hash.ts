@@ -37,9 +37,9 @@ export type DecisionHashInput = DecisionInputHashes & {
 };
 
 const SHA256_PATTERN = /^sha256:[a-f0-9]{64}$/u;
-const ABSENT_INPUT_SENTINEL_VERSION = "specwright.eval-runner.absent-input.v0";
+const ABSENT_INPUT_SENTINEL_VERSION = "specwright.eval-runner.absent-input.v1";
 const UNRESOLVED_INPUT_SENTINEL_VERSION =
-  "specwright.eval-runner.unresolved-input.v0";
+  "specwright.eval-runner.unresolved-input.v1";
 const INPUT_HASH_CAUSATION_PREFIX = "specwright.eval-runner.input-hash";
 
 export class DecisionHashError extends Error {

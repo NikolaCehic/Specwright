@@ -13,9 +13,9 @@
     "evaluatedAt": "2026-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "model_assisted",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:2e298493a6d097f02d58befbef8a23e98227b3d6c8eec7f4a985e4e8fbe893a9"
+    "decisionHash": "sha256:52e3aafebf8822d98e932cb3a17583a269c306128222dba77b85d68a78a79ef3"
   },
   "instruction": {
     "kind": "continue",

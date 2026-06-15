@@ -259,7 +259,7 @@ describe("run store", () => {
     const loadedHarness = {
       id: "default",
       version: "0.1.0",
-      schemaVersion: "specwright.harness.v0",
+      schemaVersion: "specwright.harness.v1",
       specHash: "sha256:loaded",
       loadedAt: "2026-05-29T00:00:01.000Z",
       phases: [],

@@ -76,7 +76,7 @@ export type DatasetCase = z.infer<typeof DatasetCaseSchema>;
 
 export const DatasetManifestSchema = z
   .object({
-    schemaVersion: z.literal("specwright.eval-dataset.v0"),
+    schemaVersion: z.literal("specwright.eval-dataset.v1"),
     id: z.string().min(1),
     version: z.string().min(1),
     evalId: z.string().min(1).optional(),

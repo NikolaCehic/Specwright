@@ -2,7 +2,7 @@
   "status": "reuse_blocked",
   "findingCode": "eval.dataset.rederive_required",
   "message": "Stored verdict is bound to a different dataset content id and must be re-derived",
-  "expectedDatasetContentId": "sha256:d8f894119ee520d4502a7ca763bfca34b96cca0140803b1b7431d9ef86fc7a7a",
-  "actualDatasetContentId": "sha256:7ccf16137f915511cc2d865d953782ef5d23ea93efd966dcc0dca942fd769834",
+  "expectedDatasetContentId": "sha256:8e9ba05a627288e97c15122eb10c7bf7db78041e68c80d420aadb289708287f5",
+  "actualDatasetContentId": "sha256:4fcfd622cc268033845712574d5fa327b84c4938c84c1da29d93afc923c5f49d",
   "requiresRederivation": true
 }

@@ -27,9 +27,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:53d43fb32ca87c04f1208c73344be7b8f03a2332e2331e601e98313127f8eb9d"
+          "decisionHash": "sha256:a57d55141dbe38b1060dcb1d887907391a0c535a1399835d98264fe0ccf1d683"
         },
         "instruction": {
           "kind": "pause_for_human",
@@ -45,10 +45,10 @@
         },
         "definitionHash": "sha256:13aee8cf0e0802de19789eaa146410ee9f50c1fb8dcd4b1bddbb1c2975fe15a6",
         "inputRefHashes": {},
-        "decisionHash": "sha256:53d43fb32ca87c04f1208c73344be7b8f03a2332e2331e601e98313127f8eb9d",
+        "decisionHash": "sha256:a57d55141dbe38b1060dcb1d887907391a0c535a1399835d98264fe0ccf1d683",
         "evaluator": {
           "kind": "deterministic",
-          "ref": "specwright.gate-engine.v0"
+          "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
         },
         "checks": [
           {
@@ -87,9 +87,9 @@
           "evaluatedAt": "1970-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:53d43fb32ca87c04f1208c73344be7b8f03a2332e2331e601e98313127f8eb9d"
+          "decisionHash": "sha256:a57d55141dbe38b1060dcb1d887907391a0c535a1399835d98264fe0ccf1d683"
         },
         "instruction": {
           "kind": "pause_for_human",
@@ -120,23 +120,23 @@
           "expectedAnswerSchema": "schema://answers/verification-clarification@v1"
         },
         "requiredFor": "gate:human_review_clarification",
-        "decisionHash": "sha256:53d43fb32ca87c04f1208c73344be7b8f03a2332e2331e601e98313127f8eb9d"
+        "decisionHash": "sha256:a57d55141dbe38b1060dcb1d887907391a0c535a1399835d98264fe0ccf1d683"
       }
     }
   ],
   "spans": [
     {
-      "spanId": "span_gate_516f358039933a9531d22643",
+      "spanId": "span_gate_7dc83d7d8e6aa5ede35e562c",
       "kind": "gate",
       "name": "gate.human_review_clarification",
       "status": "needs_review",
       "startedAt": "1970-01-01T00:00:00.000Z",
       "endedAt": "1970-01-01T00:00:00.000Z",
       "metadata": {
-        "decisionHash": "sha256:53d43fb32ca87c04f1208c73344be7b8f03a2332e2331e601e98313127f8eb9d",
+        "decisionHash": "sha256:a57d55141dbe38b1060dcb1d887907391a0c535a1399835d98264fe0ccf1d683",
         "definitionHash": "sha256:13aee8cf0e0802de19789eaa146410ee9f50c1fb8dcd4b1bddbb1c2975fe15a6",
         "evaluatorKind": "deterministic",
-        "evaluatorRef": "specwright.gate-engine.v0",
+        "evaluatorRef": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0",
         "gateId": "human_review_clarification",
         "instructionKind": "pause_for_human",
         "phase": "verification",
@@ -144,8 +144,8 @@
       }
     },
     {
-      "spanId": "span_gate_input_resolution_8acdebf1a145188dc6e88353",
-      "parentSpanId": "span_gate_516f358039933a9531d22643",
+      "spanId": "span_gate_input_resolution_cfb39bfab01d201d519dd33b",
+      "parentSpanId": "span_gate_7dc83d7d8e6aa5ede35e562c",
       "kind": "gate.input_resolution",
       "name": "gate.human_review_clarification.input_resolution",
       "status": "success",
@@ -159,8 +159,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_8be6e5a5b08b96ef5896bf04",
-      "parentSpanId": "span_gate_516f358039933a9531d22643",
+      "spanId": "span_gate_check_2c6643223e81ee2d90cfe84b",
+      "parentSpanId": "span_gate_7dc83d7d8e6aa5ede35e562c",
       "kind": "gate.check",
       "name": "gate.human_review_clarification.check.human_review_required",
       "status": "needs_review",

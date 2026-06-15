@@ -87,7 +87,7 @@
         "evaluatedAt": "2026-01-01T00:00:00.000Z",
         "evaluator": {
           "kind": "deterministic",
-          "ref": "specwright.eval-runner.v0"
+          "ref": "specwright.eval-runner.v1"
         }
       }
     }

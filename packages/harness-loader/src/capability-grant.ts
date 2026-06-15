@@ -485,7 +485,7 @@ export function firstDeniedCapability(evaluation: GrantEvaluation) {
 }
 
 const DEFAULT_CAPABILITY_GRANT_REGISTRY = {
-  registryId: "specwright.local.capability-grants.v0",
+  registryId: "specwright.local.capability-grants.current",
   grants: [
     {
       grantId: "grant.specwright.default.0.1.0",
@@ -506,7 +506,7 @@ const DEFAULT_CAPABILITY_GRANT_REGISTRY = {
         "shell.exec"
       ],
       issuer: {
-        registryId: "specwright.local.capability-grants.v0",
+        registryId: "specwright.local.capability-grants.current",
         authorityId: "specwright.registry.operator"
       }
     },
@@ -521,7 +521,7 @@ const DEFAULT_CAPABILITY_GRANT_REGISTRY = {
       allowedPolicyLayers: [],
       allowedRuntimeInvariantToolIds: [],
       issuer: {
-        registryId: "specwright.local.capability-grants.v0",
+        registryId: "specwright.local.capability-grants.current",
         authorityId: "specwright.registry.operator"
       }
     }

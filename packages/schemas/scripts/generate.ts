@@ -1061,7 +1061,7 @@ const validPolicyEvaluatedEventPayload = {
   decisionHash: "sha256:policy-fixture",
   argsHash: "sha256:args-fixture",
   bundleSetRef: "policy-bundle:contract-registry",
-  bundleVersions: ["contract-registry@specwright.policy-bundle.v0"]
+  bundleVersions: ["contract-registry@specwright.policy-bundle.v1"]
 };
 
 const validGateVerdict = {
@@ -1096,7 +1096,7 @@ const validEvalVerdict = {
 const validHarnessSnapshot = {
   id: "default",
   version: "1.0.0",
-  schemaVersion: "specwright.harness.v0",
+  schemaVersion: "specwright.harness.v1",
   specHash: "sha256:harness-fixture",
   loadedAt: "2026-06-05T00:00:00.000Z",
   phases: [],

@@ -1307,7 +1307,7 @@ describe("eval runner CI conformance gate", () => {
     expect(workflow).toContain("bun run --cwd packages/eval-runner typecheck");
     expect(workflow).toContain("bun run build");
     expect(workflow).toContain("bun run typecheck");
-    expect(workflow).toContain("bun run proof:v0");
+    expect(workflow).toContain("bun run proof");
   });
 });
 
@@ -1957,7 +1957,7 @@ describe("dataset, grader, and trace-based regression fixtures", () => {
     });
 
     expect(contentId).toBe(
-      "sha256:d8f894119ee520d4502a7ca763bfca34b96cca0140803b1b7431d9ef86fc7a7a"
+      "sha256:8e9ba05a627288e97c15122eb10c7bf7db78041e68c80d420aadb289708287f5"
     );
     expect(EvalVerdictSchema.parse(result.verdict)).toEqual(result.verdict);
     expect(result.verdict.status).toBe("fail");
@@ -2046,7 +2046,7 @@ describe("dataset, grader, and trace-based regression fixtures", () => {
       "request.json"
     ))) as RunEvalRequest;
     const registry = regressionRegistry(
-      "sha256:d8f894119ee520d4502a7ca763bfca34b96cca0140803b1b7431d9ef86fc7a7a"
+      "sha256:8e9ba05a627288e97c15122eb10c7bf7db78041e68c80d420aadb289708287f5"
     );
 
     const verdict = runEval({
@@ -2797,7 +2797,7 @@ function registeredEvalRequest(
     evalId: definition.id,
     evalDefinition: definition,
     evalRegistry: {
-      schemaVersion: "specwright.eval-registry.v0",
+      schemaVersion: "specwright.eval-registry.v1",
       harnessPackageId,
       entries: [
         {
@@ -2831,7 +2831,7 @@ function memoryEmissionContext(
         causationId: input.causationId,
         correlationId: input.correlationId,
         contractId: `specwright.event.${input.type}`,
-        contractVersion: "eval-runner.local.v0",
+        contractVersion: "eval-runner.local.v1",
         schemaHash:
           "sha256:1111111111111111111111111111111111111111111111111111111111111111",
         payload: input.payload

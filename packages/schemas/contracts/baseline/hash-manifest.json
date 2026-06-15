@@ -57,9 +57,9 @@
   },
   {
     "compatibilityClass": "forward-compatible",
-    "exportName": "MvpArtifactTypeSchema",
+    "exportName": "ArtifactTypeSchema",
     "hash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
-    "id": "specwright.artifact.mvp-artifact-type",
+    "id": "specwright.artifact.production-artifact-type",
     "version": "1"
   },
   {

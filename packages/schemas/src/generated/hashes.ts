@@ -59,9 +59,9 @@ export const contractHashManifest = [
   },
   {
     "compatibilityClass": "forward-compatible",
-    "exportName": "MvpArtifactTypeSchema",
-    "hash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
-    "id": "specwright.artifact.mvp-artifact-type",
+    "exportName": "ArtifactTypeSchema",
+    "hash": "sha256:80c627f0adac7bde88d3bf2e4a089c17bc61571328ca01f2314d8708427a5f03",
+    "id": "specwright.artifact.artifact-type",
     "version": "1"
   },
   {
@@ -109,7 +109,7 @@ export const contractHashManifest = [
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "HarnessSchemaVersionSchema",
-    "hash": "sha256:e9c576bf33c829c70d6f5dd19400ba4f2d1283396bcc0fbde1123ae3103e9721",
+    "hash": "sha256:9f1031e31871bd0cbf88dba83bec085001f52b73c6d9e72c50bd6d28d2236d59",
     "id": "specwright.compatibility.harness-schema-version",
     "version": "1"
   },
@@ -158,7 +158,7 @@ export const contractHashManifest = [
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "HarnessLoadedEventPayloadSchema",
-    "hash": "sha256:84727b617e64f9c4970d28531fc8f4040fe11e52d382ccc8555983b2ee7de964",
+    "hash": "sha256:1cdea3729d68fa05a6fa3582ea9203d43fe79f910b7bf2959a1b5829f4495f96",
     "id": "specwright.event.harness.loaded",
     "version": "1"
   },
@@ -228,7 +228,7 @@ export const contractHashManifest = [
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "RuntimeEventSchema",
-    "hash": "sha256:65662fff45c6f493c33091586a24a5e0c74898913afaeb04a5289c0a80022a17",
+    "hash": "sha256:808885fee99ffa6b4cf164dbca3c4382a63f24042d6b328b8ae74459360c8259",
     "id": "specwright.event.runtime-event",
     "version": "1"
   },
@@ -473,14 +473,14 @@ export const contractHashManifest = [
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "HarnessManifestSchema",
-    "hash": "sha256:f1bf4c0f88b6186ff84fc7087656ad941f7860701284f2f33c328b4a92358120",
+    "hash": "sha256:5b531e9083ea4e2d11fc7582550e5630d3a00be558f5b0cc49e4596c2174ec36",
     "id": "specwright.harness.harness-manifest",
     "version": "1"
   },
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "HarnessSnapshotSchema",
-    "hash": "sha256:16c1f2c9c9e9ec7942bca7a806c0f524470389b1ab897e93363173844983d9a0",
+    "hash": "sha256:bf34ee93a9db44d92d5019dbd1a8e3262deedaebf8cc32bfb221bcbf34fdaa54",
     "id": "specwright.harness.harness-snapshot",
     "version": "1"
   },

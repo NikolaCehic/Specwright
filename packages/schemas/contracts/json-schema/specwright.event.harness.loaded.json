@@ -638,7 +638,7 @@
           "type": "object"
         },
         "schemaVersion": {
-          "const": "specwright.harness.v0"
+          "const": "specwright.harness.v1"
         },
         "specHash": {
           "type": "string"
@@ -699,7 +699,7 @@
   "type": "object",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:84727b617e64f9c4970d28531fc8f4040fe11e52d382ccc8555983b2ee7de964",
+    "hash": "sha256:1cdea3729d68fa05a6fa3582ea9203d43fe79f910b7bf2959a1b5829f4495f96",
     "id": "specwright.event.harness.loaded",
     "status": "public",
     "version": "1"

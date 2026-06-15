@@ -17,7 +17,7 @@ export const DEFAULT_HARNESS_EVAL_DEFINITIONS = [
       version: "1.0.0",
       path: "packages/eval-runner/fixtures/default-datasets/artifact_schema_presence.json",
       contentId:
-        "sha256:60908c02ed97ebdc630aef606a1dad54a8769a63be952bea268e6208bfc33604"
+        "sha256:896633eb17fd58a9b965f322d233b90f7424be32f0306dd9c02bceb41590521b"
     },
     target: {
       artifactId: "plan"
@@ -52,7 +52,7 @@ export const DEFAULT_HARNESS_EVAL_DEFINITIONS = [
       version: "1.0.0",
       path: "packages/eval-runner/fixtures/default-datasets/source_fidelity.json",
       contentId:
-        "sha256:f9202ee5ce4d13ec541115f461254eda47d55b7e68ec3f82af32f0c95ce11996"
+        "sha256:6961cf3d4ea30e9dfa998d2de6b9a567902a2dd2bde350ff4692d5cf885dd960"
     },
     target: {
       artifactId: "plan"
@@ -88,7 +88,7 @@ export const DEFAULT_HARNESS_EVAL_DEFINITIONS = [
       version: "1.0.0",
       path: "packages/eval-runner/fixtures/default-datasets/completeness_required_sections.json",
       contentId:
-        "sha256:63af2df0e9262c396ab8918c9bac53adf1b3753977f3b7448eb2cc79a79ffd7a"
+        "sha256:05b4d7e14690dabf2351bfcc6f459d8db3e97c2ab2a602dd316b7476c3421e9c"
     },
     target: {
       artifactId: "plan"
@@ -150,7 +150,7 @@ export type RegisteredEvalDefinition = z.infer<
 
 export const EvalRegistryManifestSchema = z
   .object({
-    schemaVersion: z.literal("specwright.eval-registry.v0"),
+    schemaVersion: z.literal("specwright.eval-registry.v1"),
     harnessPackageId: z.string().min(1),
     entries: z.array(RegisteredEvalDefinitionSchema)
   })
@@ -259,7 +259,7 @@ export function buildEvalRegistry(
   });
 
   return EvalRegistryManifestSchema.parse({
-    schemaVersion: "specwright.eval-registry.v0",
+    schemaVersion: "specwright.eval-registry.v1",
     harnessPackageId,
     entries
   }) as EvalRegistryManifest;

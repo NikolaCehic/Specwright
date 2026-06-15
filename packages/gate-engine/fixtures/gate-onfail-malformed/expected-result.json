@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "gate.onFail.malformed",
-        "severity": "blocking",
         "message": "Gate definition gate_onfail_malformed has malformed onFail",
+        "severity": "blocking",
         "targetRef": "gate:gate_onfail_malformed",
         "evidenceRefs": []
       }
@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:1ac11d63d531b906b68775226ff280b799ea1184aaf5d76489f07fd559500f96"
+    "decisionHash": "sha256:283a52b2d3f9303c59996bb2a9b3da0e465b388df8529085ec5c80637059ab37"
   },
   "instruction": {
     "kind": "fail_run",

@@ -386,7 +386,7 @@ export const AttachmentRefSchema = z
   .strict();
 export type AttachmentRef = z.infer<typeof AttachmentRefSchema>;
 
-export const HarnessSchemaVersionSchema = z.literal("specwright.harness.v0");
+export const HarnessSchemaVersionSchema = z.literal("specwright.harness.v1");
 export type HarnessSchemaVersion = z.infer<typeof HarnessSchemaVersionSchema>;
 
 export const HarnessReferenceSchema = z.union([
@@ -991,7 +991,7 @@ export const EvidenceRecordSchema = z
   });
 export type EvidenceRecord = z.infer<typeof EvidenceRecordSchema>;
 
-export const MvpArtifactTypeSchema = z.enum([
+export const ArtifactTypeSchema = z.enum([
   "run-input",
   "source-inventory",
   "evidence-graph",
@@ -999,7 +999,7 @@ export const MvpArtifactTypeSchema = z.enum([
   "eval-report",
   "summary"
 ]);
-export type MvpArtifactType = z.infer<typeof MvpArtifactTypeSchema>;
+export type ArtifactType = z.infer<typeof ArtifactTypeSchema>;
 
 export const ArtifactFileRefSchema = z
   .object({
@@ -1080,7 +1080,7 @@ export type ArtifactClaim = z.infer<typeof ArtifactClaimSchema>;
 export const ArtifactRecordSchema = z
   .object({
     artifactId: nonEmptyString,
-    artifactType: MvpArtifactTypeSchema,
+    artifactType: ArtifactTypeSchema,
     content: z.unknown().optional(),
     fileRef: ArtifactFileRefSchema.optional(),
     evidenceRefs: z.array(nonEmptyString),

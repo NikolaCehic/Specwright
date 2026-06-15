@@ -27,9 +27,9 @@
           "evaluatedAt": "2026-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f"
+          "decisionHash": "sha256:d23913bf3ad962939e0b4c2f7ceee2eed1d807f3e8e707871643de90d20005c5"
         },
         "instruction": {
           "kind": "create_repair_task",
@@ -53,10 +53,10 @@
         "inputRefHashes": {
           "artifact:summary": "sha256:8717bf2570a06195d0713e101ada4712048877e820fb029827c9b4c8e1ba42c8"
         },
-        "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f",
+        "decisionHash": "sha256:d23913bf3ad962939e0b4c2f7ceee2eed1d807f3e8e707871643de90d20005c5",
         "evaluator": {
           "kind": "deterministic",
-          "ref": "specwright.gate-engine.v0"
+          "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
         },
         "checks": [
           {
@@ -101,9 +101,9 @@
           "evaluatedAt": "2026-01-01T00:00:00.000Z",
           "evaluator": {
             "kind": "deterministic",
-            "ref": "specwright.gate-engine.v0"
+            "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
           },
-          "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f"
+          "decisionHash": "sha256:d23913bf3ad962939e0b4c2f7ceee2eed1d807f3e8e707871643de90d20005c5"
         },
         "instruction": {
           "kind": "create_repair_task",
@@ -147,23 +147,23 @@
         "createdFromFindingIds": [
           "summary_text_present"
         ],
-        "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f"
+        "decisionHash": "sha256:d23913bf3ad962939e0b4c2f7ceee2eed1d807f3e8e707871643de90d20005c5"
       }
     }
   ],
   "spans": [
     {
-      "spanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "spanId": "span_gate_63aece8dab357386473aeef6",
       "kind": "gate",
       "name": "gate.model_assisted_deterministic_blocks",
       "status": "fail",
       "startedAt": "2026-01-01T00:00:00.000Z",
       "endedAt": "2026-01-01T00:00:00.000Z",
       "metadata": {
-        "decisionHash": "sha256:180497de8c39d7f3b815404d218418fa736fd39f5259ad66220b3bbbd536553f",
+        "decisionHash": "sha256:d23913bf3ad962939e0b4c2f7ceee2eed1d807f3e8e707871643de90d20005c5",
         "definitionHash": "sha256:127632fbd9a6e73ae9f8baf7f2a0bf2ffc3fb60d7f68163cf5ca28ddae100146",
         "evaluatorKind": "deterministic",
-        "evaluatorRef": "specwright.gate-engine.v0",
+        "evaluatorRef": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0",
         "gateId": "model_assisted_deterministic_blocks",
         "instructionKind": "create_repair_task",
         "phase": "verification",
@@ -171,8 +171,8 @@
       }
     },
     {
-      "spanId": "span_gate_input_resolution_65e724b4eb42ca0d56e70213",
-      "parentSpanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "spanId": "span_gate_input_resolution_2a6ef707808f7bdfbb839be8",
+      "parentSpanId": "span_gate_63aece8dab357386473aeef6",
       "kind": "gate.input_resolution",
       "name": "gate.model_assisted_deterministic_blocks.input_resolution",
       "status": "success",
@@ -188,8 +188,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_461e53b0f0cf9dc9e8d243a0",
-      "parentSpanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "spanId": "span_gate_check_b80ecdaf01d4175547e2fd02",
+      "parentSpanId": "span_gate_63aece8dab357386473aeef6",
       "kind": "gate.check",
       "name": "gate.model_assisted_deterministic_blocks.check.summary_text_present",
       "status": "fail",
@@ -206,8 +206,8 @@
       }
     },
     {
-      "spanId": "span_gate_check_413c9b4ac5937f8cf7238c90",
-      "parentSpanId": "span_gate_c98d35fe510d0fcff8a85b4b",
+      "spanId": "span_gate_check_25b16f1454f13c55ddb0ba4c",
+      "parentSpanId": "span_gate_63aece8dab357386473aeef6",
       "kind": "gate.check",
       "name": "gate.model_assisted_deterministic_blocks.check.model_review",
       "status": "skipped",

@@ -45,7 +45,7 @@ describe("evidence store", () => {
     const rawIndex = await readFile(paths.indexPath, "utf8");
 
     expect(paths.evidenceDir).toContain(
-      ".archetype/runs/run-evidence/evidence"
+      ".specwright/runs/run-evidence/evidence"
     );
     expect(rawIndex).toContain(record.id);
   });

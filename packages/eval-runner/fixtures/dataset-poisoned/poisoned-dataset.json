@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "specwright.eval-dataset.v0",
+  "schemaVersion": "specwright.eval-dataset.v1",
   "id": "specwright.eval-runner.regression-pass-to-fail",
   "version": "1.0.0",
   "evalId": "artifact_schema_regression",
@@ -35,7 +35,7 @@
         ],
         "producedBy": {
           "kind": "deterministic",
-          "ref": "specwright.eval-runner.v0"
+          "ref": "specwright.eval-runner.v1"
         },
         "provenance": {
           "decisionHash": "sha256:ec54ac8e0b58ebaafb3d8a423b63094834edc48f61cb5cb1f460c7b2aaed0a34",

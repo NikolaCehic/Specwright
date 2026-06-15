@@ -6,21 +6,21 @@ import {
   type ArtifactFileRef,
   type ArtifactClaim,
   type ArtifactRecord,
-  type MvpArtifactType
+  type ArtifactType
 } from "@specwright/schemas";
 import { getRunStorePaths } from "@specwright/run-store";
 
 export const ARTIFACT_INDEX_FILE = "index.jsonl";
 export const ARTIFACT_RECORDS_DIR = "records";
 
-export const MVP_ARTIFACT_FILENAMES = {
+export const production_ARTIFACT_FILENAMES = {
   "run-input": "run-input.json",
   "source-inventory": "source-inventory.json",
   "evidence-graph": "evidence-graph.json",
   plan: "plan.json",
   "eval-report": "eval-report.json",
   summary: "summary.md"
-} satisfies Record<MvpArtifactType, string>;
+} satisfies Record<ArtifactType, string>;
 
 export type ArtifactStoreErrorCode =
   | "artifact_exists"
@@ -93,7 +93,7 @@ export type ReadArtifactOptions = ArtifactStoreOptions & {
 
 type ArtifactIndexEntry = {
   artifactId: string;
-  artifactType: MvpArtifactType;
+  artifactType: ArtifactType;
   uri: string;
 };
 
@@ -444,9 +444,9 @@ function serializeArtifactContent(record: ArtifactRecord) {
 
 function defaultFileRef(
   paths: ArtifactStorePaths,
-  artifactType: MvpArtifactType
+  artifactType: ArtifactType
 ): ArtifactFileRef {
-  const filename = MVP_ARTIFACT_FILENAMES[artifactType];
+  const filename = production_ARTIFACT_FILENAMES[artifactType];
   const uri = `artifacts/${filename}`;
 
   return {

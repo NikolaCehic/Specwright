@@ -1,6 +1,6 @@
 id: specwright.default
 version: 0.1.0
-schemaVersion: specwright.harness.v0
+schemaVersion: specwright.harness.v1
 runtime:
   strict: true
   eventLog: append-only
@@ -25,7 +25,7 @@ gates:
   - verification.required_evals
   - packaging.run_report
 policies:
-  - source_bound_v0
+  - source_bound
 tools:
   allow:
     - fs.list
@@ -43,9 +43,9 @@ evals:
   - source_fidelity
   - completeness_required_sections
 metadata:
-  description: Minimal source-bound planning harness for runtime strictness, with passive model-assisted gate examples kept out of the active v0 path.
+  description: Minimal source-bound planning harness for runtime strictness, with passive model-assisted gate examples kept out of the active runtime path.
   omittedFutureTools:
-    model.generate: Broad generation remains omitted from v0.
+    model.generate: Broad generation remains omitted from the active runtime path.
     model.review: Constrained advisory review remains example-only until async runtime broker injection is available in the active path.
   deniedByOmission:
     - shell.exec

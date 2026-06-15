@@ -12,7 +12,7 @@ import type {
 } from "./index";
 
 export const SUPPORTED_POLICY_BUNDLE_SCHEMA_VERSION =
-  "specwright.policy-bundle.v0";
+  "specwright.policy-bundle.v1";
 
 export type BundleLoadErrorCode =
   | "invalid_schema"

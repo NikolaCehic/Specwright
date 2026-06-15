@@ -7,10 +7,10 @@
     "evalId": "artifact_schema_regression",
     "targetType": "plan",
     "attributedVersion": {
-      "harnessSpecHash": "sha256:ef5fe67560d4b6fb12652a458cd72def267f479bce4f110283a97f531452b852",
+      "harnessSpecHash": "sha256:c39121e0174d5214621953464b3105ffe5829e764260adf078c2813ea58463cb",
       "datasetVersion": "1.0.0"
     },
-    "datasetContentId": "sha256:d8f894119ee520d4502a7ca763bfca34b96cca0140803b1b7431d9ef86fc7a7a",
-    "decisionHash": "sha256:d43daae7b99425fae14754f1954302c1b89e867504be4f9761dfff16b1b8214a"
+    "datasetContentId": "sha256:8e9ba05a627288e97c15122eb10c7bf7db78041e68c80d420aadb289708287f5",
+    "decisionHash": "sha256:472a34f0301a5f4c206ce4d38d2fbb6de076b23da71dbbb8aec5ce1d9c61288c"
   }
 }

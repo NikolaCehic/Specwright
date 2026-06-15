@@ -73,7 +73,7 @@ const validPolicyEvaluatedPayload = {
   decisionHash: "sha256:decision-fixture",
   argsHash: "sha256:args-fixture",
   bundleSetRef: "policy-bundle:fixture",
-  bundleVersions: ["fixture.shell-exec@specwright.policy-bundle.v0"]
+  bundleVersions: ["fixture.shell-exec@specwright.policy-bundle.v1"]
 };
 
 describe("artifact and evidence authority contracts", () => {

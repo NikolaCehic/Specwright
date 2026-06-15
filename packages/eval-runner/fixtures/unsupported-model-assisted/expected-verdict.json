@@ -15,13 +15,13 @@
   "evidenceRefs": [],
   "producedBy": {
     "kind": "deterministic",
-    "ref": "specwright.eval-runner.v0"
+    "ref": "specwright.eval-runner.v1"
   },
   "provenance": {
-    "decisionHash": "sha256:3c8aee2a8f7e4622a76049d4824ca64f1581293832a11bdda043b9116ee91b1e",
+    "decisionHash": "sha256:b75029292f3b7fef81fab79fe46da6d369cd837cf958c12da32c5d4a302c34e1",
     "causationIds": [
       "specwright.eval-runner.input-hash.targetContentHash=sha256:f58202ef75bcdbe1ec4ce2adba09ca2a92be19f587618106df662475d6bdb068",
-      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:ba4a85a126eb516ad252a71d23e919c78411d0876739fedd5a7a47caa602e634",
       "specwright.eval-runner.input-hash.definitionHash=sha256:cb17bd1cdb33e75e3fb4b2e05cb01b8183a48c3b5b929cc17ac80585206d41e5",
       "specwright.eval-runner.input-hash.checkResultsHash=sha256:4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
     ]

@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "artifact_schema_eval_passed",
-        "severity": "blocking",
         "message": "Blocking eval artifact_schema_eval failed",
+        "severity": "blocking",
         "targetRef": "eval:artifact_schema_eval",
         "evidenceRefs": [
           "evidence:plan"
@@ -27,9 +27,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:30c966e5422361a8434a094bd5a0ec41b94b76e54746a766a9011c5902de4cad"
+    "decisionHash": "sha256:45cacb95e95373795d4d9216310d062f8a50597f6b3e92865bd35aadd00403aa"
   },
   "instruction": {
     "kind": "create_repair_task",
@@ -38,6 +38,7 @@
       "id": "repair.eval_passed",
       "gateId": "eval_passed",
       "failedPhase": "verification",
+      "targetRef": "eval:artifact_schema_eval",
       "problem": "Blocking eval artifact_schema_eval failed",
       "requiredEvidenceRefs": [
         "evidence:plan"
@@ -47,8 +48,7 @@
       "successGate": "eval_passed",
       "createdFromFindingIds": [
         "artifact_schema_eval_passed"
-      ],
-      "targetRef": "eval:artifact_schema_eval"
+      ]
     }
   }
 }

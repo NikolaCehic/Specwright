@@ -182,7 +182,7 @@ function contractRuntime(): CliRuntime {
     async writeRunReport() {
       return {
         runId: "run-contract",
-        summaryPath: "/workspace/.archetype/runs/run-contract/summary.md",
+        summaryPath: "/workspace/.specwright/runs/run-contract/summary.md",
         markdown: "# Run Summary\n\n- Status: running\n",
         missingInputs: []
       };
@@ -202,7 +202,7 @@ function fakeHandle(
     harness: {
       id: "specwright.default",
       version: "0.1.0",
-      schemaVersion: "specwright.harness.v0",
+      schemaVersion: "specwright.harness.v1",
       specHash: "sha256:harness",
       loadedAt: "2026-05-29T00:00:00.000Z",
       phases: [],
@@ -217,30 +217,30 @@ function fakeHandle(
     events: [],
     paths: {
       rootDir: "/workspace",
-      runsDir: "/workspace/.archetype/runs",
-      runDir: `/workspace/.archetype/runs/${runId}`,
-      eventsPath: `/workspace/.archetype/runs/${runId}/events.jsonl`,
-      statePath: `/workspace/.archetype/runs/${runId}/state.json`,
-      tracePath: `/workspace/.archetype/runs/${runId}/trace.json`,
-      decisionsPath: `/workspace/.archetype/runs/${runId}/decisions.jsonl`,
-      artifactsDir: `/workspace/.archetype/runs/${runId}/artifacts`,
-      evidenceDir: `/workspace/.archetype/runs/${runId}/evidence`,
-      cacheDir: `/workspace/.archetype/runs/${runId}/cache`,
-      checkpointPath: `/workspace/.archetype/runs/${runId}/state.checkpoint.json`,
-      versionPath: `/workspace/.archetype/runs/${runId}/run.version.json`,
-      migrationsPath: `/workspace/.archetype/runs/${runId}/migrations.jsonl`,
-      sealPath: `/workspace/.archetype/runs/${runId}/seal.json`,
-      readMostlyPath: `/workspace/.archetype/runs/${runId}/read-mostly.json`,
-      retentionPath: `/workspace/.archetype/runs/${runId}/retention.json`,
-      legalHoldsPath: `/workspace/.archetype/runs/${runId}/legal-holds.jsonl`,
-      tombstonePath: `/workspace/.archetype/runs/${runId}/archive.tombstone.json`,
-      archiveDir: "/workspace/.archetype/archives",
-      archiveRunsDir: "/workspace/.archetype/archives/runs",
-      archiveStageDir: "/workspace/.archetype/archives/.stage",
-      archiveRunDir: `/workspace/.archetype/archives/runs/${runId}`,
-      archiveManifestPath: `/workspace/.archetype/archives/runs/${runId}/archive.manifest.json`,
-      evalsDir: `/workspace/.archetype/runs/${runId}/evals`,
-      summaryPath: `/workspace/.archetype/runs/${runId}/summary.md`
+      runsDir: "/workspace/.specwright/runs",
+      runDir: `/workspace/.specwright/runs/${runId}`,
+      eventsPath: `/workspace/.specwright/runs/${runId}/events.jsonl`,
+      statePath: `/workspace/.specwright/runs/${runId}/state.json`,
+      tracePath: `/workspace/.specwright/runs/${runId}/trace.json`,
+      decisionsPath: `/workspace/.specwright/runs/${runId}/decisions.jsonl`,
+      artifactsDir: `/workspace/.specwright/runs/${runId}/artifacts`,
+      evidenceDir: `/workspace/.specwright/runs/${runId}/evidence`,
+      cacheDir: `/workspace/.specwright/runs/${runId}/cache`,
+      checkpointPath: `/workspace/.specwright/runs/${runId}/state.checkpoint.json`,
+      versionPath: `/workspace/.specwright/runs/${runId}/run.version.json`,
+      migrationsPath: `/workspace/.specwright/runs/${runId}/migrations.jsonl`,
+      sealPath: `/workspace/.specwright/runs/${runId}/seal.json`,
+      readMostlyPath: `/workspace/.specwright/runs/${runId}/read-mostly.json`,
+      retentionPath: `/workspace/.specwright/runs/${runId}/retention.json`,
+      legalHoldsPath: `/workspace/.specwright/runs/${runId}/legal-holds.jsonl`,
+      tombstonePath: `/workspace/.specwright/runs/${runId}/archive.tombstone.json`,
+      archiveDir: "/workspace/.specwright/archives",
+      archiveRunsDir: "/workspace/.specwright/archives/runs",
+      archiveStageDir: "/workspace/.specwright/archives/.stage",
+      archiveRunDir: `/workspace/.specwright/archives/runs/${runId}`,
+      archiveManifestPath: `/workspace/.specwright/archives/runs/${runId}/archive.manifest.json`,
+      evalsDir: `/workspace/.specwright/runs/${runId}/evals`,
+      summaryPath: `/workspace/.specwright/runs/${runId}/summary.md`
     }
   };
 }

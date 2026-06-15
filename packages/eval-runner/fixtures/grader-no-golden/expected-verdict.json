@@ -2,5 +2,5 @@
   "status": "needs_review",
   "severity": "advisory",
   "findingCode": "eval.grader.golden_regression_missing",
-  "graderContentId": "sha256:c5b4e2276de2fe713d3036a68c5d6edf4c958057ae49f594241f7435d285b8bb"
+  "graderContentId": "sha256:4c64cae5be0ea74929ff7dce5f3773d6fb1efea78103cd2617b8a4a5b4a6fd6c"
 }

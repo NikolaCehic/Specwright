@@ -329,7 +329,7 @@ export type {
 
 export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
-  "specwright.harness.v0";
+  "specwright.harness.v1";
 
 export type HarnessLoadStageKind =
   | "harness.fetch"

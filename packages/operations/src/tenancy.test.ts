@@ -96,7 +96,7 @@ describe("tenant partitioning", () => {
 
     expect(result.partition.rootDir).toBe(tenantRootDir(rootDir, "tenant-a"));
     expect(result.result).toContain(
-      join("tenants", "tenant-a", ".archetype", "runs", "run-a")
+      join("tenants", "tenant-a", ".specwright", "runs", "run-a")
     );
     expect(result.auditRecords[0]).toMatchObject({
       action: "tenant_job_completed",

@@ -11,7 +11,7 @@
     "test:all": "bun run test",
     "test:core": "bun test packages/schemas/src/artifact-evidence-contracts.test.ts packages/memory/src/index.test.ts packages/memory/src/ranking/ranking.test.ts packages/memory/src/evals/evals.test.ts packages/memory/src/broker/broker.test.ts packages/run-store/src/index.test.ts packages/run-store/src/migration.test.ts packages/run-store/src/retention.test.ts packages/evidence-store/src/index.test.ts packages/artifact-store/src/index.test.ts packages/trace-recorder/src/index.test.ts packages/run-reports/src/index.test.ts packages/operations/src/audit.test.ts packages/operations/src/tenancy.test.ts packages/operations/src/compatibility.test.ts packages/operations/src/release.test.ts packages/harness-loader/src/index.test.ts packages/harness-loader/src/trust.test.ts packages/harness-loader/src/registry.test.ts packages/policy-engine/src/index.test.ts packages/gate-engine/src/index.test.ts packages/tool-broker/src/index.test.ts packages/eval-runner/src/index.test.ts packages/runtime/src/index.test.ts packages/adapters-cli/src/index.test.ts packages/adapters-cli/src/output-contract.test.ts packages/adapters-mcp/src/index.test.ts packages/adapters-mcp/src/versioning.test.ts packages/adapters-mcp/src/limits.test.ts packages/adapters-mcp/src/conformance.test.ts packages/adapters-mcp/src/external-capability.test.ts packages/adapters-mcp/src/observability/packet05.test.ts packages/adapter-parity/src/index.test.ts test/simple-app.e2e.test.ts",
     "typecheck": "tsc --noEmit --pretty false",
-    "proof:v0": "bun run build && bun test test/simple-app.e2e.test.ts"
+    "proof": "bun run build && bun test test/simple-app.e2e.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.6.3"

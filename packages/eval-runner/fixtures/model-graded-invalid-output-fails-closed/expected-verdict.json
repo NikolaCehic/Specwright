@@ -47,10 +47,10 @@
   "provenance": {
     "runId": "run_model_graded_fixture",
     "phase": "quality_gate",
-    "decisionHash": "sha256:907eb73d003a65fadddae7b350b7c26d65ce6bd160a81ccc02cd836a431aa2ab",
+    "decisionHash": "sha256:b475457317b7fa5397501c31c0d6528c739612dd13b075c9fde5d6e7014e2bff",
     "causationIds": [
       "specwright.eval-runner.input-hash.targetContentHash=sha256:dbc9939169a6ae4820b015467a6fc40de43d45acd20d7c4a2e92502e2fb16456",
-      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:69e4bbb72ed4ae44b80f05b270cf7f8fe0e4fbc259d7e6cfc168181dc45fe037",
+      "specwright.eval-runner.input-hash.evidenceSnapshotHash=sha256:ba4a85a126eb516ad252a71d23e919c78411d0876739fedd5a7a47caa602e634",
       "specwright.eval-runner.input-hash.definitionHash=sha256:457111e3f2db03c1f315af5393dc60f7ece882bc6ffa6e7d8ecb134ec1a99806",
       "specwright.eval-runner.input-hash.checkResultsHash=sha256:ce43cd4094b754f53d26c87c9c1e53a83f32b4e570405b72227582e16d9f883e"
     ],

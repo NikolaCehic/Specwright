@@ -89,15 +89,22 @@
       "unsupportedWithoutMigration": false
     },
     {
+      "classification": "additive-compatible",
+      "currentHash": "sha256:80c627f0adac7bde88d3bf2e4a089c17bc61571328ca01f2314d8708427a5f03",
+      "currentVersion": "1",
+      "exportName": "ArtifactTypeSchema",
+      "id": "specwright.artifact.artifact-type",
+      "reason": "New registered contract; old records remain readable.",
+      "unsupportedWithoutMigration": false
+    },
+    {
       "baselineHash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:52e735108dbe1090cfd52a181bd50f00c8fdb6f0bb3a094a58928d4810beecd7",
-      "currentVersion": "1",
-      "exportName": "MvpArtifactTypeSchema",
-      "id": "specwright.artifact.mvp-artifact-type",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "classification": "breaking",
+      "exportName": "ArtifactTypeSchema",
+      "id": "specwright.artifact.production-artifact-type",
+      "reason": "Contract was removed from the current registry.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:2264ce85475c87bfd636b799f00eee917b7c2b486eb20b3c734b4ddb8e6599c5",
@@ -168,13 +175,13 @@
     {
       "baselineHash": "sha256:e9c576bf33c829c70d6f5dd19400ba4f2d1283396bcc0fbde1123ae3103e9721",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:e9c576bf33c829c70d6f5dd19400ba4f2d1283396bcc0fbde1123ae3103e9721",
+      "classification": "migration-required",
+      "currentHash": "sha256:9f1031e31871bd0cbf88dba83bec085001f52b73c6d9e72c50bd6d28d2236d59",
       "currentVersion": "1",
       "exportName": "HarnessSchemaVersionSchema",
       "id": "specwright.compatibility.harness-schema-version",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:4b9c96c2a544fabc483ecc9b4a4d5bac424e9eea7c7a55feb687d63909aa15de",
@@ -246,7 +253,7 @@
       "baselineHash": "sha256:bf81a597052653e924e313dd53d7186f7fbc640f655c3ef1ac9dc3500ce8e17f",
       "baselineVersion": "1",
       "classification": "migration-required",
-      "currentHash": "sha256:84727b617e64f9c4970d28531fc8f4040fe11e52d382ccc8555983b2ee7de964",
+      "currentHash": "sha256:1cdea3729d68fa05a6fa3582ea9203d43fe79f910b7bf2959a1b5829f4495f96",
       "currentVersion": "1",
       "exportName": "HarnessLoadedEventPayloadSchema",
       "id": "specwright.event.harness.loaded",
@@ -354,7 +361,7 @@
       "baselineHash": "sha256:74a3ae89acd109ae0c65af3ebd0c01e4b783750ccffad57bdf143054a4982fc4",
       "baselineVersion": "1",
       "classification": "migration-required",
-      "currentHash": "sha256:65662fff45c6f493c33091586a24a5e0c74898913afaeb04a5289c0a80022a17",
+      "currentHash": "sha256:808885fee99ffa6b4cf164dbca3c4382a63f24042d6b328b8ae74459360c8259",
       "currentVersion": "1",
       "exportName": "RuntimeEventSchema",
       "id": "specwright.event.runtime-event",
@@ -738,19 +745,19 @@
     {
       "baselineHash": "sha256:f1bf4c0f88b6186ff84fc7087656ad941f7860701284f2f33c328b4a92358120",
       "baselineVersion": "1",
-      "classification": "unchanged",
-      "currentHash": "sha256:f1bf4c0f88b6186ff84fc7087656ad941f7860701284f2f33c328b4a92358120",
+      "classification": "migration-required",
+      "currentHash": "sha256:5b531e9083ea4e2d11fc7582550e5630d3a00be558f5b0cc49e4596c2174ec36",
       "currentVersion": "1",
       "exportName": "HarnessManifestSchema",
       "id": "specwright.harness.harness-manifest",
-      "reason": "Canonical schema hash is unchanged.",
-      "unsupportedWithoutMigration": false
+      "reason": "Schema hash changed in a way that requires an explicit migration review.",
+      "unsupportedWithoutMigration": true
     },
     {
       "baselineHash": "sha256:0d214ea5c9af582d5244356df0edeff49f78752801723986678d66ff96fe57d8",
       "baselineVersion": "1",
       "classification": "migration-required",
-      "currentHash": "sha256:16c1f2c9c9e9ec7942bca7a806c0f524470389b1ab897e93363173844983d9a0",
+      "currentHash": "sha256:bf34ee93a9db44d92d5019dbd1a8e3262deedaebf8cc32bfb221bcbf34fdaa54",
       "currentVersion": "1",
       "exportName": "HarnessSnapshotSchema",
       "id": "specwright.harness.harness-snapshot",
@@ -1103,7 +1110,10 @@
   "registryVersion": "scope-01.packet-05",
   "releasePolicy": {
     "auditExportChanges": [
+      "specwright.artifact.artifact-type",
+      "specwright.artifact.production-artifact-type",
       "specwright.capability.tool-call-result",
+      "specwright.compatibility.harness-schema-version",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
@@ -1113,11 +1123,15 @@
       "specwright.event.tool.completed",
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
+      "specwright.harness.harness-manifest",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
     ],
     "changedContractIds": [
+      "specwright.artifact.artifact-type",
+      "specwright.artifact.production-artifact-type",
       "specwright.capability.tool-call-result",
+      "specwright.compatibility.harness-schema-version",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
@@ -1127,6 +1141,7 @@
       "specwright.event.tool.completed",
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
+      "specwright.harness.harness-manifest",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
     ],
@@ -1139,14 +1154,15 @@
       "specwright.artifact.artifact-record": "unchanged",
       "specwright.artifact.artifact-ref": "unchanged",
       "specwright.artifact.artifact-schema-ref": "unchanged",
-      "specwright.artifact.mvp-artifact-type": "unchanged",
+      "specwright.artifact.artifact-type": "additive-compatible",
+      "specwright.artifact.production-artifact-type": "breaking",
       "specwright.capability.cache-status": "unchanged",
       "specwright.capability.harness-manifest-tools": "unchanged",
       "specwright.capability.tool-call-request": "unchanged",
       "specwright.capability.tool-call-result": "migration-required",
       "specwright.capability.tool-call-status": "unchanged",
       "specwright.capability.tool-definition": "unchanged",
-      "specwright.compatibility.harness-schema-version": "unchanged",
+      "specwright.compatibility.harness-schema-version": "migration-required",
       "specwright.compatibility.metadata": "unchanged",
       "specwright.event.artifact.recorded": "unchanged",
       "specwright.event.decision.recorded": "unchanged",
@@ -1198,7 +1214,7 @@
       "specwright.governance.policy-verdict": "unchanged",
       "specwright.governance.policy-verdict-status": "unchanged",
       "specwright.harness.gate-definition": "unchanged",
-      "specwright.harness.harness-manifest": "unchanged",
+      "specwright.harness.harness-manifest": "migration-required",
       "specwright.harness.harness-snapshot": "migration-required",
       "specwright.harness.phase-definition": "unchanged",
       "specwright.harness.prompt-asset-ref": "unchanged",
@@ -1235,7 +1251,10 @@
     "conformanceResultSummary": "migration review required before release",
     "contractRegistryVersion": "scope-01.packet-05",
     "generatedSdkSurfaceChanges": [
+      "specwright.artifact.artifact-type",
+      "specwright.artifact.production-artifact-type",
       "specwright.capability.tool-call-result",
+      "specwright.compatibility.harness-schema-version",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy-evaluated-event",
@@ -1245,11 +1264,14 @@
       "specwright.event.tool.completed",
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
+      "specwright.harness.harness-manifest",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
     ],
     "migrationRequirements": [
+      "specwright.artifact.production-artifact-type",
       "specwright.capability.tool-call-result",
+      "specwright.compatibility.harness-schema-version",
       "specwright.event.gate.evaluated",
       "specwright.event.harness.loaded",
       "specwright.event.policy.evaluated",
@@ -1258,14 +1280,19 @@
       "specwright.event.tool.completed",
       "specwright.event.tool.denied",
       "specwright.governance.policy-bundle",
+      "specwright.harness.harness-manifest",
       "specwright.harness.harness-snapshot",
       "specwright.lifecycle.gate-verdict"
     ],
     "redactionChanges": [
+      "specwright.artifact.artifact-type",
+      "specwright.artifact.production-artifact-type",
       "specwright.event.policy-evaluated-event"
     ],
     "unsupportedHistoricalVersions": [
+      "specwright.artifact.production-artifact-type@1",
       "specwright.capability.tool-call-result@1",
+      "specwright.compatibility.harness-schema-version@1",
       "specwright.event.gate.evaluated@1",
       "specwright.event.harness.loaded@1",
       "specwright.event.policy.evaluated@1",
@@ -1274,17 +1301,18 @@
       "specwright.event.tool.completed@1",
       "specwright.event.tool.denied@1",
       "specwright.governance.policy-bundle@1",
+      "specwright.harness.harness-manifest@1",
       "specwright.harness.harness-snapshot@1",
       "specwright.lifecycle.gate-verdict@1"
     ]
   },
   "summary": {
-    "additive-compatible": 1,
+    "additive-compatible": 2,
     "backward-compatible": 0,
-    "breaking": 0,
+    "breaking": 1,
     "forward-compatible": 0,
-    "migration-required": 11,
+    "migration-required": 13,
     "patch-compatible": 0,
-    "unchanged": 88
+    "unchanged": 85
   }
 }

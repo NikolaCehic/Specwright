@@ -66,17 +66,17 @@ export const DEFAULT_COMPATIBILITY_MATRIX: CompatibilityMatrix =
     matrixId: "specwright.harness-loader.compatibility.v1",
     rows: [
       {
-        id: "current-v0-load",
+        id: "current-load",
         runtimeVersion: DEFAULT_RUNTIME_VERSION,
-        harnessSchemaVersion: "specwright.harness.v0",
+        harnessSchemaVersion: "specwright.harness.v1",
         packageVersionRange: "*",
         supportClass: "content-stable",
         loaderBehavior: "load"
       },
       {
-        id: "historical-v0alpha-migrate",
+        id: "historical-preview-migrate",
         runtimeVersion: DEFAULT_RUNTIME_VERSION,
-        harnessSchemaVersion: "specwright.harness.v0alpha",
+        harnessSchemaVersion: "specwright.harness.preview",
         packageVersionRange: "*",
         supportClass: "migration-required",
         loaderBehavior: "migrate"

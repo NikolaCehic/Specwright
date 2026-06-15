@@ -48,7 +48,7 @@ afterEach(async () => {
 });
 
 describe("default harness simple-app E2E", () => {
-  test("runs the v0 fixture flow and replays from events", async () => {
+  test("runs the default fixture flow and replays from events", async () => {
     const runtime = createRuntime({
       now: () => fixedNow
     });
@@ -140,7 +140,7 @@ describe("default harness simple-app E2E", () => {
     for (const evalId of requiredEvalIds) {
       const verdict = await runtime.runEval(handle.runId, evalId);
       expect(verdict.status).toBe("pass");
-      expect(verdict.producedBy.ref).toBe("specwright.eval-runner.v0");
+      expect(verdict.producedBy.ref).toBe("specwright.eval-runner.v1");
       evalVerdicts.push(verdict);
     }
 
@@ -167,7 +167,7 @@ describe("default harness simple-app E2E", () => {
       phase: "packaging"
     });
     expect(packagingGate.verdict.status).toBe("pass");
-    expect(packagingGate.verdict.evaluator.ref).toBe("specwright.gate-engine.v0");
+    expect(packagingGate.verdict.evaluator.ref).toBe("gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0");
 
     const report = await runtime.writeRunReport(handle.runId);
     expect(report.summaryPath).toBe(paths.summaryPath);
@@ -323,7 +323,7 @@ function toolRequest(toolId: "fs.list" | "fs.read", path: string): ToolCallReque
     args: {
       path
     },
-    reason: `${toolId} ${path} for the simple-app MVP fixture`,
+    reason: `${toolId} ${path} for the simple-app source-bound fixture`,
     idempotencyKey: `simple-app:${toolId}:${path}`,
     requestedBy: {
       phase: "source_discovery"
@@ -476,7 +476,7 @@ function planArtifact(evidenceRecords: EvidenceRecord[]): ArtifactRecord {
     },
     {
       claim:
-        "The MVP verification can stay within read-only filesystem tools and deterministic evals.",
+        "The production verification can stay within read-only filesystem tools and deterministic evals.",
       claimLevel: "derived_fact",
       evidenceRefs,
       confidence: "medium",

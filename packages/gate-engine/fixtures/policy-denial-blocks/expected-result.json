@@ -10,8 +10,8 @@
     "findings": [
       {
         "id": "policy_allowed_gate_evaluation",
-        "severity": "blocking",
         "message": "Policy denied gate advancement",
+        "severity": "blocking",
         "targetRef": "policy:gate-evaluation-policy",
         "evidenceRefs": []
       }
@@ -22,9 +22,9 @@
     "evaluatedAt": "1970-01-01T00:00:00.000Z",
     "evaluator": {
       "kind": "deterministic",
-      "ref": "specwright.gate-engine.v0"
+      "ref": "gate-engine:specwright.gate-engine@1.0.0#gate-contract=1.0.0"
     },
-    "decisionHash": "sha256:8e12c8bc890de205786c9c1404b8436e249db7981c59e7775cd3dcea7255858b"
+    "decisionHash": "sha256:7d6bc1c74e0444254ba300a3ae32239c90c79d477e13f03e6edbe3bbd18989a4"
   },
   "instruction": {
     "kind": "fail_run",

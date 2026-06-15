@@ -1,5 +1,5 @@
 {
-  "schemaVersion": "specwright.eval-dataset.v0",
+  "schemaVersion": "specwright.eval-dataset.v1",
   "id": "specwright.default.completeness_required_sections",
   "version": "1.0.0",
   "evalId": "completeness_required_sections",
@@ -66,7 +66,7 @@
         ],
         "producedBy": {
           "kind": "deterministic",
-          "ref": "specwright.eval-runner.v0"
+          "ref": "specwright.eval-runner.v1"
         },
         "provenance": {
           "decisionHash": "sha256:ef88fcc7e527fa0640fd1f207b080c512ceb9dd18568ab6a55d796dcba2dec18",
