@@ -1,0 +1,471 @@
+{
+  "barrelImports": [
+    {
+      "from": "packages/adapters-mcp/src/index.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./conformance",
+      "to": "packages/adapters-mcp/src/conformance/index.ts"
+    },
+    {
+      "from": "packages/adapters-mcp/src/index.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./limits",
+      "to": "packages/adapters-mcp/src/limits/index.ts"
+    },
+    {
+      "from": "packages/adapters-mcp/src/index.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./observability",
+      "to": "packages/adapters-mcp/src/observability/index.ts"
+    },
+    {
+      "from": "packages/adapters-mcp/src/index.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./versioning",
+      "to": "packages/adapters-mcp/src/versioning/index.ts"
+    },
+    {
+      "from": "packages/adapters-mcp/src/stdio.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./index",
+      "to": "packages/adapters-mcp/src/index.ts"
+    },
+    {
+      "from": "packages/adapters-mcp/src/stdio.ts",
+      "package": "@specwright/adapters-mcp",
+      "specifier": "./versioning",
+      "to": "packages/adapters-mcp/src/versioning/index.ts"
+    },
+    {
+      "from": "packages/eval-runner/src/datasets.ts",
+      "package": "@specwright/eval-runner",
+      "specifier": "./index",
+      "to": "packages/eval-runner/src/index.ts"
+    },
+    {
+      "from": "packages/eval-runner/src/emission.ts",
+      "package": "@specwright/eval-runner",
+      "specifier": "./index",
+      "to": "packages/eval-runner/src/index.ts"
+    },
+    {
+      "from": "packages/eval-runner/src/model-assisted.ts",
+      "package": "@specwright/eval-runner",
+      "specifier": "./index",
+      "to": "packages/eval-runner/src/index.ts"
+    },
+    {
+      "from": "packages/eval-runner/src/registry.ts",
+      "package": "@specwright/eval-runner",
+      "specifier": "./index",
+      "to": "packages/eval-runner/src/index.ts"
+    },
+    {
+      "from": "packages/gate-engine/src/audit.ts",
+      "package": "@specwright/gate-engine",
+      "specifier": "./index",
+      "to": "packages/gate-engine/src/index.ts"
+    },
+    {
+      "from": "packages/gate-engine/src/definition-change.ts",
+      "package": "@specwright/gate-engine",
+      "specifier": "./index",
+      "to": "packages/gate-engine/src/index.ts"
+    },
+    {
+      "from": "packages/gate-engine/src/definition-hash.ts",
+      "package": "@specwright/gate-engine",
+      "specifier": "./index",
+      "to": "packages/gate-engine/src/index.ts"
+    },
+    {
+      "from": "packages/harness-loader/src/observe.ts",
+      "package": "@specwright/harness-loader",
+      "specifier": "./index",
+      "to": "packages/harness-loader/src/index.ts"
+    },
+    {
+      "from": "packages/memory/src/broker/runtime.ts",
+      "package": "@specwright/memory",
+      "specifier": "../chunking",
+      "to": "packages/memory/src/chunking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/broker/runtime.ts",
+      "package": "@specwright/memory",
+      "specifier": "../embedding",
+      "to": "packages/memory/src/embedding/index.ts"
+    },
+    {
+      "from": "packages/memory/src/broker/runtime.ts",
+      "package": "@specwright/memory",
+      "specifier": "../lexical",
+      "to": "packages/memory/src/lexical/index.ts"
+    },
+    {
+      "from": "packages/memory/src/broker/runtime.ts",
+      "package": "@specwright/memory",
+      "specifier": "../ranking",
+      "to": "packages/memory/src/ranking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/broker/runtime.ts",
+      "package": "@specwright/memory",
+      "specifier": "../retrieval",
+      "to": "packages/memory/src/retrieval/index.ts"
+    },
+    {
+      "from": "packages/memory/src/broker/runtime.ts",
+      "package": "@specwright/memory",
+      "specifier": "../vector",
+      "to": "packages/memory/src/vector/index.ts"
+    },
+    {
+      "from": "packages/memory/src/broker/schemas.ts",
+      "package": "@specwright/memory",
+      "specifier": "../chunking",
+      "to": "packages/memory/src/chunking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/chunk-store.ts",
+      "package": "@specwright/memory",
+      "specifier": "./chunking",
+      "to": "packages/memory/src/chunking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/chunking/fixed-overlap.ts",
+      "package": "@specwright/memory",
+      "specifier": "./index",
+      "to": "packages/memory/src/chunking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/chunking/semantic.ts",
+      "package": "@specwright/memory",
+      "specifier": "./index",
+      "to": "packages/memory/src/chunking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/chunking/structural.ts",
+      "package": "@specwright/memory",
+      "specifier": "./index",
+      "to": "packages/memory/src/chunking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/embedding/local-deterministic.ts",
+      "package": "@specwright/memory",
+      "specifier": "../chunking",
+      "to": "packages/memory/src/chunking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/evals/graders/groundedness-grader.ts",
+      "package": "@specwright/memory",
+      "specifier": "../../ranking",
+      "to": "packages/memory/src/ranking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/evals/graders/metrics.ts",
+      "package": "@specwright/memory",
+      "specifier": "../../ranking",
+      "to": "packages/memory/src/ranking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/evals/graders/retrieval-quality-grader.ts",
+      "package": "@specwright/memory",
+      "specifier": "../../ranking",
+      "to": "packages/memory/src/ranking/index.ts"
+    },
+    {
+      "from": "packages/memory/src/evals/index.ts",
+      "package": "@specwright/memory",
+      "specifier": "./graders",
+      "to": "packages/memory/src/evals/graders/index.ts"
+    },
+    {
+      "from": "packages/memory/src/index.ts",
+      "package": "@specwright/memory",
+      "specifier": "./broker",
+      "to": "packages/memory/src/broker/index.ts"
+    },
+    {
+      "from": "packages/memory/src/ranking/provenance.ts",
+      "package": "@specwright/memory",
+      "specifier": "../lexical",
+      "to": "packages/memory/src/lexical/index.ts"
+    },
+    {
+      "from": "packages/memory/src/retrieval/dense.ts",
+      "package": "@specwright/memory",
+      "specifier": "../embedding",
+      "to": "packages/memory/src/embedding/index.ts"
+    },
+    {
+      "from": "packages/memory/src/retrieval/dense.ts",
+      "package": "@specwright/memory",
+      "specifier": "../vector",
+      "to": "packages/memory/src/vector/index.ts"
+    },
+    {
+      "from": "packages/memory/src/retrieval/determinism-band.ts",
+      "package": "@specwright/memory",
+      "specifier": "../vector",
+      "to": "packages/memory/src/vector/index.ts"
+    },
+    {
+      "from": "packages/memory/src/vector/ann-index.ts",
+      "package": "@specwright/memory",
+      "specifier": "../embedding",
+      "to": "packages/memory/src/embedding/index.ts"
+    },
+    {
+      "from": "packages/memory/src/vector/build.ts",
+      "package": "@specwright/memory",
+      "specifier": "../embedding",
+      "to": "packages/memory/src/embedding/index.ts"
+    },
+    {
+      "from": "packages/policy-engine/src/bundle-load.ts",
+      "package": "@specwright/policy-engine",
+      "specifier": "./index",
+      "to": "packages/policy-engine/src/index.ts"
+    },
+    {
+      "from": "packages/policy-engine/src/policy-validation.ts",
+      "package": "@specwright/policy-engine",
+      "specifier": "./index",
+      "to": "packages/policy-engine/src/index.ts"
+    },
+    {
+      "from": "packages/policy-engine/src/replay.ts",
+      "package": "@specwright/policy-engine",
+      "specifier": "./index",
+      "to": "packages/policy-engine/src/index.ts"
+    },
+    {
+      "from": "packages/run-reports/src/audit-bundle.ts",
+      "package": "@specwright/run-reports",
+      "specifier": "./index",
+      "to": "packages/run-reports/src/index.ts"
+    },
+    {
+      "from": "packages/run-store/src/administration.ts",
+      "package": "@specwright/run-store",
+      "specifier": "./index",
+      "to": "packages/run-store/src/index.ts"
+    },
+    {
+      "from": "packages/schemas/src/generated/event-union.ts",
+      "package": "@specwright/schemas",
+      "specifier": "../index",
+      "to": "packages/schemas/src/index.ts"
+    },
+    {
+      "from": "packages/schemas/src/generated/registry.ts",
+      "package": "@specwright/schemas",
+      "specifier": "../index",
+      "to": "packages/schemas/src/index.ts"
+    },
+    {
+      "from": "packages/schemas/src/generated/types.ts",
+      "package": "@specwright/schemas",
+      "specifier": "../index",
+      "to": "packages/schemas/src/index.ts"
+    },
+    {
+      "from": "packages/schemas/src/generated/validators.ts",
+      "package": "@specwright/schemas",
+      "specifier": "../index",
+      "to": "packages/schemas/src/index.ts"
+    },
+    {
+      "from": "packages/tool-broker/src/conformance-runner.ts",
+      "package": "@specwright/tool-broker",
+      "specifier": "./index",
+      "to": "packages/tool-broker/src/index.ts"
+    },
+    {
+      "from": "packages/tool-broker/src/replay-corpus.ts",
+      "package": "@specwright/tool-broker",
+      "specifier": "./index",
+      "to": "packages/tool-broker/src/index.ts"
+    },
+    {
+      "from": "packages/trace-recorder/src/egress.ts",
+      "package": "@specwright/trace-recorder",
+      "specifier": "./index",
+      "to": "packages/trace-recorder/src/index.ts"
+    }
+  ],
+  "inventory": {
+    "barrelImportCount": 49,
+    "packageCount": 17,
+    "packageCycleCount": 0,
+    "packageEdgeCount": 45,
+    "productionFileCount": 178,
+    "sameCycleBarrelImportCount": 16,
+    "sourceCycleCount": 8
+  },
+  "packageCycles": [],
+  "policy": {
+    "barrelImports": "baseline",
+    "ci": "deferred",
+    "packageCycles": "blocking",
+    "sourceCycles": "baseline"
+  },
+  "sourceCycles": [
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/eval-runner/src/datasets.ts",
+          "to": "packages/eval-runner/src/index.ts"
+        },
+        {
+          "from": "packages/eval-runner/src/emission.ts",
+          "to": "packages/eval-runner/src/index.ts"
+        },
+        {
+          "from": "packages/eval-runner/src/model-assisted.ts",
+          "to": "packages/eval-runner/src/index.ts"
+        },
+        {
+          "from": "packages/eval-runner/src/registry.ts",
+          "to": "packages/eval-runner/src/index.ts"
+        }
+      ],
+      "files": [
+        "packages/eval-runner/src/datasets.ts",
+        "packages/eval-runner/src/emission.ts",
+        "packages/eval-runner/src/index.ts",
+        "packages/eval-runner/src/model-assisted.ts",
+        "packages/eval-runner/src/registry.ts",
+        "packages/eval-runner/src/regression.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/eval-runner"
+    },
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/gate-engine/src/audit.ts",
+          "to": "packages/gate-engine/src/index.ts"
+        },
+        {
+          "from": "packages/gate-engine/src/definition-change.ts",
+          "to": "packages/gate-engine/src/index.ts"
+        },
+        {
+          "from": "packages/gate-engine/src/definition-hash.ts",
+          "to": "packages/gate-engine/src/index.ts"
+        }
+      ],
+      "files": [
+        "packages/gate-engine/src/audit.ts",
+        "packages/gate-engine/src/definition-change.ts",
+        "packages/gate-engine/src/definition-hash.ts",
+        "packages/gate-engine/src/index.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/gate-engine"
+    },
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/harness-loader/src/observe.ts",
+          "to": "packages/harness-loader/src/index.ts"
+        }
+      ],
+      "files": [
+        "packages/harness-loader/src/index.ts",
+        "packages/harness-loader/src/observe.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/harness-loader"
+    },
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/memory/src/chunking/fixed-overlap.ts",
+          "to": "packages/memory/src/chunking/index.ts"
+        },
+        {
+          "from": "packages/memory/src/chunking/semantic.ts",
+          "to": "packages/memory/src/chunking/index.ts"
+        },
+        {
+          "from": "packages/memory/src/chunking/structural.ts",
+          "to": "packages/memory/src/chunking/index.ts"
+        }
+      ],
+      "files": [
+        "packages/memory/src/chunking/fixed-overlap.ts",
+        "packages/memory/src/chunking/index.ts",
+        "packages/memory/src/chunking/semantic.ts",
+        "packages/memory/src/chunking/structural.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/memory"
+    },
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/policy-engine/src/bundle-load.ts",
+          "to": "packages/policy-engine/src/index.ts"
+        },
+        {
+          "from": "packages/policy-engine/src/replay.ts",
+          "to": "packages/policy-engine/src/index.ts"
+        }
+      ],
+      "files": [
+        "packages/policy-engine/src/bundle-load.ts",
+        "packages/policy-engine/src/index.ts",
+        "packages/policy-engine/src/replay.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/policy-engine"
+    },
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/run-reports/src/audit-bundle.ts",
+          "to": "packages/run-reports/src/index.ts"
+        }
+      ],
+      "files": [
+        "packages/run-reports/src/audit-bundle-verify.ts",
+        "packages/run-reports/src/audit-bundle.ts",
+        "packages/run-reports/src/index.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/run-reports"
+    },
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/run-store/src/administration.ts",
+          "to": "packages/run-store/src/index.ts"
+        }
+      ],
+      "files": [
+        "packages/run-store/src/administration.ts",
+        "packages/run-store/src/index.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/run-store"
+    },
+    {
+      "barrelBackEdges": [
+        {
+          "from": "packages/trace-recorder/src/egress.ts",
+          "to": "packages/trace-recorder/src/index.ts"
+        }
+      ],
+      "files": [
+        "packages/trace-recorder/src/egress.ts",
+        "packages/trace-recorder/src/index.ts"
+      ],
+      "includesIndex": true,
+      "package": "@specwright/trace-recorder"
+    }
+  ],
+  "version": 1
+}
