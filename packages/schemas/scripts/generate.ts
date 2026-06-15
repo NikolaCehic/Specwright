@@ -506,6 +506,9 @@ function camelEventNameToRuntimeType(name: string) {
     ToolDenied: "tool.denied",
     GateEvaluated: "gate.evaluated",
     EvalCompleted: "eval.completed",
+    ApprovalRequested: "approval.requested",
+    RepairTaskCreated: "repair.task_created",
+    RunBlocked: "run.blocked",
     RunCompleted: "run.completed",
     RunFailed: "run.failed",
     PolicyEvaluated: "policy.evaluated",
@@ -1129,6 +1132,7 @@ const validRunState = {
   budgets: {},
   pendingApprovals: [],
   pendingQuestions: [],
+  pendingRepairTasks: [],
   artifacts: [validArtifactRef],
   lastEventId: "event:0"
 };
@@ -1205,6 +1209,20 @@ const positiveOverrides: Record<string, unknown> = {
   ApprovalRequestSchema: {
     approvalId: "approval:contract-registry",
     reason: "Review generated registry changes."
+  },
+  ApprovalRequestedEventPayloadSchema: {
+    approvalRequest: {
+      approvalId: "approval:contract-registry",
+      reason: "Review generated registry changes.",
+      requiredFor: "gate:contract.registry"
+    },
+    gateApprovalRequest: {
+      id: "approval:contract-registry",
+      gateId: "contract.registry",
+      phase: "shared-schemas",
+      reason: "Generated registry change needs review.",
+      requiredFor: "gate:contract.registry"
+    }
   },
   CreatedBySchema: validEvidenceRecord.createdBy,
   DecisionRecordedEventPayloadSchema: {
@@ -1315,6 +1333,17 @@ const positiveOverrides: Record<string, unknown> = {
   PolicyVerdictSchema: validPolicyVerdict,
   RepairTaskSchema: {
     task: "Regenerate checked-in contract artifacts."
+  },
+  RepairTaskCreatedEventPayloadSchema: {
+    repairTask: {
+      id: "repair:contract-registry",
+      task: "Regenerate checked-in contract artifacts.",
+      gateId: "contract.registry"
+    }
+  },
+  RunBlockedEventPayloadSchema: {
+    reason: "Contract registry generation is waiting for approval.",
+    blockedBy: "approval.requested"
   },
   RunCompletedEventPayloadSchema: {
     reason: "Contract registry generated."

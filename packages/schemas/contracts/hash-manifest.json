@@ -120,6 +120,13 @@
   },
   {
     "compatibilityClass": "forward-compatible",
+    "exportName": "ApprovalRequestedEventPayloadSchema",
+    "hash": "sha256:d7b9dbebfc1e4d992bf2050dea7f5d94d352cd6a71a46c4848880936da89c1af",
+    "id": "specwright.event.approval.requested",
+    "version": "1"
+  },
+  {
+    "compatibilityClass": "forward-compatible",
     "exportName": "ArtifactRecordedEventPayloadSchema",
     "hash": "sha256:e0e38fe8121eb83916a32e9df5e579375be806976937844e4ade9f73d548a80e",
     "id": "specwright.event.artifact.recorded",
@@ -204,6 +211,20 @@
   },
   {
     "compatibilityClass": "forward-compatible",
+    "exportName": "RepairTaskCreatedEventPayloadSchema",
+    "hash": "sha256:1fc2098fc5c361a03e5235c4c2451e5f53c879dcbde074c4156e7bb3bafe7224",
+    "id": "specwright.event.repair.task_created",
+    "version": "1"
+  },
+  {
+    "compatibilityClass": "forward-compatible",
+    "exportName": "RunBlockedEventPayloadSchema",
+    "hash": "sha256:cd2c3c22f38afacfb6a4c20e9aa08b09906e75c4498f7721335afc99bb9f1b7f",
+    "id": "specwright.event.run.blocked",
+    "version": "1"
+  },
+  {
+    "compatibilityClass": "forward-compatible",
     "exportName": "RunCompletedEventPayloadSchema",
     "hash": "sha256:e37ba0c18b1d30ea8da7b9a082f2ed3cac18ac6cde717b101699ecd99d704528",
     "id": "specwright.event.run.completed",
@@ -226,7 +247,7 @@
   {
     "compatibilityClass": "forward-compatible",
     "exportName": "RuntimeEventSchema",
-    "hash": "sha256:808885fee99ffa6b4cf164dbca3c4382a63f24042d6b328b8ae74459360c8259",
+    "hash": "sha256:8a7545b141b34df4902f4f584e8fb44b6880b8368f6def0887be39082dd7bf52",
     "id": "specwright.event.runtime-event",
     "version": "1"
   },
@@ -604,7 +625,7 @@
   {
     "compatibilityClass": "patch-compatible",
     "exportName": "RunStateSchema",
-    "hash": "sha256:532d6baee777d10718203e243a9987cc28e7f1f39f4f4a608cc5ff76f723c774",
+    "hash": "sha256:6abeaf8f51bb78b4c5150bb9c3fe8ff2187b7a0aaa14dd405bcc424ff9effbbc",
     "id": "specwright.lifecycle.run-state",
     "version": "1"
   },

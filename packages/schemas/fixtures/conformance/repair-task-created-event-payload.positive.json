@@ -1,0 +1,7 @@
+{
+  "repairTask": {
+    "gateId": "contract.registry",
+    "id": "repair:contract-registry",
+    "task": "Regenerate checked-in contract artifacts."
+  }
+}

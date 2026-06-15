@@ -9,6 +9,165 @@
           "type": "string"
         },
         "contractId": {
+          "const": "specwright.event.approval.requested"
+        },
+        "contractVersion": {
+          "const": "1"
+        },
+        "correlationId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "approvalRequest": {
+              "additionalProperties": false,
+              "properties": {
+                "approvalId": {
+                  "type": "string"
+                },
+                "constraints": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "metadata": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "policyVerdictRef": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requestedAction": {
+                  "type": "string"
+                },
+                "requiredFor": {
+                  "type": "string"
+                },
+                "riskSummary": {
+                  "type": "string"
+                },
+                "subjectRef": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "approvalId"
+              ],
+              "type": "object"
+            },
+            "gateApprovalRequest": {
+              "additionalProperties": false,
+              "properties": {
+                "constraints": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "gateId": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "phase": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "requiredFor": {
+                  "type": "string"
+                },
+                "riskSummary": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "gateId",
+                "id",
+                "phase",
+                "reason",
+                "requiredFor"
+              ],
+              "type": "object"
+            },
+            "metadata": {
+              "additionalProperties": {},
+              "type": "object"
+            }
+          },
+          "required": [
+            "approvalRequest"
+          ],
+          "type": "object"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "schemaHash": {
+          "const": "sha256:d7b9dbebfc1e4d992bf2050dea7f5d94d352cd6a71a46c4848880936da89c1af"
+        },
+        "sequence": {
+          "type": "number"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "type": {
+          "const": "approval.requested"
+        }
+      },
+      "required": [
+        "id",
+        "payload",
+        "runId",
+        "sequence",
+        "timestamp",
+        "traceId",
+        "type"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "causationId": {
+          "type": "string"
+        },
+        "contractId": {
           "const": "specwright.event.artifact.recorded"
         },
         "contractVersion": {
@@ -3495,6 +3654,288 @@
           "type": "string"
         },
         "contractId": {
+          "const": "specwright.event.repair.task_created"
+        },
+        "contractVersion": {
+          "const": "1"
+        },
+        "correlationId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "metadata": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "repairTask": {
+              "additionalProperties": false,
+              "properties": {
+                "acceptanceChecks": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "allowedRefs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "allowedTools": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "blockedTools": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "constraints": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "createdFromFindingIds": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "escalationRule": {
+                  "type": "string"
+                },
+                "expiresAt": {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                "failedPhase": {
+                  "type": "string"
+                },
+                "gateId": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "metadata": {
+                  "additionalProperties": {},
+                  "type": "object"
+                },
+                "problem": {
+                  "type": "string"
+                },
+                "producedBy": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "kind": {
+                      "enum": [
+                        "deterministic",
+                        "model_assisted",
+                        "human"
+                      ]
+                    },
+                    "ref": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "kind",
+                    "ref"
+                  ],
+                  "type": "object"
+                },
+                "repairId": {
+                  "type": "string"
+                },
+                "requiredCorrection": {
+                  "type": "string"
+                },
+                "requiredEvidenceRefs": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "sourceFindingId": {
+                  "type": "string"
+                },
+                "successEval": {
+                  "type": "string"
+                },
+                "successGate": {
+                  "type": "string"
+                },
+                "targetRef": {
+                  "type": "string"
+                },
+                "task": {
+                  "type": "string"
+                }
+              },
+              "required": [],
+              "type": "object",
+              "x-zod-effect": "refinement"
+            }
+          },
+          "required": [
+            "repairTask"
+          ],
+          "type": "object"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "schemaHash": {
+          "const": "sha256:1fc2098fc5c361a03e5235c4c2451e5f53c879dcbde074c4156e7bb3bafe7224"
+        },
+        "sequence": {
+          "type": "number"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "type": {
+          "const": "repair.task_created"
+        }
+      },
+      "required": [
+        "id",
+        "payload",
+        "runId",
+        "sequence",
+        "timestamp",
+        "traceId",
+        "type"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "causationId": {
+          "type": "string"
+        },
+        "contractId": {
+          "const": "specwright.event.run.blocked"
+        },
+        "contractVersion": {
+          "const": "1"
+        },
+        "correlationId": {
+          "type": "string"
+        },
+        "id": {
+          "type": "string"
+        },
+        "integrity": {
+          "additionalProperties": false,
+          "properties": {
+            "algo": {
+              "type": "string"
+            },
+            "hash": {
+              "type": "string"
+            },
+            "prevHash": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "algo",
+            "hash",
+            "prevHash"
+          ],
+          "type": "object"
+        },
+        "payload": {
+          "additionalProperties": false,
+          "properties": {
+            "blockedBy": {
+              "type": "string"
+            },
+            "metadata": {
+              "additionalProperties": {},
+              "type": "object"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "reason"
+          ],
+          "type": "object"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "schemaHash": {
+          "const": "sha256:cd2c3c22f38afacfb6a4c20e9aa08b09906e75c4498f7721335afc99bb9f1b7f"
+        },
+        "sequence": {
+          "type": "number"
+        },
+        "timestamp": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        },
+        "type": {
+          "const": "run.blocked"
+        }
+      },
+      "required": [
+        "id",
+        "payload",
+        "runId",
+        "sequence",
+        "timestamp",
+        "traceId",
+        "type"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "causationId": {
+          "type": "string"
+        },
+        "contractId": {
           "const": "specwright.event.run.completed"
         },
         "contractVersion": {
@@ -5095,7 +5536,7 @@
   "title": "RuntimeEventSchema",
   "x-specwright-contract": {
     "family": "event",
-    "hash": "sha256:808885fee99ffa6b4cf164dbca3c4382a63f24042d6b328b8ae74459360c8259",
+    "hash": "sha256:8a7545b141b34df4902f4f584e8fb44b6880b8368f6def0887be39082dd7bf52",
     "id": "specwright.event.runtime-event",
     "status": "public",
     "version": "1"

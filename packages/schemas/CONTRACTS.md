@@ -220,6 +220,12 @@ Unknown-field posture is recorded under extension points. `metadata` means the d
 | `GateEvaluatedEventPayload` | type | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | same as schema | Inferred payload type for `gate.evaluated`. |
 | `EvalCompletedEventPayloadSchema` | schema | event | verification | public | 01 Shared Schemas / 02 Run Store | durable | strict | Payload contract for `eval.completed`. |
 | `EvalCompletedEventPayload` | type | event | verification | public | 01 Shared Schemas / 02 Run Store | durable | same as schema | Inferred payload type for `eval.completed`. |
+| `ApprovalRequestedEventPayloadSchema` | schema | event | governance | public | 01 Shared Schemas / 02 Run Store | durable | strict | Payload contract for `approval.requested`. |
+| `ApprovalRequestedEventPayload` | type | event | governance | public | 01 Shared Schemas / 02 Run Store | durable | same as schema | Inferred payload type for `approval.requested`. |
+| `RepairTaskCreatedEventPayloadSchema` | schema | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | strict | Payload contract for `repair.task_created`. |
+| `RepairTaskCreatedEventPayload` | type | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | same as schema | Inferred payload type for `repair.task_created`. |
+| `RunBlockedEventPayloadSchema` | schema | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | strict | Payload contract for `run.blocked`. |
+| `RunBlockedEventPayload` | type | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | same as schema | Inferred payload type for `run.blocked`. |
 | `RunCompletedEventPayloadSchema` | schema | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | strict | Payload contract for `run.completed`. |
 | `RunCompletedEventPayload` | type | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | same as schema | Inferred payload type for `run.completed`. |
 | `RunFailedEventPayloadSchema` | schema | event | lifecycle | public | 01 Shared Schemas / 02 Run Store | durable | strict | Payload contract for `run.failed`. |

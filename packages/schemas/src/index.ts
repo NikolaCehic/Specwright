@@ -706,6 +706,7 @@ export const RunStateSchema = z
     budgets: BudgetStateSchema,
     pendingApprovals: z.array(ApprovalRequestSchema),
     pendingQuestions: z.array(HumanQuestionSchema),
+    pendingRepairTasks: z.array(z.lazy(() => RepairTaskSchema)).default([]),
     artifacts: z.array(ArtifactRefSchema),
     lastEventId: nonEmptyString
   })
@@ -1618,6 +1619,17 @@ export type RunCompletedEventPayload = z.infer<
   typeof RunCompletedEventPayloadSchema
 >;
 
+export const RunBlockedEventPayloadSchema = z
+  .object({
+    reason: nonEmptyString,
+    blockedBy: nonEmptyString.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type RunBlockedEventPayload = z.infer<
+  typeof RunBlockedEventPayloadSchema
+>;
+
 export const RunFailedEventPayloadSchema = z
   .object({
     reason: nonEmptyString,
@@ -1655,6 +1667,17 @@ export const PolicyEvaluatedEventPayloadSchema = z
   .strict();
 export type PolicyEvaluatedEventPayload = z.infer<
   typeof PolicyEvaluatedEventPayloadSchema
+>;
+
+export const ApprovalRequestedEventPayloadSchema = z
+  .object({
+    approvalRequest: ApprovalRequestSchema,
+    gateApprovalRequest: GateApprovalRequestSchema.optional(),
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type ApprovalRequestedEventPayload = z.infer<
+  typeof ApprovalRequestedEventPayloadSchema
 >;
 
 export const DecisionRecordedEventPayloadSchema = z
@@ -1712,7 +1735,18 @@ export type HumanAnswerRecordedEventPayload = z.infer<
   typeof HumanAnswerRecordedEventPayloadSchema
 >;
 
+export const RepairTaskCreatedEventPayloadSchema = z
+  .object({
+    repairTask: RepairTaskSchema,
+    metadata: MetadataSchema.optional()
+  })
+  .strict();
+export type RepairTaskCreatedEventPayload = z.infer<
+  typeof RepairTaskCreatedEventPayloadSchema
+>;
+
 export const EVENT_PAYLOAD_SCHEMAS = {
+  "approval.requested": ApprovalRequestedEventPayloadSchema,
   "artifact.recorded": ArtifactRecordedEventPayloadSchema,
   "decision.recorded": DecisionRecordedEventPayloadSchema,
   "eval.completed": EvalCompletedEventPayloadSchema,
@@ -1724,6 +1758,8 @@ export const EVENT_PAYLOAD_SCHEMAS = {
   "phase.entered": PhaseEnteredEventPayloadSchema,
   "phase.transitioned": PhaseTransitionedEventPayloadSchema,
   "policy.evaluated": PolicyEvaluatedEventPayloadSchema,
+  "repair.task_created": RepairTaskCreatedEventPayloadSchema,
+  "run.blocked": RunBlockedEventPayloadSchema,
   "run.completed": RunCompletedEventPayloadSchema,
   "run.failed": RunFailedEventPayloadSchema,
   "run.started": RunStartedEventPayloadSchema,
@@ -1789,6 +1825,10 @@ export const RuntimeEventEnvelopeSchema = z
 
 export const RuntimeEventSchema = z.discriminatedUnion("type", [
   runtimeEventVariantSchema(
+    "approval.requested",
+    EVENT_PAYLOAD_SCHEMAS["approval.requested"]
+  ),
+  runtimeEventVariantSchema(
     "artifact.recorded",
     EVENT_PAYLOAD_SCHEMAS["artifact.recorded"]
   ),
@@ -1831,6 +1871,14 @@ export const RuntimeEventSchema = z.discriminatedUnion("type", [
   runtimeEventVariantSchema(
     "policy.evaluated",
     EVENT_PAYLOAD_SCHEMAS["policy.evaluated"]
+  ),
+  runtimeEventVariantSchema(
+    "repair.task_created",
+    EVENT_PAYLOAD_SCHEMAS["repair.task_created"]
+  ),
+  runtimeEventVariantSchema(
+    "run.blocked",
+    EVENT_PAYLOAD_SCHEMAS["run.blocked"]
   ),
   runtimeEventVariantSchema(
     "run.completed",

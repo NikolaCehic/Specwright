@@ -34,8 +34,6 @@ import {
 } from "./trust";
 import type {
   HarnessTrustEvent,
-  SignatureEnvelope,
-  TrustStore,
   TrustVerdict
 } from "./trust";
 import {
@@ -52,9 +50,7 @@ import {
 import type {
   CapabilityGrant,
   GrantDenialReason,
-  GrantEvaluation,
-  GrantSource,
-  HarnessGrantEvent
+  GrantEvaluation
 } from "./capability-grant";
 import {
   DEFAULT_DEPENDENCY_RESOLVER,
@@ -65,8 +61,6 @@ import {
 } from "./dependency-resolver";
 import type {
   DependencyResolution,
-  HarnessDependencyEvent,
-  HarnessDependencyResolver,
   ResolvedDependency
 } from "./dependency-resolver";
 import {
@@ -78,15 +72,18 @@ import {
   DEFAULT_RUNTIME_VERSION
 } from "./compatibility/matrix";
 import type {
-  CompatibilityAdmission,
   CompatibilitySourceFile
 } from "./compatibility/admission";
-import type { CompatibilityMatrix } from "./compatibility/matrix";
-import type { MigrationDescriptor } from "./compatibility/migration";
 import { HarnessLoaderError } from "./errors";
 import type { HarnessLoaderErrorCode } from "./errors";
 import { createHarnessPackageReadLimiter, createLimitStageObserver } from "./limits";
 import type { HarnessLoaderLimitsInput, HarnessPackageReadLimiter } from "./limits";
+import type {
+  HarnessLoadRecord,
+  HarnessLoadStageKind,
+  LoadHarnessPackageOptions,
+  SourceFile
+} from "./types";
 
 export {
   HarnessLoaderError
@@ -217,6 +214,13 @@ export {
   InMemoryRegistryStore
 } from "./registry";
 export type {
+  HarnessLoadRecord,
+  HarnessLoadStageKind,
+  HarnessLoadStageObserver,
+  LoadHarnessPackageOptions,
+  SourceFile
+} from "./types";
+export type {
   HarnessLoaderErrorCode
 } from "./errors";
 export type {
@@ -331,63 +335,12 @@ export const HARNESS_MANIFEST_FILE = "harness.yaml";
 export const SUPPORTED_HARNESS_SCHEMA_VERSION: HarnessSchemaVersion =
   "specwright.harness.v1";
 
-export type HarnessLoadStageKind =
-  | "harness.fetch"
-  | "harness.verify_trust"
-  | "harness.parse"
-  | "harness.validate"
-  | "harness.resolve_deps"
-  | "harness.compatibility"
-  | "harness.grant_check"
-  | "harness.freeze";
-
-export type HarnessLoadStageObserver = <TValue>(
-  stage: HarnessLoadStageKind,
-  metadata: Record<string, unknown>,
-  operation: () => TValue | Promise<TValue>
-) => Promise<TValue>;
-
-export type LoadHarnessPackageOptions = {
-  packageDir: string;
-  loadedAt?: Date | string;
-  signature?: SignatureEnvelope;
-  trustStore?: TrustStore;
-  strict?: boolean;
-  trustNow?: Date | string;
-  onTrustEvent?(event: HarnessTrustEvent): void | Promise<void>;
-  grantSource?: GrantSource;
-  onGrantEvent?(event: HarnessGrantEvent): void | Promise<void>;
-  dependencyResolver?: HarnessDependencyResolver;
-  onDependencyEvent?(event: HarnessDependencyEvent): void | Promise<void>;
-  runtimeVersion?: string;
-  compatibilityMatrix?: CompatibilityMatrix;
-  migrationDescriptor?: MigrationDescriptor;
-  migrationTrustStore?: TrustStore;
-  migrationNow?: Date | string;
-  onLoadStage?: HarnessLoadStageObserver;
-};
-
 export type LoadHarnessPackageWithLimitsOptions = LoadHarnessPackageOptions & {
   limits?: HarnessLoaderLimitsInput | undefined;
 };
 
 type LoadHarnessPackageInternalOptions = LoadHarnessPackageOptions & {
   readLimiter?: HarnessPackageReadLimiter | undefined;
-};
-
-export type HarnessLoadRecord = {
-  snapshot: HarnessSnapshot;
-  loadedFiles: readonly SourceFile[];
-  grant: GrantEvaluation;
-  dependencies: DependencyResolution;
-  compatibility: CompatibilityAdmission;
-  trust?: TrustVerdict;
-};
-
-export type SourceFile = {
-  absolutePath: string;
-  relativePath: string;
-  raw: string;
 };
 
 type FetchedHarnessFiles = {

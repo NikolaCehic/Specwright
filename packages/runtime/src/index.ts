@@ -44,11 +44,18 @@ import {
 import {
   EvalVerdictSchema,
   HarnessSnapshotSchema,
+  ApprovalDecisionSchema,
+  HumanAnswerRecordedEventPayloadSchema,
   RunInputSchema,
+  type ApprovalDecision,
+  type ApprovalRequest,
   type ArtifactRecord,
   type EvalVerdict,
   type EvidenceRecord,
   type HarnessSnapshot,
+  type HumanAnswerRecordedEventPayload,
+  type HumanQuestion,
+  type RepairTask,
   type RunInput,
   type RunState,
   type RuntimeEvent,
@@ -141,10 +148,71 @@ export type RuntimeEvaluateGateRequest = string | EvaluateGateRequest;
 export type RuntimeReportOptions = RunLookupOptions & {
   tenantScope?: string | undefined;
 };
+export type RuntimeApprovalDecisionOptions = RunLookupOptions;
+export type RuntimeApprovalDecisionResult = {
+  decision: ApprovalDecision;
+  event: RuntimeEvent;
+  state: RunState;
+};
+export type RuntimeHumanAnswerOptions = RunLookupOptions;
+export type RuntimeHumanAnswerResult = {
+  answer: HumanAnswerRecordedEventPayload;
+  event: RuntimeEvent;
+  state: RunState;
+};
+export type RuntimeNextAction =
+  | {
+      kind: "approval";
+      runId: string;
+      approval: ApprovalRequest;
+    }
+  | {
+      kind: "question";
+      runId: string;
+      question: HumanQuestion;
+    }
+  | {
+      kind: "repair";
+      runId: string;
+      repairTask: RepairTask;
+    }
+  | {
+      kind: "none";
+      runId: string;
+      status: RunState["status"];
+      phase: string;
+    };
+export type RuntimeApprovalState = {
+  runId: string;
+  status: RunState["status"];
+  phase: string;
+  pendingApprovals: ApprovalRequest[];
+  pendingQuestions: HumanQuestion[];
+  pendingRepairTasks: RepairTask[];
+  nextAction: RuntimeNextAction;
+  blocked: boolean;
+  resolved: boolean;
+};
 
 export type RuntimeApi = {
   startRun(input: RunInput): Promise<RunHandle>;
   getRun(runId: string, options?: RunLookupOptions): Promise<RunState>;
+  getNextAction(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<RuntimeNextAction>;
+  listPendingApprovals(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<ApprovalRequest[]>;
+  listPendingQuestions(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<HumanQuestion[]>;
+  resolveApprovalState(
+    runId: string,
+    options?: RunLookupOptions
+  ): Promise<RuntimeApprovalState>;
   getEvents(
     runId: string,
     options?: RunLookupOptions
@@ -170,6 +238,16 @@ export type RuntimeApi = {
     record: ArtifactRecordInput,
     options?: RunLookupOptions
   ): Promise<ArtifactRecord>;
+  recordApproval(
+    runId: string,
+    decision: ApprovalDecision,
+    options?: RuntimeApprovalDecisionOptions
+  ): Promise<RuntimeApprovalDecisionResult>;
+  recordHumanAnswer(
+    runId: string,
+    answer: HumanAnswerRecordedEventPayload,
+    options?: RuntimeHumanAnswerOptions
+  ): Promise<RuntimeHumanAnswerResult>;
   evaluateGate(
     runId: string,
     request: RuntimeEvaluateGateRequest,
@@ -184,6 +262,33 @@ export type RuntimeApi = {
     options?: RuntimeReportOptions
   ): Promise<RunReport>;
 };
+
+type OptionalKey<TObject, TKey extends keyof TObject> = {} extends Pick<
+  TObject,
+  TKey
+>
+  ? true
+  : false;
+type CompileTimeAssert<TValue extends true> = TValue;
+export type RuntimeApiRecordApprovalRequiredRegression = CompileTimeAssert<
+  OptionalKey<RuntimeApi, "recordApproval"> extends false ? true : false
+>;
+export type RuntimeApiRecordApprovalDefinedRegression = CompileTimeAssert<
+  undefined extends RuntimeApi["recordApproval"] ? false : true
+>;
+export type RuntimeApiHumanLoopProjectionRegression = CompileTimeAssert<
+  OptionalKey<RuntimeApi, "getNextAction"> extends false
+    ? OptionalKey<RuntimeApi, "recordHumanAnswer"> extends false
+      ? OptionalKey<RuntimeApi, "listPendingApprovals"> extends false
+        ? OptionalKey<RuntimeApi, "listPendingQuestions"> extends false
+          ? OptionalKey<RuntimeApi, "resolveApprovalState"> extends false
+            ? true
+            : false
+          : false
+        : false
+      : false
+    : false
+>;
 
 export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
   const loadHarnessPackage =
@@ -560,11 +665,11 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
       )
     );
 
-    let lifecycleEvent: RuntimeEvent | undefined;
+    let lifecycleEvents: RuntimeEvent[] = [];
     let lifecycleError: Error | undefined;
 
     try {
-      lifecycleEvent = await applyGateLifecycleInstructionForRun({
+      lifecycleEvents = await applyGateLifecycleInstructionForRun({
         rootDir,
         runId,
         instruction: result.instruction,
@@ -582,14 +687,17 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
       instruction: result.instruction.kind,
       lifecycleApplication:
         lifecycleError === undefined
-          ? lifecycleEvent === undefined
+          ? lifecycleEvents.length === 0
             ? "no_op"
             : "applied"
           : "stopped"
     };
 
-    if (lifecycleEvent !== undefined) {
-      gateSpanMetadata.lifecycleEventType = lifecycleEvent.type;
+    if (lifecycleEvents.length > 0) {
+      gateSpanMetadata.lifecycleEventType = lifecycleEvents[0]?.type;
+      gateSpanMetadata.lifecycleEventTypes = lifecycleEvents.map(
+        (event) => event.type
+      );
     }
 
     if (lifecycleError !== undefined) {
@@ -607,11 +715,11 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
         name: `gate.${result.verdict.gateId}`,
         status: result.verdict.status,
         startedAt: evaluated.event.timestamp,
-        endedAt: lifecycleEvent?.timestamp ?? evaluated.event.timestamp,
-        eventIds:
-          lifecycleEvent === undefined
-            ? [evaluated.event.id]
-            : [evaluated.event.id, lifecycleEvent.id],
+        endedAt: lifecycleEvents.at(-1)?.timestamp ?? evaluated.event.timestamp,
+        eventIds: [
+          evaluated.event.id,
+          ...lifecycleEvents.map((event) => event.id)
+        ],
         metadata: gateSpanMetadata
       }
     });
@@ -681,6 +789,139 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
     return artifact;
   }
 
+  async function getNextActionForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<RuntimeNextAction> {
+    const state = await getRun(runId, lookupOptions);
+
+    return nextActionFromState(runId, state);
+  }
+
+  async function listPendingApprovalsForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<ApprovalRequest[]> {
+    const state = await getRun(runId, lookupOptions);
+
+    return state.pendingApprovals;
+  }
+
+  async function listPendingQuestionsForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<HumanQuestion[]> {
+    const state = await getRun(runId, lookupOptions);
+
+    return state.pendingQuestions;
+  }
+
+  async function resolveApprovalStateForRun(
+    runId: string,
+    lookupOptions: RunLookupOptions = {}
+  ): Promise<RuntimeApprovalState> {
+    const state = await getRun(runId, lookupOptions);
+    const nextAction = nextActionFromState(runId, state);
+
+    return {
+      runId,
+      status: state.status,
+      phase: state.phase,
+      pendingApprovals: state.pendingApprovals,
+      pendingQuestions: state.pendingQuestions,
+      pendingRepairTasks: state.pendingRepairTasks,
+      nextAction,
+      blocked: state.status === "blocked",
+      resolved:
+        state.pendingApprovals.length === 0 &&
+        state.pendingQuestions.length === 0 &&
+        state.pendingRepairTasks.length === 0
+    };
+  }
+
+  async function recordApprovalForRun(
+    runId: string,
+    decisionLike: ApprovalDecision,
+    lookupOptions: RuntimeApprovalDecisionOptions = {}
+  ): Promise<RuntimeApprovalDecisionResult> {
+    const decision = ApprovalDecisionSchema.parse(decisionLike);
+    const rootDir = rootDirForRun(runId, lookupOptions, options, runRoots);
+    const state = await getRun(runId, { rootDir });
+    const pendingApproval = state.pendingApprovals.find(
+      (approval) => approval.approvalId === decision.approvalId
+    );
+
+    if (pendingApproval === undefined) {
+      throw new Error(
+        `Approval ${decision.approvalId} is not currently pending for run ${runId}`
+      );
+    }
+
+    const recorded = await appendEvent(
+      withTimestamp(
+        {
+          rootDir,
+          runId,
+          type: "decision.recorded",
+          payload: {
+            approvalId: decision.approvalId,
+            decision
+          }
+        },
+        options.now
+      )
+    );
+
+    return {
+      decision,
+      event: recorded.event,
+      state: recorded.state
+    };
+  }
+
+  async function recordHumanAnswerForRun(
+    runId: string,
+    answerLike: HumanAnswerRecordedEventPayload,
+    lookupOptions: RuntimeHumanAnswerOptions = {}
+  ): Promise<RuntimeHumanAnswerResult> {
+    const answer = HumanAnswerRecordedEventPayloadSchema.parse(answerLike);
+    const questionId = answer.questionId ?? answer.humanQuestionId;
+
+    if (questionId === undefined) {
+      throw new Error("Human answer must reference a pending question");
+    }
+
+    const rootDir = rootDirForRun(runId, lookupOptions, options, runRoots);
+    const state = await getRun(runId, { rootDir });
+    const pendingQuestion = state.pendingQuestions.find(
+      (question) => question.questionId === questionId
+    );
+
+    if (pendingQuestion === undefined) {
+      throw new Error(
+        `Human question ${questionId} is not currently pending for run ${runId}`
+      );
+    }
+
+    const recorded = await appendEvent(
+      withTimestamp(
+        {
+          rootDir,
+          runId,
+          type: "human.answer_recorded",
+          payload: answer
+        },
+        options.now
+      )
+    );
+
+    return {
+      answer,
+      event: recorded.event,
+      state: recorded.state
+    };
+  }
+
   async function generateReportForRun(
     runId: string,
     lookupOptions: RuntimeReportOptions = {}
@@ -706,12 +947,18 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
   return {
     startRun,
     getRun,
+    getNextAction: getNextActionForRun,
+    listPendingApprovals: listPendingApprovalsForRun,
+    listPendingQuestions: listPendingQuestionsForRun,
+    resolveApprovalState: resolveApprovalStateForRun,
     getEvents,
     replay,
     callTool,
     runEval: runEvalForRun,
     recordEvidence: recordEvidenceForRun,
     recordArtifact: recordArtifactForRun,
+    recordApproval: recordApprovalForRun,
+    recordHumanAnswer: recordHumanAnswerForRun,
     evaluateGate: evaluateGateForRun,
     generateReport: generateReportForRun,
     writeRunReport: writeRunReportForRun
@@ -720,6 +967,45 @@ export function createRuntime(options: RuntimeOptions = {}): RuntimeApi {
 
 export const createRuntimeApi = createRuntime;
 
+function nextActionFromState(runId: string, state: RunState): RuntimeNextAction {
+  const approval = state.pendingApprovals[0];
+
+  if (approval !== undefined) {
+    return {
+      kind: "approval",
+      runId,
+      approval
+    };
+  }
+
+  const question = state.pendingQuestions[0];
+
+  if (question !== undefined) {
+    return {
+      kind: "question",
+      runId,
+      question
+    };
+  }
+
+  const repairTask = state.pendingRepairTasks[0];
+
+  if (repairTask !== undefined) {
+    return {
+      kind: "repair",
+      runId,
+      repairTask
+    };
+  }
+
+  return {
+    kind: "none",
+    runId,
+    status: state.status,
+    phase: state.phase
+  };
+}
+
 async function applyGateLifecycleInstructionForRun(input: {
   rootDir: string | undefined;
   runId: string;
@@ -727,12 +1013,12 @@ async function applyGateLifecycleInstructionForRun(input: {
   currentPhase: string;
   causationId: string;
   now: RuntimeOptions["now"];
-}): Promise<RuntimeEvent | undefined> {
+}): Promise<RuntimeEvent[]> {
   const gateReason = gateLifecycleReason(input.instruction.gateId);
 
   switch (input.instruction.kind) {
     case "continue":
-      return undefined;
+      return [];
     case "transition_phase": {
       const transitioned = await appendEvent(
         withTimestamp(
@@ -752,7 +1038,7 @@ async function applyGateLifecycleInstructionForRun(input: {
         )
       );
 
-      return transitioned.event;
+      return [transitioned.event];
     }
     case "fail_run": {
       const failed = await appendEvent(
@@ -775,14 +1061,111 @@ async function applyGateLifecycleInstructionForRun(input: {
         )
       );
 
-      return failed.event;
+      return [failed.event];
     }
-    case "pause_for_human":
-    case "request_approval":
-    case "create_repair_task":
-      throw new Error(
-        `Gate lifecycle instruction ${input.instruction.kind} for gate ${input.instruction.gateId} is deferred by AUD-003A and requires explicit runtime lifecycle support`
+    case "pause_for_human": {
+      const question = humanQuestionFromGateInstruction(input.instruction.question);
+      const requested = await appendEvent(
+        withTimestamp(
+          {
+            rootDir: input.rootDir,
+            runId: input.runId,
+            type: "human.input_requested",
+            payload: {
+              question
+            },
+            causationId: input.causationId
+          },
+          input.now
+        )
       );
+      const blocked = await appendRunBlockedForGate({
+        ...input,
+        reason: `Gate ${input.instruction.gateId} is waiting for human input`,
+        blockedBy: "human.input_requested",
+        metadata: {
+          gateId: input.instruction.gateId,
+          gateCausation: gateReason,
+          instructionKind: input.instruction.kind,
+          questionId: question.questionId
+        }
+      });
+
+      return [requested.event, blocked.event];
+    }
+    case "request_approval": {
+      const approvalRequest = approvalRequestFromGateInstruction(
+        input.instruction.approvalRequest
+      );
+      const requested = await appendEvent(
+        withTimestamp(
+          {
+            rootDir: input.rootDir,
+            runId: input.runId,
+            type: "approval.requested",
+            payload: {
+              approvalRequest,
+              gateApprovalRequest: input.instruction.approvalRequest,
+              metadata: {
+                gateId: input.instruction.gateId,
+                gateCausation: gateReason,
+                instructionKind: input.instruction.kind
+              }
+            },
+            causationId: input.causationId
+          },
+          input.now
+        )
+      );
+      const blocked = await appendRunBlockedForGate({
+        ...input,
+        reason: `Gate ${input.instruction.gateId} is waiting for approval`,
+        blockedBy: "approval.requested",
+        metadata: {
+          gateId: input.instruction.gateId,
+          gateCausation: gateReason,
+          instructionKind: input.instruction.kind,
+          approvalId: approvalRequest.approvalId
+        }
+      });
+
+      return [requested.event, blocked.event];
+    }
+    case "create_repair_task": {
+      const repairTask = input.instruction.repairTask;
+      const created = await appendEvent(
+        withTimestamp(
+          {
+            rootDir: input.rootDir,
+            runId: input.runId,
+            type: "repair.task_created",
+            payload: {
+              repairTask,
+              metadata: {
+                gateId: input.instruction.gateId,
+                gateCausation: gateReason,
+                instructionKind: input.instruction.kind
+              }
+            },
+            causationId: input.causationId
+          },
+          input.now
+        )
+      );
+      const blocked = await appendRunBlockedForGate({
+        ...input,
+        reason: `Gate ${input.instruction.gateId} created repair task ${repairTask.id}`,
+        blockedBy: "repair.task_created",
+        metadata: {
+          gateId: input.instruction.gateId,
+          gateCausation: gateReason,
+          instructionKind: input.instruction.kind,
+          repairTaskId: repairTask.id
+        }
+      });
+
+      return [created.event, blocked.event];
+    }
     default: {
       const instruction: never = input.instruction;
       throw new Error(
@@ -790,6 +1173,92 @@ async function applyGateLifecycleInstructionForRun(input: {
       );
     }
   }
+}
+
+async function appendRunBlockedForGate(input: {
+  rootDir: string | undefined;
+  runId: string;
+  instruction: GateLifecycleInstruction;
+  causationId: string;
+  now: RuntimeOptions["now"];
+  reason: string;
+  blockedBy: string;
+  metadata: Record<string, unknown>;
+}) {
+  return appendEvent(
+    withTimestamp(
+      {
+        rootDir: input.rootDir,
+        runId: input.runId,
+        type: "run.blocked",
+        payload: {
+          reason: input.reason,
+          blockedBy: input.blockedBy,
+          metadata: input.metadata
+        },
+        causationId: input.causationId
+      },
+      input.now
+    )
+  );
+}
+
+function humanQuestionFromGateInstruction(
+  question: Extract<
+    GateLifecycleInstruction,
+    { kind: "pause_for_human" }
+  >["question"]
+): HumanQuestion {
+  return {
+    questionId: question.id,
+    prompt: question.question,
+    ...(question.subjectRef === undefined ? {} : { subjectRef: question.subjectRef }),
+    ...(question.allowedDecisionValues === undefined
+      ? {}
+      : { allowedDecisionValues: question.allowedDecisionValues }),
+    ...(question.requiredExpertise === undefined
+      ? {}
+      : { requiredExpertise: question.requiredExpertise }),
+    requiredFor: question.requiredFor,
+    metadata: {
+      ...(question.metadata ?? {}),
+      gateId: question.gateId,
+      phase: question.phase,
+      ...(question.expectedAnswerSchema === undefined
+        ? {}
+        : { expectedAnswerSchema: question.expectedAnswerSchema }),
+      ...(question.constraints === undefined ? {} : { constraints: question.constraints }),
+      ...(question.comments === undefined ? {} : { comments: question.comments }),
+      ...(question.unresolvedQuestions === undefined
+        ? {}
+        : { unresolvedQuestions: question.unresolvedQuestions }),
+      ...(question.causationIds === undefined
+        ? {}
+        : { causationIds: question.causationIds })
+    }
+  };
+}
+
+function approvalRequestFromGateInstruction(
+  request: Extract<
+    GateLifecycleInstruction,
+    { kind: "request_approval" }
+  >["approvalRequest"]
+): ApprovalRequest {
+  return {
+    approvalId: request.id,
+    reason: request.reason,
+    subjectRef: `gate:${request.gateId}`,
+    requestedAction: "gate.approval",
+    ...(request.riskSummary === undefined ? {} : { riskSummary: request.riskSummary }),
+    ...(request.constraints === undefined ? {} : { constraints: request.constraints }),
+    requiredFor: request.requiredFor,
+    metadata: {
+      ...(request.metadata ?? {}),
+      gateId: request.gateId,
+      phase: request.phase
+    }
+  };
 }
 
 function gateLifecycleReason(gateId: string) {

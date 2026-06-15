@@ -1,0 +1,89 @@
+name: Specwright CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  root-gates:
+    name: Root gates
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.14"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Dependency isolation
+        run: bun run check:deps
+
+      - name: Source cycles
+        run: bun run check:cycles
+
+      - name: Unused-code guard
+        run: bun run check:unused
+
+      - name: Package packlist dry run
+        run: bun run check:pack
+
+      - name: Tests
+        run: bun run test
+
+      - name: Proof
+        run: bun run proof
+
+  package-typecheck:
+    name: Package typecheck (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - packages/schemas
+          - packages/run-store
+          - packages/evidence-store
+          - packages/artifact-store
+          - packages/trace-recorder
+          - packages/run-reports
+          - packages/operations
+          - packages/harness-loader
+          - packages/policy-engine
+          - packages/gate-engine
+          - packages/tool-broker
+          - packages/memory
+          - packages/eval-runner
+          - packages/runtime
+          - packages/adapters-cli
+          - packages/adapters-mcp
+          - packages/adapter-parity
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2.14"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Package typecheck
+        run: bun run --cwd ${{ matrix.package }} typecheck

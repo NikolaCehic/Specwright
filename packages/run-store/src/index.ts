@@ -25,6 +25,7 @@ import {
   ArtifactRefSchema,
   HumanQuestionSchema,
   RedactionClassSchema,
+  RepairTaskSchema,
   RunInputSchema,
   RunStateSchema,
   RuntimeEventSchema,
@@ -35,6 +36,7 @@ import {
   type HumanQuestion,
   type RedactionClass,
   type RedactionPolicy,
+  type RepairTask,
   type RunInput,
   type RunState,
   type RuntimeEvent,
@@ -3396,6 +3398,7 @@ function projectRunStateWithReducer(
     budgets: startedPayload.budgets,
     pendingApprovals: [],
     pendingQuestions: [],
+    pendingRepairTasks: [],
     artifacts: [],
     lastEventId: started.id
   };
@@ -4467,6 +4470,7 @@ function reduceEvent(state: RunState, event: RuntimeEvent) {
         );
       }
 
+      state.status = "blocked";
       return;
     }
     case "human.answer_recorded": {
@@ -4481,6 +4485,21 @@ function reduceEvent(state: RunState, event: RuntimeEvent) {
         );
       }
 
+      restoreRunningIfUnblocked(state);
+      return;
+    }
+    case "approval.requested": {
+      const approval = parseNestedApprovalRequest(event.payload);
+
+      if (approval !== undefined) {
+        state.pendingApprovals = upsertByKey(
+          state.pendingApprovals,
+          approval,
+          "approvalId"
+        );
+      }
+
+      state.status = "blocked";
       return;
     }
     case "policy.evaluated": {
@@ -4507,8 +4526,25 @@ function reduceEvent(state: RunState, event: RuntimeEvent) {
         );
       }
 
+      restoreRunningIfUnblocked(state);
       return;
     }
+    case "repair.task_created": {
+      const repairTask = parseNestedRepairTask(event.payload);
+
+      if (repairTask !== undefined) {
+        state.pendingRepairTasks = upsertRepairTask(
+          state.pendingRepairTasks,
+          repairTask
+        );
+      }
+
+      state.status = "blocked";
+      return;
+    }
+    case "run.blocked":
+      state.status = "blocked";
+      return;
     case "run.completed":
       state.status = "completed";
       return;
@@ -5303,6 +5339,49 @@ function parseNestedApprovalRequest(
   }
 
   return undefined;
+}
+
+function parseNestedRepairTask(payload: unknown): RepairTask | undefined {
+  const candidates = getPayloadCandidates(payload, ["repairTask"]);
+
+  for (const candidate of candidates) {
+    const parsed = RepairTaskSchema.safeParse(candidate);
+
+    if (parsed.success) {
+      return parsed.data;
+    }
+  }
+
+  return undefined;
+}
+
+function restoreRunningIfUnblocked(state: RunState) {
+  if (
+    state.status === "blocked" &&
+    state.pendingApprovals.length === 0 &&
+    state.pendingQuestions.length === 0 &&
+    state.pendingRepairTasks.length === 0
+  ) {
+    state.status = "running";
+  }
+}
+
+function upsertRepairTask(
+  tasks: readonly RepairTask[],
+  task: RepairTask
+): RepairTask[] {
+  const key = repairTaskKey(task);
+  const next =
+    key === undefined
+      ? [...tasks]
+      : tasks.filter((current) => repairTaskKey(current) !== key);
+
+  next.push(task);
+  return next;
+}
+
+function repairTaskKey(task: RepairTask) {
+  return task.id ?? task.repairId;
 }
 
 function getPayloadCandidates(payload: unknown, nestedKeys: string[]) {
